@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Atelier.Framework.Context\Atelier.Framework.Context.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Infrastructure\Atelier.Framework.Infrastructure.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Observability\Atelier.Framework.Observability.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Outcomes\Atelier.Framework.Outcomes.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Requisitions\Atelier.Framework.Requisitions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="System.Diagnostics.PerformanceCounter" />
+        <PackageReference Include="prometheus-net" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    </ItemGroup>
+</Project>
+

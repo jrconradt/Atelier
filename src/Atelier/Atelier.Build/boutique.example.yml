@@ -1,0 +1,32 @@
+name: Atelier.Example
+version: 1.0.0
+description: Example boutique definition
+
+dependencies:
+  - Atelier.Framework.Messaging
+  - Atelier.Framework.Observability
+  - Atelier.Framework.Resilience
+
+offerings:
+  - name: ExampleOffering
+    description: Example offering wired into the boutique
+    enabled: true
+
+facilities:
+  - IContextAccessor
+  - IRequisitionService
+
+build:
+  configuration: Release
+  treat_warnings_as_errors: true
+  msbuild_args:
+    - -p:PublishReadyToRun=true
+
+docker:
+  base_image: mcr.microsoft.com/dotnet/aspnet:10.0
+  ports:
+    - 8080
+    - 8081
+  env:
+    ASPNETCORE_ENVIRONMENT: Production
+    DOTNET_EnableDiagnostics: "0"

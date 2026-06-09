@@ -1,0 +1,1 @@
+  - Max Latency: {{ ms }}ms

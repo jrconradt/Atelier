@@ -1,0 +1,4 @@
+    deploy:
+      resources:
+        limits:
+          {{ limitLines }}

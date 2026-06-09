@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Atelier.Framework.Infrastructure\Atelier.Framework.Infrastructure.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Observability\Atelier.Framework.Observability.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Outcomes\Atelier.Framework.Outcomes.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Requisitions\Atelier.Framework.Requisitions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Polly.Core" />
+    <PackageReference Include="Polly.Extensions" />
+    <PackageReference Include="Polly.RateLimiting" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+  </ItemGroup>
+</Project>

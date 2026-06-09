@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <AtelierExcludeAnalyzers>true</AtelierExcludeAnalyzers>
+    <AtelierExcludeRequisitionsGen>true</AtelierExcludeRequisitionsGen>
+    <AtelierExcludeTestGen>true</AtelierExcludeTestGen>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Analyzer.Testing" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.CodeFix.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Atelier.Framework.Analyzers\Atelier.Framework.Analyzers.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Analyzers.CodeFixes\Atelier.Framework.Analyzers.CodeFixes.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Attributes\Atelier.Framework.Attributes.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Primitives\Atelier.Framework.Primitives.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Identity.Authorization\Atelier.Framework.Identity.Authorization.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Requisitions\Atelier.Framework.Requisitions.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Outcomes\Atelier.Framework.Outcomes.csproj" />
+  </ItemGroup>
+
+</Project>

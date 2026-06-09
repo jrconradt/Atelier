@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Atelier.Framework.Context\Atelier.Framework.Context.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Facility\Atelier.Framework.Facility.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Infrastructure\Atelier.Framework.Infrastructure.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Observability\Atelier.Framework.Observability.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Offering\Atelier.Framework.Offering.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Outcomes\Atelier.Framework.Outcomes.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Performance\Atelier.Framework.Performance.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Requisitions\Atelier.Framework.Requisitions.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Resilience\Atelier.Framework.Resilience.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+        <PackageReference Include="Microsoft.Extensions.Logging" />
+    </ItemGroup>
+</Project>

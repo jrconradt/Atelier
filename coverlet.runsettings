@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura,opencover</Format>
+          <Exclude>
+            <!-- Exclude generated code -->
+            [*]*.g.cs
+            [*.Generator]*
+            [*.Generators]*
+            <!-- Exclude benchmark projects -->
+            [*.Benchmarks]*
+            [Atelier.Benchmarks.Shared]*
+            <!-- Exclude third-party -->
+            [HuggingfaceHub]*
+            [MermaidDotNet]*
+            <!-- Exclude build tools -->
+            [Atelier.Build]*
+          </Exclude>
+          <ExcludeByAttribute>GeneratedCode,CompilerGenerated,ExcludeFromCodeCoverage</ExcludeByAttribute>
+          <ExcludeByFile>
+            <!-- Exclude source generators -->
+            **/obj/**/*.cs
+            **/*.g.cs
+            **/*.Generated.cs
+          </ExcludeByFile>
+          <IncludeTestAssembly>false</IncludeTestAssembly>
+          <SingleHit>false</SingleHit>
+          <UseSourceLink>true</UseSourceLink>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

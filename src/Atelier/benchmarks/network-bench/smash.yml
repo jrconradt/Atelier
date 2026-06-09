@@ -1,0 +1,4 @@
+name: network
+solution: Atelier.Bench.Network/Atelier.Bench.Network.csproj
+benchmark:
+  project: Atelier.Bench.Network

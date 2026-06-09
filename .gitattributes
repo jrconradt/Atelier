@@ -1,0 +1,69 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Source code
+*.cs text diff=csharp eol=lf
+*.csx text diff=csharp eol=lf
+*.vb text eol=lf
+*.vbx text eol=lf
+*.fs text eol=lf
+*.fsx text eol=lf
+*.fsi text eol=lf
+
+# Scripts
+*.sh text eol=lf
+*.bash text eol=lf
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Config files
+*.json text eol=lf
+*.xml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.config text eol=lf
+*.props text eol=lf
+*.targets text eol=lf
+*.csproj text eol=lf
+*.sln text eol=lf
+*.slnx text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+*.adoc text eol=lf
+
+# Graphics
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text
+
+# Archives
+*.zip binary
+*.7z binary
+*.gz binary
+*.tar binary
+*.tgz binary
+
+# Executables
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+
+# Don't allow people to merge changes to these generated files
+# because they're generated from the model code
+*.Designer.cs merge=binary
+*.generated.cs merge=binary
+*.g.cs merge=binary
+
+# Denote all files that are truly binary and should not be modified
+*.snk binary
+

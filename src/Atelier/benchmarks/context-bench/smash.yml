@@ -1,0 +1,4 @@
+name: context
+solution: Atelier.Bench.Context/Atelier.Bench.Context.csproj
+benchmark:
+  project: Atelier.Bench.Context

@@ -1,0 +1,4 @@
+name: cache
+solution: Atelier.Bench.Cache/Atelier.Bench.Cache.csproj
+benchmark:
+  project: Atelier.Bench.Cache

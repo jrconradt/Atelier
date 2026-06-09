@@ -1,0 +1,1 @@
+ValidateContract({{ paramName }});

@@ -1,0 +1,4 @@
+name: requisitions
+solution: Atelier.Bench.Requisitions/Atelier.Bench.Requisitions.csproj
+benchmark:
+  project: Atelier.Bench.Requisitions

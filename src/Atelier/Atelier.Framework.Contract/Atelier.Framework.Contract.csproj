@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Atelier.Framework.Attributes\Atelier.Framework.Attributes.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Primitives\Atelier.Framework.Primitives.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Identity.Authorization\Atelier.Framework.Identity.Authorization.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Context\Atelier.Framework.Context.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Observability\Atelier.Framework.Observability.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Properties\Atelier.Framework.Properties.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Requisitions\Atelier.Framework.Requisitions.csproj" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" />
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <LangVersion>preview</LangVersion>
+        <IsRoslynComponent>true</IsRoslynComponent>
+        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <Nullable>enable</Nullable>
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <NoWarn>$(NoWarn);RS1041</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Templar.Net" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="Templates\**\*.tpl" />
+        <AdditionalFiles Include="Templates\**\*.tpl" />
+        <EmbeddedResource Include="Compositors\**\*.tpl" />
+        <CompilerVisibleProperty Include="RootNamespace" />
+        <CompilerVisibleProperty Include="ProjectDir" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <GetTargetPathDependsOn>$(GetTargetPathDependsOn);GetDependencyTargetPaths</GetTargetPathDependsOn>
+    </PropertyGroup>
+
+    <Target Name="GetDependencyTargetPaths" DependsOnTargets="ResolveReferences">
+        <ItemGroup>
+            <TargetPathWithTargetPlatformMoniker
+                Include="@(ReferencePath->WithMetadataValue('FileName', 'Templar'))"
+                IncludeRuntimeDependency="false" />
+        </ItemGroup>
+    </Target>
+
+    <Target Name="IncludeTemplarAsAnalyzer"
+            BeforeTargets="CoreCompile"
+            DependsOnTargets="ResolveReferences">
+        <ItemGroup>
+            <Analyzer Include="@(ReferencePath->WithMetadataValue('FileName', 'Templar'))" />
+        </ItemGroup>
+    </Target>
+</Project>

@@ -1,0 +1,6 @@
+public {{ className }}(
+    {{ parameters }}
+)
+{
+    {{ assignments }}
+}

@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Atelier.Framework.Primitives\Atelier.Framework.Primitives.csproj" />
+  </ItemGroup>
+</Project>

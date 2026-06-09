@@ -1,0 +1,4 @@
+name: eventstream
+solution: Atelier.Bench.EventStream/Atelier.Bench.EventStream.csproj
+benchmark:
+  project: Atelier.Bench.EventStream

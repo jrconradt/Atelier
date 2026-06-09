@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <AtelierExcludeAnalyzers>true</AtelierExcludeAnalyzers>
+    <AtelierExcludeRequisitionsGen>true</AtelierExcludeRequisitionsGen>
+    <AtelierExcludeTestGen>true</AtelierExcludeTestGen>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Atelier.Framework.Testing\Atelier.Framework.Testing.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Outcomes\Atelier.Framework.Outcomes.csproj" />
+  </ItemGroup>
+
+</Project>

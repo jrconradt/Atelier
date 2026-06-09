@@ -1,0 +1,66 @@
+# Build artifacts
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Git
+.git/
+.gitignore
+
+# Documentation (not needed in container)
+_docs/
+*.md
+!README.md
+
+# Test results
+**/TestResults/
+**/coverage/
+
+# NuGet
+**/packages/
+*.nupkg
+
+# Logs
+*.log
+logs/
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Build system
+build/
+.nuke/
+artifacts/
+
+# Training data (mount as volume instead)
+training/
+_experimental/
+_disabled/
+
+# Scripts
+*.ps1
+*.sh
+scripts/
+
+# Temporary
+*.tmp
+*.temp
+*.swp
+*~
+$*
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore

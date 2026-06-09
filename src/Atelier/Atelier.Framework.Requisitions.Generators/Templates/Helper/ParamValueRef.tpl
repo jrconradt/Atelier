@@ -1,0 +1,1 @@
+{{ camelName }}Value

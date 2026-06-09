@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <AtelierExcludeAnalyzers>true</AtelierExcludeAnalyzers>
+    <AtelierExcludeRequisitionsGen>true</AtelierExcludeRequisitionsGen>
+    <AtelierExcludeTestGen>true</AtelierExcludeTestGen>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Templar.Net" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Atelier.Framework.Test.Generators\Atelier.Framework.Test.Generators.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Requisitions\Atelier.Framework.Requisitions.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Attributes\Atelier.Framework.Attributes.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Primitives\Atelier.Framework.Primitives.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Identity.Authorization\Atelier.Framework.Identity.Authorization.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Outcomes\Atelier.Framework.Outcomes.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Observability\Atelier.Framework.Observability.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Offering\Atelier.Framework.Offering.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Testing\Atelier.Framework.Testing.csproj" />
+  </ItemGroup>
+
+</Project>

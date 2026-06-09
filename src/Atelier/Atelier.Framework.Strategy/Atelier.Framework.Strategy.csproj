@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Atelier.Framework.Outcomes\Atelier.Framework.Outcomes.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Testing.Contract\Atelier.Framework.Testing.Contract.csproj" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Atelier.Framework.Attributes\Atelier.Framework.Attributes.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Primitives\Atelier.Framework.Primitives.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Identity.Authorization\Atelier.Framework.Identity.Authorization.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Context\Atelier.Framework.Context.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Observability\Atelier.Framework.Observability.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Outcomes\Atelier.Framework.Outcomes.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Requisitions\Atelier.Framework.Requisitions.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Strategy\Atelier.Framework.Strategy.csproj" />
+
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+        <PackageReference Include="Polly.Core" />
+        <PackageReference Include="Polly.Extensions" />
+        <PackageReference Include="prometheus-net" />
+    </ItemGroup>
+</Project>

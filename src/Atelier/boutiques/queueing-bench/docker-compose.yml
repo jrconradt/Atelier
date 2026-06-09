@@ -1,0 +1,63 @@
+services:
+
+  queueing:
+    build:
+      context: ../..
+      dockerfile: boutiques/queueing/Dockerfile
+      args:
+        BUILD_CONFIGURATION: Release
+        SELF_CONTAINED: ${SELF_CONTAINED:-false}
+    image: queueing:1.0.0
+    container_name: queueing
+    labels:
+      io.atelier.boutique: "QUEUEING"
+      io.atelier.image.immutable: "queueing:1.0.0"
+      org.opencontainers.image.version: "1.0.0"
+      org.opencontainers.image.description: "queueing-bench Subsystem"
+    restart: unless-stopped
+    environment:
+      - "ASPNETCORE_ENVIRONMENT=Production"
+
+
+    ports:
+      - "8080:8080"
+
+      - "8081:8081"
+
+      - "9090:9090"
+
+
+    volumes:
+      - ../../docker/certs:/https:ro
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
+
+    deploy:
+      resources:
+        limits:
+          cpus: "3"
+
+          memory: 4G
+
+
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/atelier
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - atelier-network
+
+
+networks:
+  atelier-network:
+    driver: bridge
+

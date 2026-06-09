@@ -1,0 +1,4 @@
+name: statemachine
+solution: Atelier.Bench.StateMachine/Atelier.Bench.StateMachine.csproj
+benchmark:
+  project: Atelier.Bench.StateMachine

@@ -1,0 +1,4 @@
+name: performance
+solution: Atelier.Bench.Performance/Atelier.Bench.Performance.csproj
+benchmark:
+  project: Atelier.Bench.Performance

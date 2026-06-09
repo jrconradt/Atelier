@@ -1,0 +1,3 @@
+    - podSelector:
+        matchLabels:
+          zone: {{ zoneName }}

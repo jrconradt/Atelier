@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
+        <NoWarn>$(NoWarn);ATELIER0600</NoWarn>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Atelier.Framework.Infrastructure\Atelier.Framework.Infrastructure.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Contract\Atelier.Framework.Contract.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Context\Atelier.Framework.Context.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Observability\Atelier.Framework.Observability.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Outcomes\Atelier.Framework.Outcomes.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Host.Execution\Atelier.Framework.Host.Execution.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Network\Atelier.Framework.Network.csproj" />
+    </ItemGroup>
+</Project>

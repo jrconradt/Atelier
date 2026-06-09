@@ -1,0 +1,19 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ zoneName }}-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      zone: {{ zoneName }}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+{{ ingressFrom }}
+  egress:
+  - to:
+{{ egressTo }}

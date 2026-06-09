@@ -1,0 +1,4 @@
+name: messaging
+solution: Atelier.Bench.Messaging/Atelier.Bench.Messaging.csproj
+benchmark:
+  project: Atelier.Bench.Messaging

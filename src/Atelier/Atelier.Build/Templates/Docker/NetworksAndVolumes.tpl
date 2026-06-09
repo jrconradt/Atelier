@@ -1,0 +1,3 @@
+networks:
+{{ networkLines }}
+{{ volumesBlock }}

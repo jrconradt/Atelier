@@ -1,0 +1,2 @@
+    volumes:
+      - {{ certsPath }}:/https:ro

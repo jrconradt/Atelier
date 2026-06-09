@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AtelierExcludeAnalyzers>true</AtelierExcludeAnalyzers>
+    <AtelierExcludeRequisitionsGen>true</AtelierExcludeRequisitionsGen>
+    <AtelierExcludeTestGen>true</AtelierExcludeTestGen>
+  </PropertyGroup>
+</Project>

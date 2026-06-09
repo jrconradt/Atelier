@@ -1,0 +1,4 @@
+public {{ typeName }}Factory()
+{
+    {{ assignments }}
+}

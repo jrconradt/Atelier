@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <AtelierExcludeAnalyzers>true</AtelierExcludeAnalyzers>
+    <AtelierExcludeRequisitionsGen>true</AtelierExcludeRequisitionsGen>
+    <AtelierExcludeTestGen>true</AtelierExcludeTestGen>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Atelier.Framework.Identity\Atelier.Framework.Identity.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Testing\Atelier.Framework.Testing.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Outcomes\Atelier.Framework.Outcomes.csproj" />
+    <ProjectReference Include="..\Atelier.Framework.Context\Atelier.Framework.Context.csproj" />
+  </ItemGroup>
+
+</Project>

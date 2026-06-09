@@ -1,0 +1,5 @@
+- **Services**: {{ services }}
+- **Inbound Zones**: {{ inbound }}
+- **Outbound Zones**: {{ outbound }}
+- **Mutual TLS Required**: {{ mtls }}
+- **Max Isolation Level**: {{ isolation }}

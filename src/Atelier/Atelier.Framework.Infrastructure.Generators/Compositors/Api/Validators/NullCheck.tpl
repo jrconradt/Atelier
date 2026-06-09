@@ -1,0 +1,1 @@
+ArgumentNullException.ThrowIfNull({{ paramName }});

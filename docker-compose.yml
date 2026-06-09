@@ -1,0 +1,5 @@
+services: {}
+
+networks:
+  atelier-network:
+    driver: bridge

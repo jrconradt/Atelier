@@ -1,0 +1,4 @@
+name: queueing
+solution: Atelier.Bench.Queueing/Atelier.Bench.Queueing.csproj
+benchmark:
+  project: Atelier.Bench.Queueing

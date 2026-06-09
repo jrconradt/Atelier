@@ -1,0 +1,1 @@
+{{ methodName }}CoreAsync({{ arguments }})

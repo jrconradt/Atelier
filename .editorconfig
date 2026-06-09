@@ -1,0 +1,167 @@
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csx,vb,vbx}]
+indent_size = 4
+indent_style = space
+
+[*.{json,yml,yaml}]
+indent_size = 2
+indent_style = space
+
+[*.{ps1,sh}]
+indent_size = 4
+indent_style = space
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+csharp_indent_labels = no_change
+
+csharp_space_after_cast = false
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_between_parentheses = false
+csharp_space_before_colon_in_inheritance_clause = true
+csharp_space_after_colon_in_inheritance_clause = true
+csharp_space_around_binary_operators = before_and_after
+csharp_space_between_method_declaration_empty_parameter_list_parentheses = false
+csharp_space_between_method_call_name_and_opening_parenthesis = false
+csharp_space_between_method_call_empty_parameter_list_parentheses = false
+
+csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks = true
+
+csharp_prefer_braces = true:warning
+csharp_prefer_simple_using_statement = true:suggestion
+
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+
+dotnet_style_predefined_type_for_locals_parameters_members = true:warning
+dotnet_style_predefined_type_for_member_access = true:warning
+
+dotnet_style_require_accessibility_modifiers = always:warning
+dotnet_style_readonly_field = true:warning
+
+dotnet_style_prefer_auto_properties = true:suggestion
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
+dotnet_style_prefer_inferred_tuple_names = true:suggestion
+dotnet_style_prefer_inferred_anonymous_type_member_names = true:suggestion
+
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+
+csharp_style_expression_bodied_methods = false:none
+csharp_style_expression_bodied_constructors = false:none
+csharp_style_expression_bodied_operators = false:none
+csharp_style_expression_bodied_properties = true:suggestion
+csharp_style_expression_bodied_indexers = true:suggestion
+csharp_style_expression_bodied_accessors = true:suggestion
+
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+
+csharp_style_throw_expression = true:suggestion
+csharp_style_conditional_delegate_call = true:suggestion
+
+csharp_prefer_simple_default_expression = true:suggestion
+csharp_style_prefer_local_over_anonymous_function = true:suggestion
+csharp_style_prefer_index_operator = true:suggestion
+csharp_style_prefer_range_operator = true:suggestion
+csharp_style_implicit_object_creation_when_type_is_apparent = true:suggestion
+
+dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.IDE0005.severity = none
+dotnet_diagnostic.IDE0006.severity = none
+dotnet_diagnostic.IDE0007.severity = none
+
+# Atelier Framework Analyzers
+dotnet_diagnostic.ATELIER003.severity = warning
+dotnet_diagnostic.ATELIER004.severity = none
+dotnet_diagnostic.ATELIER0200.severity = warning
+dotnet_diagnostic.ATELIER0300.severity = warning
+dotnet_diagnostic.ATELIER1000.severity = warning
+dotnet_diagnostic.ATELIER1101.severity = warning
+dotnet_diagnostic.ATELIER1301.severity = warning
+dotnet_diagnostic.ATELIER1402.severity = warning
+dotnet_diagnostic.ATELIER1404.severity = warning
+dotnet_diagnostic.ATELIER1503.severity = warning
+dotnet_diagnostic.ATE1002.severity = warning
+dotnet_diagnostic.IDE0008.severity = none
+dotnet_diagnostic.IDE0009.severity = none
+dotnet_diagnostic.IDE0010.severity = none
+dotnet_diagnostic.IDE0011.severity = none
+dotnet_diagnostic.IDE0012.severity = none
+dotnet_diagnostic.IDE0013.severity = none
+dotnet_diagnostic.IDE0014.severity = none
+dotnet_diagnostic.IDE0015.severity = none
+
+# =============================================================================
+# Generated Code Suppressions
+# =============================================================================
+
+# Generated files in obj/ directories (Roslyn-generated code)
+[**/obj/**/*.cs]
+dotnet_diagnostic.CS1591.severity = none
+
+# Source generator output files (*.g.cs pattern)
+[**/*.g.cs]
+dotnet_diagnostic.CS1591.severity = none
+
+# Global usings generated by compiler
+[**/GlobalUsings.g.cs]
+dotnet_diagnostic.CS1591.severity = none
+
+# Test projects (*.Tests, *.Benchmarks) - tests don't need XML documentation
+[**/*Tests/**/*.cs]
+dotnet_diagnostic.CS1591.severity = none
+
+[**/*Benchmarks/**/*.cs]
+dotnet_diagnostic.CS1591.severity = none
+
+# =============================================================================
+# Atelier.Build CLI tool - not a framework service host; service-shaped pattern
+# rules (Operation null/cancellation guards, Requisite DI, public-ctor, Contract
+# DTO, ConfigureAwait) do not apply to the build tool's internal command code.
+# =============================================================================
+
+[**/Atelier.Build/**/*.cs]
+dotnet_diagnostic.ATELIER003.severity = none
+dotnet_diagnostic.ATELIER004.severity = none
+dotnet_diagnostic.ATELIER0010.severity = none
+dotnet_diagnostic.ATELIER0200.severity = none
+dotnet_diagnostic.ATELIER0402.severity = none
+dotnet_diagnostic.ATELIER0600.severity = none
+dotnet_diagnostic.ATELIER0604.severity = none
+dotnet_diagnostic.ATELIER1001.severity = none
+dotnet_diagnostic.ATELIER1101.severity = none
+dotnet_diagnostic.ATELIER1200.severity = none
+dotnet_diagnostic.ATELIER1310.severity = none
+dotnet_diagnostic.ATELIER1404.severity = none
+dotnet_diagnostic.ATELIER1503.severity = none
+dotnet_diagnostic.ATELIER1610.severity = none
+dotnet_diagnostic.ATE1002.severity = none

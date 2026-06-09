@@ -1,0 +1,4 @@
+name: outcomes
+solution: Atelier.Bench.Outcomes/Atelier.Bench.Outcomes.csproj
+benchmark:
+  project: Atelier.Bench.Outcomes

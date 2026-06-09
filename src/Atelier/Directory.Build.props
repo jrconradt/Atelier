@@ -1,0 +1,91 @@
+<Project>
+    <Import Project="$(MSBuildThisFileDirectory)..\..\Directory.Build.Package.props" />
+
+    <PropertyGroup>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>14.0</LangVersion>
+        <TargetFramework>net10.0</TargetFramework>
+        <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);ATE1002</NoWarn>
+        <WarningsNotAsErrors>$(WarningsNotAsErrors);ATELIER0300;ATE1004;ATELIER0330</WarningsNotAsErrors>
+        <NuGetAudit>true</NuGetAudit>
+        <NuGetAuditMode>all</NuGetAuditMode>
+        <NuGetAuditLevel>low</NuGetAuditLevel>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <Authors>Infalligence Labs LLC</Authors>
+        <Company>Infalligence Labs LLC</Company>
+        <Product>Atelier</Product>
+        <Copyright>Copyright © 2026 Infalligence Labs LLC</Copyright>
+        <Description>Atelier — infrastructure host and orchestration framework for .NET 10.</Description>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <RepositoryType>git</RepositoryType>
+        <PackageTags>atelier;dotnet;source-generators;dependency-injection;orchestration;roslyn</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)../../README.md"
+              Pack="true"
+              PackagePath="/"
+              Visible="false"
+              Condition="Exists('$(MSBuildThisFileDirectory)../../README.md')" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Analyzers' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Analyzers.CodeFixes' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Requisitions.Generators' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Infrastructure.Generators' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Network.Generators' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Offering.Generators' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Test.Generators'">
+        <AtelierExcludeAnalyzers>true</AtelierExcludeAnalyzers>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Requisitions' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Requisitions.Generators'">
+        <AtelierExcludeRequisitionsGen>true</AtelierExcludeRequisitionsGen>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Requisitions' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Requisitions.Generators' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Infrastructure.Generators' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Network.Generators' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Offering.Generators' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Analyzers' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Analyzers.CodeFixes' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Abstractions' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Outcomes' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Context' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Observability' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Strategy' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Test.Generators' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Testing' OR
+        '$(MSBuildProjectName)' == 'Atelier.Framework.Testing.Contract'">
+        <AtelierExcludeTestGen>true</AtelierExcludeTestGen>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(AtelierExcludeAnalyzers)' != 'true'">
+        <ProjectReference Include="$(MSBuildThisFileDirectory)Atelier.Framework.Analyzers\Atelier.Framework.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(AtelierExcludeRequisitionsGen)' != 'true'">
+        <ProjectReference Include="$(MSBuildThisFileDirectory)Atelier.Framework.Requisitions.Generators\Atelier.Framework.Requisitions.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(AtelierExcludeTestGen)' != 'true'">
+        <ProjectReference Include="$(MSBuildThisFileDirectory)Atelier.Framework.Infrastructure.Generators\Atelier.Framework.Infrastructure.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(AtelierExcludeTestGen)' != 'true'">
+        <ProjectReference Include="$(MSBuildThisFileDirectory)Atelier.Framework.Test.Generators\Atelier.Framework.Test.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="$(MSBuildThisFileDirectory)Atelier.Framework.Testing.Contract\Atelier.Framework.Testing.Contract.csproj" PrivateAssets="all" />
+    </ItemGroup>
+</Project>

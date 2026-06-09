@@ -1,0 +1,2 @@
+  {{ name }}:
+    driver: {{ driver }}

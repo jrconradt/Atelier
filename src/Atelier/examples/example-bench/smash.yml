@@ -1,0 +1,4 @@
+name: example
+solution: Atelier.Example.Bench/Atelier.Example.Bench.csproj
+benchmark:
+  project: Atelier.Example.Bench
