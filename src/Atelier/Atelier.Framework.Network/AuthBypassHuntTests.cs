@@ -22,35 +22,53 @@ public static class AuthBypassHuntTests
     [ScopeResource(typeof(Scopes.Boutique))]
     private sealed class NameInferenceService
     {
+        [OperationEffect(EffectKind.Write)]
         public void GetOrCreateBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void FindOrCreateBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void ListAndArchiveBoutiques()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void SearchAndDeleteBoutiques()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void QueryThenPurge()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void RetrieveAndReset()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void DiscoverOrProvision()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void GetOrCreateBoutiqueAsync()
+        {
+        }
+
+        [OperationEffect(EffectKind.Read)]
+        public void ListBoutiquesReadOnly()
+        {
+        }
+
+        [RequiresScope(Scopes.Boutique.READ)]
+        public void UndeclaredEffectExplicitScope()
         {
         }
     }
@@ -58,6 +76,7 @@ public static class AuthBypassHuntTests
     [ScopeResource(typeof(BlankWriteResource))]
     private sealed class BlankWriteService
     {
+        [OperationEffect(EffectKind.Write)]
         public void UpdateBoutique()
         {
         }
@@ -117,7 +136,7 @@ public static class AuthBypassHuntTests
     {
         var required = ScopeRequirementResolver.ResolveRequiredScopes(Method<NameInferenceService>(nameof(NameInferenceService.GetOrCreateBoutique)));
 
-        IsTrue(required.Contains(Scopes.Boutique.WRITE), "GetOrCreate creates state and must derive the WRITE tier scope");
+        IsTrue(required.Contains(Scopes.Boutique.WRITE), "GetOrCreate declares the Write effect and must resolve the WRITE tier scope despite its reader-shaped name");
 
         var readerOnly = Principal(SUBJECT, Scopes.Boutique.READ);
 
@@ -129,7 +148,7 @@ public static class AuthBypassHuntTests
     {
         var required = ScopeRequirementResolver.ResolveRequiredScopes(Method<NameInferenceService>(nameof(NameInferenceService.FindOrCreateBoutique)));
 
-        IsTrue(required.Contains(Scopes.Boutique.WRITE), "FindOrCreate creates state and must derive the WRITE tier scope");
+        IsTrue(required.Contains(Scopes.Boutique.WRITE), "FindOrCreate declares the Write effect and must resolve the WRITE tier scope despite its reader-shaped name");
 
         var readerOnly = Principal(SUBJECT, Scopes.Boutique.READ);
 
@@ -141,7 +160,7 @@ public static class AuthBypassHuntTests
     {
         var required = ScopeRequirementResolver.ResolveRequiredScopes(Method<NameInferenceService>(nameof(NameInferenceService.ListAndArchiveBoutiques)));
 
-        IsTrue(required.Contains(Scopes.Boutique.WRITE), "ListAndArchive mutates state and must derive the WRITE tier scope");
+        IsTrue(required.Contains(Scopes.Boutique.WRITE), "ListAndArchive declares the Write effect and must resolve the WRITE tier scope despite its reader-shaped name");
 
         var readerOnly = Principal(SUBJECT, Scopes.Boutique.READ);
 
@@ -153,7 +172,7 @@ public static class AuthBypassHuntTests
     {
         var required = ScopeRequirementResolver.ResolveRequiredScopes(Method<NameInferenceService>(nameof(NameInferenceService.SearchAndDeleteBoutiques)));
 
-        IsTrue(required.Contains(Scopes.Boutique.WRITE), "SearchAndDelete mutates state and must derive the WRITE tier scope");
+        IsTrue(required.Contains(Scopes.Boutique.WRITE), "SearchAndDelete declares the Write effect and must resolve the WRITE tier scope despite its reader-shaped name");
 
         var readerOnly = Principal(SUBJECT, Scopes.Boutique.READ);
 
@@ -165,7 +184,7 @@ public static class AuthBypassHuntTests
     {
         var required = ScopeRequirementResolver.ResolveRequiredScopes(Method<NameInferenceService>(nameof(NameInferenceService.QueryThenPurge)));
 
-        IsTrue(required.Contains(Scopes.Boutique.WRITE), "QueryThenPurge mutates state and must derive the WRITE tier scope");
+        IsTrue(required.Contains(Scopes.Boutique.WRITE), "QueryThenPurge declares the Write effect and must resolve the WRITE tier scope despite its reader-shaped name");
 
         var readerOnly = Principal(SUBJECT, Scopes.Boutique.READ);
 
@@ -177,7 +196,7 @@ public static class AuthBypassHuntTests
     {
         var required = ScopeRequirementResolver.ResolveRequiredScopes(Method<NameInferenceService>(nameof(NameInferenceService.RetrieveAndReset)));
 
-        IsTrue(required.Contains(Scopes.Boutique.WRITE), "RetrieveAndReset mutates state and must derive the WRITE tier scope");
+        IsTrue(required.Contains(Scopes.Boutique.WRITE), "RetrieveAndReset declares the Write effect and must resolve the WRITE tier scope despite its reader-shaped name");
 
         var readerOnly = Principal(SUBJECT, Scopes.Boutique.READ);
 
@@ -189,7 +208,7 @@ public static class AuthBypassHuntTests
     {
         var required = ScopeRequirementResolver.ResolveRequiredScopes(Method<NameInferenceService>(nameof(NameInferenceService.DiscoverOrProvision)));
 
-        IsTrue(required.Contains(Scopes.Boutique.WRITE), "DiscoverOrProvision creates state and must derive the WRITE tier scope");
+        IsTrue(required.Contains(Scopes.Boutique.WRITE), "DiscoverOrProvision declares the Write effect and must resolve the WRITE tier scope despite its reader-shaped name");
 
         var readerOnly = Principal(SUBJECT, Scopes.Boutique.READ);
 
@@ -201,20 +220,36 @@ public static class AuthBypassHuntTests
     {
         var required = ScopeRequirementResolver.ResolveRequiredScopes(Method<NameInferenceService>(nameof(NameInferenceService.GetOrCreateBoutiqueAsync)));
 
-        IsTrue(required.Contains(Scopes.Boutique.WRITE), "GetOrCreateAsync creates state and must derive the WRITE tier scope after Async stripping");
+        IsTrue(required.Contains(Scopes.Boutique.WRITE), "GetOrCreateAsync declares the Write effect and must resolve the WRITE tier scope despite its reader-shaped name");
 
         var readerOnly = Principal(SUBJECT, Scopes.Boutique.READ);
 
         IsTrue(!ScopeAuthorizationEvaluator.IsAuthorized(readerOnly, required), "A principal holding only READ must not be authorized to call GetOrCreateAsync");
     }
 
-    [GeneratedTest("network.scope.bypass.classifier-getorcreate-is-mutating", TARGET)]
-    public static void ClassifierTreatsGetOrCreateAsMutating()
+    [GeneratedTest("network.scope.bypass.declared-read-resolves-read-tier", TARGET)]
+    public static void DeclaredReadEffectResolvesReadTier()
     {
-        IsTrue(OperationEffectClassifier.IsMutatingOperation("GetOrCreateBoutique"), "GetOrCreate must classify as a mutating operation");
-        IsTrue(OperationEffectClassifier.IsMutatingOperation("FindOrCreateBoutique"), "FindOrCreate must classify as a mutating operation");
-        IsTrue(OperationEffectClassifier.IsMutatingOperation("ListAndArchiveBoutiques"), "ListAndArchive must classify as a mutating operation");
-        IsTrue(OperationEffectClassifier.IsMutatingOperation("SearchAndDeleteBoutiques"), "SearchAndDelete must classify as a mutating operation");
+        var required = ScopeRequirementResolver.ResolveRequiredScopes(Method<NameInferenceService>(nameof(NameInferenceService.ListBoutiquesReadOnly)));
+
+        IsTrue(required.Contains(Scopes.Boutique.READ), "A method declaring the Read effect must resolve the READ tier scope");
+        IsTrue(!required.Contains(Scopes.Boutique.WRITE), "A Read-effect method must not resolve the WRITE tier scope");
+
+        var readerOnly = Principal(SUBJECT, Scopes.Boutique.READ);
+
+        IsTrue(ScopeAuthorizationEvaluator.IsAuthorized(readerOnly, required), "A principal holding READ must be authorized to call a Read-effect operation");
+    }
+
+    [GeneratedTest("network.scope.bypass.undeclared-effect-fails-closed", TARGET)]
+    public static void UndeclaredOperationEffectFailsClosed()
+    {
+        var required = ScopeRequirementResolver.ResolveRequiredScopes(Method<NameInferenceService>(nameof(NameInferenceService.UndeclaredEffectExplicitScope)));
+
+        IsTrue(required.FailClosed, "An operation on a [ScopeResource] type that declares no [OperationEffect] must fail closed: the tier is not derivable");
+
+        var holdsRead = Principal(SUBJECT, Scopes.Boutique.READ);
+
+        IsTrue(!ScopeAuthorizationEvaluator.IsAuthorized(holdsRead, required), "A fail-closed requirement must deny even a principal holding the explicitly named scope");
     }
 
     [GeneratedTest("network.scope.bypass.blank-write-field-not-admitted", TARGET)]

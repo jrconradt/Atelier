@@ -1,6 +1,5 @@
 using System.Reflection;
 using Atelier.Framework.Attributes;
-using Atelier.Framework.Identity.Authorization;
 
 namespace Atelier.Framework.Network.Enforcement;
 
@@ -52,7 +51,13 @@ public static class ScopeRequirementResolver
     private static string? ResolveTierScope(Type scopePairType,
                                             MethodInfo method)
     {
-        var fieldName = OperationEffectClassifier.IsMutatingOperation(method.Name) ? "WRITE" : "READ";
+        var effect = ResolveDeclaredEffect(method);
+        if (effect == null)
+        {
+            return null;
+        }
+
+        var fieldName = effect.Value == EffectKind.Write ? "WRITE" : "READ";
         var field = scopePairType.GetField(fieldName, BindingFlags.Public | BindingFlags.Static);
         if (field == null)
         {
@@ -60,6 +65,38 @@ public static class ScopeRequirementResolver
         }
 
         return field.GetRawConstantValue() as string;
+    }
+
+    private static EffectKind? ResolveDeclaredEffect(MethodInfo method)
+    {
+        var methodAttribute = method.GetCustomAttribute<OperationEffectAttribute>(inherit: true);
+        if (methodAttribute != null)
+        {
+            return methodAttribute.Effect;
+        }
+
+        var declaringType = method.DeclaringType;
+        if (declaringType == null)
+        {
+            return null;
+        }
+
+        var typeAttribute = declaringType.GetCustomAttribute<OperationEffectAttribute>(inherit: true);
+        if (typeAttribute != null)
+        {
+            return typeAttribute.Effect;
+        }
+
+        foreach (var contract in declaringType.GetInterfaces())
+        {
+            var contractAttribute = contract.GetCustomAttribute<OperationEffectAttribute>(inherit: true);
+            if (contractAttribute != null)
+            {
+                return contractAttribute.Effect;
+            }
+        }
+
+        return null;
     }
 
     private static Type? ResolveScopePairType(MethodInfo method)

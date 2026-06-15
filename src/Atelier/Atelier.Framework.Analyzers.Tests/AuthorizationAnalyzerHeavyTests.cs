@@ -43,7 +43,8 @@ public sealed class AuthorizationAnalyzerHeavyTests
             .WithArguments(method, type);
     }
 
-    private static string ApiMutator(string methodName)
+    private static string ApiOperation(string methodName,
+                                       string effect)
     {
         return $$"""
             using System.Threading.Tasks;
@@ -54,6 +55,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             [Api(null)]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.{{effect}})]
                 public Task {{methodName}}()
                 {
                     return Task.CompletedTask;
@@ -73,11 +75,11 @@ public sealed class AuthorizationAnalyzerHeavyTests
     [InlineData("ReticulateBoutiqueAsync")]
     [InlineData("FrobnicateAsync")]
     [InlineData("SaveAsync")]
-    public async Task Atelier0750_FiresForEachMutatorName(string methodName)
+    public async Task Atelier0750_FiresForEachWriteEffectOperation(string methodName)
     {
-        var source = ApiMutator(methodName);
+        var source = ApiOperation(methodName, "Write");
         var endCol = 17 + methodName.Length;
-        var expected = Mutating0750(9, 17, 9, endCol, methodName, "BoutiqueService");
+        var expected = Mutating0750(10, 17, 10, endCol, methodName, "BoutiqueService");
         await AnalyzerVerify.FiresAsync<MutatingApiScopeAnalyzer>(source, expected);
     }
 
@@ -90,14 +92,14 @@ public sealed class AuthorizationAnalyzerHeavyTests
     [InlineData("ListBoutiquesAsync")]
     [InlineData("QueryBoutiquesAsync")]
     [InlineData("SearchBoutiquesAsync")]
-    public async Task Atelier0750_SilentForEachReaderName(string methodName)
+    public async Task Atelier0750_SilentForEachReadEffectOperation(string methodName)
     {
-        var source = ApiMutator(methodName);
+        var source = ApiOperation(methodName, "Read");
         await AnalyzerVerify.SilentAsync<MutatingApiScopeAnalyzer>(source);
     }
 
     [Fact]
-    public async Task Atelier0750_FiresForMultipleMutatorsOnOneClass()
+    public async Task Atelier0750_FiresForMultipleWriteEffectOperationsOnOneClass()
     {
         const string source = """
             using System.Threading.Tasks;
@@ -108,16 +110,19 @@ public sealed class AuthorizationAnalyzerHeavyTests
             [Api(null)]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 public Task CreateBoutiqueAsync()
                 {
                     return Task.CompletedTask;
                 }
 
+                [OperationEffect(EffectKind.Write)]
                 public Task DeleteBoutiqueAsync()
                 {
                     return Task.CompletedTask;
                 }
 
+                [OperationEffect(EffectKind.Read)]
                 public Task GetBoutiqueAsync()
                 {
                     return Task.CompletedTask;
@@ -125,8 +130,8 @@ public sealed class AuthorizationAnalyzerHeavyTests
             }
             """;
 
-        var create = Mutating0750(9, 17, 9, 36, "CreateBoutiqueAsync", "BoutiqueService");
-        var delete = Mutating0750(14, 17, 14, 36, "DeleteBoutiqueAsync", "BoutiqueService");
+        var create = Mutating0750(10, 17, 10, 36, "CreateBoutiqueAsync", "BoutiqueService");
+        var delete = Mutating0750(16, 17, 16, 36, "DeleteBoutiqueAsync", "BoutiqueService");
         await AnalyzerVerify.FiresAsync<MutatingApiScopeAnalyzer>(source, create, delete);
     }
 
@@ -155,6 +160,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             [Api(null)]
             public sealed class BoutiqueService : IBoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 public Task CreateBoutiqueAsync()
                 {
                     return Task.CompletedTask;
@@ -190,6 +196,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
                 [RequiresScopeContract(Scopes.Boutique.WRITE)]
                 public sealed class BoutiqueService
                 {
+                    [OperationEffect(EffectKind.Write)]
                     public System.Threading.Tasks.Task CreateBoutiqueAsync()
                     {
                         return System.Threading.Tasks.Task.CompletedTask;
@@ -213,6 +220,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             [Api(null)]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 private Task CreateBoutiqueAsync()
                 {
                     return Task.CompletedTask;
@@ -235,6 +243,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             [Api(null)]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 public static Task CreateBoutiqueAsync()
                 {
                     return Task.CompletedTask;
@@ -246,7 +255,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
     }
 
     [Fact]
-    public async Task Atelier0750_FiresOnMutatingVoidMethod()
+    public async Task Atelier0750_FiresOnWriteEffectVoidMethod()
     {
         const string source = """
             using Atelier.Framework.Attributes;
@@ -256,13 +265,14 @@ public sealed class AuthorizationAnalyzerHeavyTests
             [Api(null)]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 public void CreateBoutique()
                 {
                 }
             }
             """;
 
-        var expected = Mutating0750(8, 17, 8, 31, "CreateBoutique", "BoutiqueService");
+        var expected = Mutating0750(9, 17, 9, 31, "CreateBoutique", "BoutiqueService");
         await AnalyzerVerify.FiresAsync<MutatingApiScopeAnalyzer>(source, expected);
     }
 
@@ -277,6 +287,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
 
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 public Task CreateBoutiqueAsync()
                 {
                     return Task.CompletedTask;
@@ -300,6 +311,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             [AllowAnonymous]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 public Task CreateBoutiqueAsync()
                 {
                     return Task.CompletedTask;
@@ -329,6 +341,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             public sealed class BoutiqueService
             {
                 [Audited]
+                [OperationEffect(EffectKind.Write)]
                 public Task CreateBoutiqueAsync()
                 {
                     return Task.CompletedTask;
@@ -336,7 +349,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             }
             """;
 
-        var expected = Mutating0750(16, 17, 16, 36, "CreateBoutiqueAsync", "BoutiqueService");
+        var expected = Mutating0750(17, 17, 17, 36, "CreateBoutiqueAsync", "BoutiqueService");
         await AnalyzerVerify.FiresAsync<MutatingApiScopeAnalyzer>(source, expected);
     }
 
@@ -359,6 +372,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             [ScopeResourceMarker]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 public Task CreateBoutiqueAsync()
                 {
                     return Task.CompletedTask;
@@ -366,7 +380,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             }
             """;
 
-        var expected = Mutating0750(16, 17, 16, 36, "CreateBoutiqueAsync", "BoutiqueService");
+        var expected = Mutating0750(17, 17, 17, 36, "CreateBoutiqueAsync", "BoutiqueService");
         await AnalyzerVerify.FiresAsync<MutatingApiScopeAnalyzer>(source, expected);
     }
 
@@ -382,6 +396,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             [Api(null)]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 public ValueTask CreateBoutiqueAsync()
                 {
                     return ValueTask.CompletedTask;
@@ -389,12 +404,12 @@ public sealed class AuthorizationAnalyzerHeavyTests
             }
             """;
 
-        var expected = Mutating0750(9, 22, 9, 41, "CreateBoutiqueAsync", "BoutiqueService");
+        var expected = Mutating0750(10, 22, 10, 41, "CreateBoutiqueAsync", "BoutiqueService");
         await AnalyzerVerify.FiresAsync<MutatingApiScopeAnalyzer>(source, expected);
     }
 
     [Fact]
-    public async Task Atelier0750_FiresOnMutatingMethodReturningCustomAwaitable()
+    public async Task Atelier0750_FiresOnWriteEffectMethodReturningCustomAwaitable()
     {
         const string source = """
             using Atelier.Framework.Attributes;
@@ -408,6 +423,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             [Api(null)]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 public Promise CreateBoutiqueAsync()
                 {
                     return default;
@@ -415,7 +431,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             }
             """;
 
-        var expected = Mutating0750(12, 20, 12, 39, "CreateBoutiqueAsync", "BoutiqueService");
+        var expected = Mutating0750(13, 20, 13, 39, "CreateBoutiqueAsync", "BoutiqueService");
         await AnalyzerVerify.FiresAsync<MutatingApiScopeAnalyzer>(source, expected);
     }
 
@@ -477,7 +493,7 @@ public sealed class AuthorizationAnalyzerHeavyTests
             }
             """;
 
-        var expected = Claim0741(15, 104, 15, 115, "\"raw-value\"");
+        var expected = Claim0741(15, 100, 15, 111, "\"raw-value\"");
         await AnalyzerVerify.FiresAsync<ClosedSetAuthorizationLiteralAnalyzer>(source, expected);
     }
 

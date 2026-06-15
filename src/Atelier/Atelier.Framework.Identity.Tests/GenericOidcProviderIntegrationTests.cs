@@ -118,6 +118,7 @@ public sealed class GenericOidcProviderIntegrationTests
             ClientId = CLIENT_ID,
             ClientSecret = "secret",
             RequireHttps = false,
+            AllowInsecureValidation = true,
         };
 
         var oidcConfiguration = new OidcConfiguration

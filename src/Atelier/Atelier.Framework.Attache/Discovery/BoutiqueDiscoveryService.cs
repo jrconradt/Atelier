@@ -19,6 +19,7 @@ public partial class BoutiqueDiscoveryService : IAtelier, IBoutiqueDiscoveryServ
     private readonly ConcurrentDictionary<string, AvailableBoutique> _boutiques = new();
 
     [Operation("DiscoverBoutiquesAsync")]
+    [OperationEffect(EffectKind.Read)]
     public Task<Outcome<IEnumerable<AvailableBoutique>>> DiscoverBoutiquesAsync(
         CancellationToken cancellationToken = default)
     {
@@ -35,6 +36,7 @@ public partial class BoutiqueDiscoveryService : IAtelier, IBoutiqueDiscoveryServ
     }
 
     [Operation("DiscoverBoutiqueAsync")]
+    [OperationEffect(EffectKind.Read)]
     public Task<Outcome<AvailableBoutique>> DiscoverBoutiqueAsync(
         string boutiqueId,
         CancellationToken cancellationToken = default)
@@ -66,6 +68,7 @@ public partial class BoutiqueDiscoveryService : IAtelier, IBoutiqueDiscoveryServ
     }
 
     [Operation("RegisterBoutiqueAsync")]
+    [OperationEffect(EffectKind.Write)]
     public Task<Outcome> RegisterBoutiqueAsync(
         AvailableBoutique boutique,
         CancellationToken cancellationToken = default)
@@ -85,6 +88,7 @@ public partial class BoutiqueDiscoveryService : IAtelier, IBoutiqueDiscoveryServ
     }
 
     [Operation("UnregisterBoutiqueAsync")]
+    [OperationEffect(EffectKind.Write)]
     public Task<Outcome> UnregisterBoutiqueAsync(
         string boutiqueId,
         CancellationToken cancellationToken = default)
@@ -110,6 +114,7 @@ public partial class BoutiqueDiscoveryService : IAtelier, IBoutiqueDiscoveryServ
     }
 
     [Operation("UpdateEndpointsAsync")]
+    [OperationEffect(EffectKind.Write)]
     public Task<Outcome> UpdateEndpointsAsync(
         string boutiqueId,
         List<BoutiqueEndpoint> endpoints,
