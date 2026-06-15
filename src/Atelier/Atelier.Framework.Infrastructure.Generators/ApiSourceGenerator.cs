@@ -50,7 +50,8 @@ public class ApiSourceGenerator : IIncrementalGenerator
             return null;
         }
 
-        return new ApiEndpointResult($"{classSymbol.Name}_ApiEndpoints.g.cs", source);
+        var namespacePart = classSymbol.ContainingNamespace.ToDisplayString().Replace(".", "_");
+        return new ApiEndpointResult($"{namespacePart}_{classSymbol.Name}_ApiEndpoints.g.cs", source);
     }
 }
 

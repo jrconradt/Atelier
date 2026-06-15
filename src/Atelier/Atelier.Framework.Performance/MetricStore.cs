@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 
 namespace Atelier.Framework.Performance;
 
@@ -6,7 +7,7 @@ internal sealed class MetricStore
 {
     private const int MAX_SAMPLES_PER_KEY = 4096;
 
-    private readonly ConcurrentDictionary<string, ConcurrentQueue<PerformanceMetric>> _metrics = new();
+    private readonly ConcurrentDictionary<string, ImmutableQueue<PerformanceMetric>> _metrics = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _keysByComponent = new();
     private readonly TimeSpan _retentionWindow;
 
@@ -18,12 +19,13 @@ internal sealed class MetricStore
     public void Record(PerformanceMetric metric)
     {
         var key = $"{metric.Component}:{metric.Operation}";
-        var queue = _metrics.GetOrAdd(key, _ => new ConcurrentQueue<PerformanceMetric>());
 
         var componentKeys = _keysByComponent.GetOrAdd(metric.Component, _ => new ConcurrentDictionary<string, byte>());
         componentKeys.TryAdd(key, 0);
 
-        queue.Enqueue(metric);
+        _metrics.AddOrUpdate(key,
+                             _ => ImmutableQueue.Create(metric),
+                             (_, existing) => existing.Enqueue(metric));
     }
 
     private DateTime EffectiveStart(DateTime windowStart)
@@ -129,29 +131,49 @@ internal sealed class MetricStore
 
         foreach (var key in _metrics.Keys)
         {
-            if (!_metrics.TryGetValue(key, out var queue))
+            if (!_metrics.TryGetValue(key, out var snapshot))
             {
                 continue;
             }
 
-            while (queue.TryPeek(out var oldest)
-                   && oldest.Timestamp < windowStart)
+            var retained = new List<PerformanceMetric>();
+            var original = 0;
+
+            foreach (var metric in snapshot)
             {
-                queue.TryDequeue(out _);
+                original++;
+
+                if (metric.Timestamp >= windowStart)
+                {
+                    retained.Add(metric);
+                }
             }
 
-            while (queue.Count > MAX_SAMPLES_PER_KEY)
+            var excess = retained.Count - MAX_SAMPLES_PER_KEY;
+
+            if (excess > 0)
             {
-                queue.TryDequeue(out _);
+                retained.RemoveRange(0, excess);
             }
 
-            if (queue.IsEmpty)
+            if (retained.Count == 0)
             {
-                if (_metrics.TryRemove(new KeyValuePair<string, ConcurrentQueue<PerformanceMetric>>(key, queue)))
+                if (_metrics.TryRemove(new KeyValuePair<string, ImmutableQueue<PerformanceMetric>>(key, snapshot)))
                 {
                     RemoveFromIndex(key);
                 }
+
+                continue;
             }
+
+            if (retained.Count == original)
+            {
+                continue;
+            }
+
+            _metrics.TryUpdate(key,
+                               ImmutableQueue.CreateRange(retained),
+                               snapshot);
         }
     }
 

@@ -73,7 +73,7 @@ public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDis
     {
         if (Interlocked.CompareExchange(
                 ref _state.Value,
-                (int)AttacheState.Running,
+                (int)AttacheState.Starting,
                 (int)AttacheState.Created) != (int)AttacheState.Created)
         {
             return Task.CompletedTask;
@@ -82,8 +82,12 @@ public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDis
         var verification = _auditChannel.VerifyChain();
         if (!verification.IsIntact)
         {
+            Volatile.Write(ref _state.Value, (int)AttacheState.Failed);
             Observe(LogLevel.Error, values: [("InstanceId", InstanceId), ("AuditChainIntact", false), ("FirstBreakSequence", verification.FirstBreakSequence ?? -1), ("FirstBreakReason", verification.FirstBreakReason ?? string.Empty), ("AnchorSequence", verification.AnchorSequence)]);
+            return Task.CompletedTask;
         }
+
+        Volatile.Write(ref _state.Value, (int)AttacheState.Running);
 
         Observe(LogLevel.Information, values: [("InstanceId", InstanceId)]);
 

@@ -135,7 +135,10 @@ public partial class StateMachineInstance<T> : IAtelier, IStateMachineInstance, 
             IsHealthy = true;
             LastTransition = DateTime.UtcNow;
             CurrentState = StateMachine.CurrentState;
-            await _monitor.RecordTransitionAsync(this, transitionName, cancellationToken).ConfigureAwait(false);
+            if (_monitor is not null)
+            {
+                await _monitor.RecordTransitionAsync(this, transitionName, cancellationToken).ConfigureAwait(false);
+            }
             return Outcome.Success();
         }
         finally
@@ -210,6 +213,11 @@ public partial class StateMachineInstance<T> : IAtelier, IStateMachineInstance, 
     {
         ArgumentNullException.ThrowIfNull(from);
         ArgumentNullException.ThrowIfNull(to);
+
+        if (_monitor is null)
+        {
+            return;
+        }
 
         var recordTask = _monitor.RecordStateChangeAsync(
             this,

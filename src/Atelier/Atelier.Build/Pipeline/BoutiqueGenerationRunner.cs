@@ -12,6 +12,8 @@ public sealed record GeneratedBoutiques(
 
 public sealed class BoutiqueGenerationRunner
 {
+    private const int HOST_PORT_STRIDE = 100;
+
     private readonly BuildContext _context;
     private readonly BuildPresenter _presenter;
     private readonly OutputPathResolver _outputPathResolver;
@@ -110,6 +112,11 @@ public sealed class BoutiqueGenerationRunner
         var allSchemas = new List<BoutiqueYamlSchema>();
         var allResolved = new List<ResolvedBoutique>();
 
+        var hostPortOffsets = boutiqueDefinitions
+            .OrderBy(definition => definition.Name, StringComparer.Ordinal)
+            .Select((definition, index) => (definition.Name, Offset: index * HOST_PORT_STRIDE))
+            .ToDictionary(entry => entry.Name, entry => entry.Offset, StringComparer.Ordinal);
+
         foreach (var definition in boutiqueDefinitions)
         {
             var outputDir = _outputPathResolver.ResolveBoutiqueOutputDirectory(definition, boutiquesDir);
@@ -120,7 +127,7 @@ public sealed class BoutiqueGenerationRunner
 
             try
             {
-                var schema = ConvertToSchema(definition);
+                var schema = ConvertToSchema(definition, hostPortOffsets[definition.Name]);
                 allSchemas.Add(schema);
 
                 var dependencyGraph = AnalyzeBoutiqueDependencies(schema, compiledAssembliesDir);
@@ -362,7 +369,7 @@ public sealed class BoutiqueGenerationRunner
         return await generator.GenerateAsync(schema, dependencyGraph, resolved, outputDirectory).ConfigureAwait(false);
     }
 
-    private static BoutiqueYamlSchema ConvertToSchema(BoutiqueDefinition definition)
+    private static BoutiqueYamlSchema ConvertToSchema(BoutiqueDefinition definition, int hostPortOffset)
     {
         return new BoutiqueYamlSchema
         {
@@ -403,7 +410,7 @@ public sealed class BoutiqueGenerationRunner
             Docker = new DockerYaml
             {
                 Ports = BuildPortsList(definition.Ports),
-                PortMappings = BuildPortMappings(definition.Ports),
+                PortMappings = BuildPortMappings(definition.Ports, hostPortOffset),
                 Env = definition.Docker?.EnvironmentVariables?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
                     ?? new Dictionary<string, string> { ["ASPNETCORE_ENVIRONMENT"] = "Production" },
                 Volumes = definition.Docker?.Volumes?.ToList() ?? [],
@@ -451,13 +458,13 @@ public sealed class BoutiqueGenerationRunner
         return portList;
     }
 
-    private static Dictionary<int, int> BuildPortMappings(PortConfiguration ports)
+    private static Dictionary<int, int> BuildPortMappings(PortConfiguration ports, int hostPortOffset)
     {
         var mappings = new Dictionary<int, int>
         {
-            [ports.Http] = ports.Http,
-            [ports.Grpc] = ports.Grpc,
-            [ports.Metrics] = ports.Metrics
+            [ports.Http] = ports.Http == DefaultPorts.Http ? ports.Http + hostPortOffset : ports.Http,
+            [ports.Grpc] = ports.Grpc == DefaultPorts.Grpc ? ports.Grpc + hostPortOffset : ports.Grpc,
+            [ports.Metrics] = ports.Metrics == DefaultPorts.Metrics ? ports.Metrics + hostPortOffset : ports.Metrics
         };
 
         if (ports.Gravity.HasValue)

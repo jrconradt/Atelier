@@ -156,14 +156,16 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
             emitContextAccessorField: emitContextAccessorField,
             emitContextAccessorProperty: emitContextAccessorProperty,
             existingAccessorMemberName: existingAccessorMember,
-            emitObserveMethod: needsObserve);
+            emitObserveMethod: needsObserve,
+            loggerType: loggerType,
+            contextAccessorType: contextAccessorType);
 
         if (string.IsNullOrEmpty(injectionCode))
         {
             return null;
         }
 
-        var namespacePart = classSymbol.ContainingNamespace.ToDisplayString().Replace(".", "_");
+        var namespacePart = GeneratorNaming.SanitizeNamespace(classSymbol.ContainingNamespace);
         var fileName = $"{namespacePart}_{classSymbol.Name}_RequisiteInjection.g.cs";
         return new RequisiteInjectionResult(fileName, injectionCode);
     }
@@ -313,7 +315,9 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
         bool emitContextAccessorField,
         bool emitContextAccessorProperty,
         string? existingAccessorMemberName,
-        bool emitObserveMethod)
+        bool emitObserveMethod,
+        INamedTypeSymbol? loggerType,
+        INamedTypeSymbol? contextAccessorType)
     {
         var className = classSymbol.Name;
         var namespaceName = classSymbol.ContainingNamespace.ToDisplayString();
@@ -362,7 +366,12 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
 
         if (emitConstructor)
         {
-            sectionItems.Add(BuildConstructor(classSymbol, className, orderedMembers));
+            sectionItems.Add(BuildConstructor(
+                classSymbol,
+                className,
+                orderedMembers,
+                loggerType,
+                contextAccessorType));
         }
 
         var sections = Sequence.BlankLines(sectionItems);
@@ -377,7 +386,7 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
         return new RequisiteFile
         {
             Namespace = namespaceName,
-            Pragmas = "#pragma warning disable CS8618",
+            Pragmas = "#pragma warning disable CS8618, CS8601",
             Usings = new[]
             {
                 "global::System",
@@ -391,23 +400,112 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
     private static Compositor BuildConstructor(
         INamedTypeSymbol classSymbol,
         string className,
-        List<RequisiteMember> orderedMembers)
+        List<RequisiteMember> orderedMembers,
+        INamedTypeSymbol? loggerType,
+        INamedTypeSymbol? contextAccessorType)
     {
+        var baseParamNames = GetBaseChainPassThroughNames(classSymbol, loggerType, contextAccessorType);
+
+        var ownParamNames = new HashSet<string>(
+            orderedMembers.Select(m => GeneratorNaming.ToParameterName(m.Name)),
+            StringComparer.Ordinal);
+
+        var baseArgNames = baseParamNames
+            .Where(n => ownParamNames.Contains(n))
+            .ToList();
+
         var parameters = Sequence.CommaList(orderedMembers.Select(m => (Compositor)BuildParameter(m)));
 
-        var assignments = Sequence.Lines(orderedMembers.Select(m => (Compositor)BuildAssignment(classSymbol, m)));
+        var ownMembers = baseArgNames.Count == 0
+            ? orderedMembers
+            : orderedMembers
+                .Where(m => !baseParamNames.Contains(GeneratorNaming.ToParameterName(m.Name)))
+                .ToList();
 
-        return new I.Constructor
+        var assignments = Sequence.Lines(ownMembers.Select(m => (Compositor)BuildAssignment(classSymbol, m)));
+
+        if (baseArgNames.Count == 0)
+        {
+            return new I.Constructor
+            {
+                ClassName = className,
+                Parameters = parameters,
+                Assignments = assignments,
+            };
+        }
+
+        var baseArguments = Sequence.CommaList(baseArgNames.Select(n => (Compositor)new I.BaseArgument
+        {
+            ParamName = n,
+        }));
+
+        return new I.ConstructorWithBase
         {
             ClassName = className,
             Parameters = parameters,
+            BaseArguments = baseArguments,
             Assignments = assignments,
         };
     }
 
+    private static HashSet<string> GetBaseChainPassThroughNames(
+        INamedTypeSymbol classSymbol,
+        INamedTypeSymbol? loggerType,
+        INamedTypeSymbol? contextAccessorType)
+    {
+        var empty = new HashSet<string>(StringComparer.Ordinal);
+
+        var baseType = classSymbol.BaseType;
+        if (baseType is null || baseType.SpecialType == SpecialType.System_Object)
+        {
+            return empty;
+        }
+
+        if (!ImplementsIAtelier(baseType)
+            || !IsPartialClass(baseType)
+            || HasExistingConstructor(baseType))
+        {
+            return empty;
+        }
+
+        return new HashSet<string>(
+            ComputeBaseCtorParamNames(baseType, loggerType, contextAccessorType),
+            StringComparer.Ordinal);
+    }
+
+    private static List<string> ComputeBaseCtorParamNames(
+        INamedTypeSymbol baseType,
+        INamedTypeSymbol? loggerType,
+        INamedTypeSymbol? contextAccessorType)
+    {
+        var members = GetRequisiteMembers(baseType);
+        var implementsIAtelier = ImplementsIAtelier(baseType);
+
+        if (implementsIAtelier && loggerType is not null)
+        {
+            members.Add(new RequisiteMember
+            {
+                Name = "Logger",
+            });
+        }
+
+        if (implementsIAtelier
+            && contextAccessorType is not null
+            && FindExistingContextAccessorMember(baseType, contextAccessorType) is null
+            && !ContextAccessorPropertyExistsInChain(baseType))
+        {
+            members.Add(new RequisiteMember
+            {
+                Name = "ContextAccessor",
+            });
+        }
+
+        return members.Select(m => GeneratorNaming.ToParameterName(m.Name)).ToList();
+    }
+
     private static Compositor BuildParameter(RequisiteMember member)
     {
-        var paramName = GeneratorNaming.ToCamelCase(member.Name);
+        var paramName = GeneratorNaming.ToParameterName(member.Name);
         var typeDisplay = member.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         if (!member.IsRequired && !member.Type.IsValueType && !typeDisplay.EndsWith("?"))
         {
@@ -423,21 +521,40 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
 
     private static Compositor BuildAssignment(INamedTypeSymbol classSymbol, RequisiteMember member)
     {
-        var paramName = GeneratorNaming.ToCamelCase(member.Name);
+        var paramName = GeneratorNaming.ToParameterName(member.Name);
         var useNullCheck = member.IsRequired && !member.Type.IsValueType;
+
+        if (!member.IsField && member.HasSetter)
+        {
+            return useNullCheck
+                ? new A.PropertyNullCheckedAssignment
+                {
+                    MemberName = member.Name,
+                    ParamName = paramName,
+                }
+                : new A.PropertyAssignment
+                {
+                    MemberName = member.Name,
+                    ParamName = paramName,
+                };
+        }
+
         var declaringType = member.DeclaringType ?? classSymbol;
         var declaringTypeName = declaringType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var reflectionMemberName = member.IsField
+            ? member.Name
+            : $"<{member.Name}>k__BackingField";
         return useNullCheck
             ? new A.NullCheckedAssignment
             {
                 DeclaringTypeName = declaringTypeName,
-                MemberName = member.Name,
+                MemberName = reflectionMemberName,
                 ParamName = paramName,
             }
             : new A.PlainAssignment
             {
                 DeclaringTypeName = declaringTypeName,
-                MemberName = member.Name,
+                MemberName = reflectionMemberName,
                 ParamName = paramName,
             };
     }
@@ -577,6 +694,7 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
                     Type = property.Type,
                     DeclaringType = property.ContainingType as INamedTypeSymbol,
                     IsField = false,
+                    HasSetter = property.SetMethod is not null,
                     IsRequired = isRequired,
                     IsRuntime = isRuntime,
                 });
@@ -619,6 +737,7 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
         public ITypeSymbol Type { get; set; } = null!;
         public INamedTypeSymbol? DeclaringType { get; set; }
         public bool IsField { get; set; }
+        public bool HasSetter { get; set; }
         public bool IsRequired { get; set; }
         public bool IsRuntime { get; set; }
         public bool IsLogger { get; set; }

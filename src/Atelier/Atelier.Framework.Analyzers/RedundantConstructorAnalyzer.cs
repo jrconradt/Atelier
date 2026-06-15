@@ -78,25 +78,26 @@ public class RedundantConstructorAnalyzer : DiagnosticAnalyzer
 
     private static bool IsRedundantConstructor(ConstructorDeclarationSyntax constructor)
     {
-
         if (constructor.Body == null)
         {
-
-            if (constructor.ExpressionBody != null)
-            {
-                return false;
-            }
-
-            return constructor.Initializer != null;
+            return false;
         }
 
-        if (constructor.Body.Statements.Count == 0)
+        if (constructor.Body.Statements.Count != 0)
         {
-
-            return constructor.Initializer != null &&
-                   constructor.Initializer.IsKind(SyntaxKind.BaseConstructorInitializer);
+            return false;
         }
 
-        return false;
+        if (constructor.Initializer == null)
+        {
+            return false;
+        }
+
+        if (!constructor.Initializer.IsKind(SyntaxKind.BaseConstructorInitializer))
+        {
+            return false;
+        }
+
+        return constructor.Initializer.ArgumentList.Arguments.Count == 0;
     }
 }

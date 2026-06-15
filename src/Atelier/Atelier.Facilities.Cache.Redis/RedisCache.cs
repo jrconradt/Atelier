@@ -8,7 +8,6 @@ using Atelier.Framework.Observability;
 using Atelier.Framework.Outcomes;
 using Atelier.Framework.Requisitions;
 using Atelier.Framework.Resilience;
-using StackExchange.Redis;
 
 namespace Atelier.Facilities.Cache.Redis;
 
@@ -40,7 +39,7 @@ public partial class RedisCache : ICache, IAtelier
 
         var lookup = await _resilience.ExecuteWithResilienceAsync(
             _resilience.RedisPipeline,
-            ct => MapTransient("Get", keyHash, () => _connection.StringGetAsync(scopedKey, ct)),
+            ct => Succeed(() => _connection.StringGetAsync(scopedKey, ct)),
             "Redis.Get",
             cancellationToken).ConfigureAwait(false);
 
@@ -112,7 +111,7 @@ public partial class RedisCache : ICache, IAtelier
 
         var write = await _resilience.ExecuteWithResilienceAsync(
             _resilience.RedisPipeline,
-            ct => MapTransient("Set", keyHash, () => _connection.StringSetAsync(scopedKey, value.Value, value.Ttl, ct)),
+            ct => Succeed(() => _connection.StringSetAsync(scopedKey, value.Value, value.Ttl, ct)),
             "Redis.Set",
             cancellationToken).ConfigureAwait(false);
 
@@ -155,7 +154,7 @@ public partial class RedisCache : ICache, IAtelier
 
         var removal = await _resilience.ExecuteWithResilienceAsync(
             _resilience.RedisPipeline,
-            ct => MapTransient("Remove", keyHash, () => _connection.KeyDeleteAsync(scopedKey, ct)),
+            ct => Succeed(() => _connection.KeyDeleteAsync(scopedKey, ct)),
             "Redis.Remove",
             cancellationToken).ConfigureAwait(false);
 
@@ -192,40 +191,9 @@ public partial class RedisCache : ICache, IAtelier
         return Convert.ToHexString(hash);
     }
 
-    private async Task<Outcome<T>> MapTransient<T>(
-        string operation,
-        string keyHash,
-        Func<Task<T>> call)
+    private static async Task<Outcome<T>> Succeed<T>(Func<Task<T>> call)
     {
-        try
-        {
-            return Outcome<T>.Success(await call().ConfigureAwait(false));
-        }
-        catch (RedisTimeoutException ex)
-        {
-            Observe(LogLevel.Warning, ex, values: [("Operation", operation), ("KeyHash", keyHash), ("Reason", "Redis operation timed out")]);
-            return Outcome<T>.Failure();
-        }
-        catch (RedisConnectionException ex)
-        {
-            Observe(LogLevel.Warning, ex, values: [("Operation", operation), ("KeyHash", keyHash), ("Reason", "Redis connection failed")]);
-            return Outcome<T>.Failure();
-        }
-        catch (RedisException ex)
-        {
-            Observe(LogLevel.Warning, ex, values: [("Operation", operation), ("KeyHash", keyHash), ("Reason", "Redis operation failed")]);
-            return Outcome<T>.Failure();
-        }
-        catch (ObjectDisposedException ex)
-        {
-            Observe(LogLevel.Warning, ex, values: [("Operation", operation), ("KeyHash", keyHash), ("Reason", "Redis connection has been disposed")]);
-            return Outcome<T>.Failure();
-        }
-        catch (InvalidOperationException ex)
-        {
-            Observe(LogLevel.Warning, ex, values: [("Operation", operation), ("KeyHash", keyHash), ("Reason", "Redis connection is not available")]);
-            return Outcome<T>.Failure();
-        }
+        return Outcome<T>.Success(await call().ConfigureAwait(false));
     }
 
     private bool Guard(

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Atelier.Framework.Context;
 using Atelier.Framework.Context.Validation;
+using Atelier.Framework.Infrastructure;
 
 using Atelier.Framework.Outcomes;
 namespace Atelier.Framework.Messaging.Serializers
@@ -55,7 +56,7 @@ namespace Atelier.Framework.Messaging.Serializers
 
             envelope.Results = context.Results
                 .Where(r => r.Value != null)
-                .ToDictionary(r => r.Key, r => r.Value);
+                .ToDictionary(r => r.Key, r => WrapResultValue(r.Value!));
 
             if (context.Authorization != null)
             {
@@ -202,13 +203,72 @@ namespace Atelier.Framework.Messaging.Serializers
             return Outcome<IContext>.Success(deserializedContext);
         }
 
-        private static object? UnwrapResultValue(object? value)
+        private static object WrapResultValue(object value)
+        {
+            var valueType = value.GetType();
+            return new TypedResultEnvelope
+            {
+                Type = valueType.AssemblyQualifiedName ?? valueType.FullName ?? valueType.Name,
+                Value = value
+            };
+        }
+
+        private object? UnwrapResultValue(object? value)
         {
             if (value is not JsonElement element)
             {
                 return value;
             }
 
+            if (element.ValueKind == JsonValueKind.Object
+                && element.TryGetProperty("type", out var typeProperty)
+                && element.TryGetProperty("value", out var valueProperty)
+                && typeProperty.ValueKind == JsonValueKind.String)
+            {
+                return ReconstructTypedValue(typeProperty, valueProperty);
+            }
+
+            return ReadJsonScalar(element);
+        }
+
+        private object? ReconstructTypedValue(JsonElement typeProperty, JsonElement valueProperty)
+        {
+            var resolved = SafeTypeResolver.Resolve(typeProperty.GetString());
+            if (resolved == null
+                || !IsAllowedResultType(resolved))
+            {
+                return null;
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize(valueProperty.GetRawText(), resolved, _jsonOptions);
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+            catch (NotSupportedException)
+            {
+                return null;
+            }
+        }
+
+        private static bool IsAllowedResultType(Type type)
+        {
+            return type.IsPrimitive
+                || type == typeof(string)
+                || type == typeof(DateTime)
+                || type == typeof(DateTimeOffset)
+                || type == typeof(TimeSpan)
+                || type == typeof(decimal)
+                || type == typeof(Guid)
+                || type.IsEnum
+                || (type.IsArray && type.GetElementType()?.IsPrimitive == true);
+        }
+
+        private static object? ReadJsonScalar(JsonElement element)
+        {
             switch (element.ValueKind)
             {
                 case JsonValueKind.String:
@@ -232,19 +292,18 @@ namespace Atelier.Framework.Messaging.Serializers
 
                     return element.GetDouble();
                 }
-                case JsonValueKind.Null:
-                {
-                    return null;
-                }
-                case JsonValueKind.Undefined:
-                {
-                    return null;
-                }
                 default:
                 {
                     return null;
                 }
             }
+        }
+
+        private sealed class TypedResultEnvelope
+        {
+            public string Type { get; set; } = string.Empty;
+
+            public object? Value { get; set; }
         }
     }
 }

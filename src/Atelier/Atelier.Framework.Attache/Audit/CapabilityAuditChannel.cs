@@ -20,6 +20,7 @@ public partial class CapabilityAuditChannel : IAtelier, ICapabilityAuditChannel,
     private const string GenesisHash = "";
     private const string AUDIT_PATH_ENV = "ATELIER_AUDIT_LOG_PATH";
     private const string DEFAULT_AUDIT_FILE = "atelier-capability-audit.jsonl";
+    private const string AUDIT_HMAC_KEY_ENV = "ATELIER_AUDIT_HMAC_KEY";
 
     private readonly ConcurrentQueue<CapabilityAuditEntry> _entries = new();
     private readonly ChainStateHolder _chain = new();
@@ -35,6 +36,8 @@ public partial class CapabilityAuditChannel : IAtelier, ICapabilityAuditChannel,
     {
         WriteIndented = false
     };
+
+    private readonly byte[]? _auditHmacKey = ResolveHmacKey();
 
     private readonly StrongBox<Task?> _durableWriter = new();
     private readonly TaskCompletionSource _writerClaim = new();
@@ -153,6 +156,20 @@ public partial class CapabilityAuditChannel : IAtelier, ICapabilityAuditChannel,
     {
         var entries = _entries.ToArray();
         var anchor = Volatile.Read(ref _checkpoint.Current);
+        var key = _auditHmacKey;
+        if (key is null)
+        {
+            return new CapabilityAuditChainVerification
+            {
+                IsIntact = false,
+                VerifiedEntryCount = 0,
+                FirstBreakSequence = null,
+                FirstBreakReason = $"{AUDIT_HMAC_KEY_ENV} is not configured",
+                AnchorHash = anchor.Hash,
+                AnchorSequence = anchor.Sequence
+            };
+        }
+
         var expectedPrevious = anchor.Hash;
         var expectedSequence = anchor.Sequence + 1;
 
@@ -187,6 +204,7 @@ public partial class CapabilityAuditChannel : IAtelier, ICapabilityAuditChannel,
             }
 
             var recomputed = ComputeEntryHash(
+                key,
                 entry.Sequence,
                 entry.Timestamp,
                 entry.Decision,
@@ -240,6 +258,9 @@ public partial class CapabilityAuditChannel : IAtelier, ICapabilityAuditChannel,
     {
         EnsureDurableWriter();
 
+        var key = _auditHmacKey
+            ?? throw new InvalidOperationException($"{AUDIT_HMAC_KEY_ENV} is not configured; the capability audit chain refuses to record unkeyed entries");
+
         CapabilityAuditEntry entry;
         while (true)
         {
@@ -248,6 +269,7 @@ public partial class CapabilityAuditChannel : IAtelier, ICapabilityAuditChannel,
             var timestamp = DateTime.UtcNow;
             var previousHash = current.LastHash;
             var entryHash = ComputeEntryHash(
+                key,
                 sequence,
                 timestamp,
                 decision,
@@ -384,7 +406,19 @@ public partial class CapabilityAuditChannel : IAtelier, ICapabilityAuditChannel,
         return Path.Combine(directory, DEFAULT_AUDIT_FILE);
     }
 
+    private static byte[]? ResolveHmacKey()
+    {
+        var configured = Environment.GetEnvironmentVariable(AUDIT_HMAC_KEY_ENV);
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            return null;
+        }
+
+        return Encoding.UTF8.GetBytes(configured);
+    }
+
     private static string ComputeEntryHash(
+        byte[] key,
         long sequence,
         DateTime timestamp,
         CapabilityAuditDecision decision,
@@ -414,7 +448,7 @@ public partial class CapabilityAuditChannel : IAtelier, ICapabilityAuditChannel,
             Frame(isAuthenticated ? "1" : "0"),
             Frame(previousHash));
 
-        var digest = SHA256.HashData(Encoding.UTF8.GetBytes(canonical));
+        var digest = HMACSHA256.HashData(key, Encoding.UTF8.GetBytes(canonical));
         return Convert.ToHexStringLower(digest);
     }
 

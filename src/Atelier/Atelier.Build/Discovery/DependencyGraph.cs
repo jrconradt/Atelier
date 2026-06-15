@@ -28,7 +28,7 @@ public class DependencyGraph
     {
         var visited = new HashSet<string>();
         var recursionStack = new HashSet<string>();
-        var result = new Stack<BoutiqueDefinition>();
+        var result = new List<BoutiqueDefinition>();
 
         foreach (var node in _nodes.Keys.OrderBy(n => n, StringComparer.Ordinal))
         {
@@ -45,14 +45,14 @@ public class DependencyGraph
             }
         }
 
-        return result.ToList();
+        return result;
     }
 
     private string? TopologicalSortVisit(
         string root,
         HashSet<string> visited,
         HashSet<string> recursionStack,
-        Stack<BoutiqueDefinition> result)
+        List<BoutiqueDefinition> result)
     {
         var work = new Stack<(string Node, IEnumerator<string> Children)>();
 
@@ -84,7 +84,7 @@ public class DependencyGraph
             {
                 work.Pop();
                 recursionStack.Remove(frame.Node);
-                result.Push(_nodes[frame.Node]);
+                result.Add(_nodes[frame.Node]);
             }
         }
 

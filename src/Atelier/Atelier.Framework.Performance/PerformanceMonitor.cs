@@ -1,5 +1,6 @@
 using Atelier.Framework.Primitives;
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using Atelier.Framework.Infrastructure;
 using Atelier.Framework.Attributes;
 using Atelier.Framework.Infrastructure.Operation;
@@ -30,7 +31,7 @@ public partial class PerformanceMonitor : IAtelier, IPerformanceMonitor, Microso
     private const int MAX_SAMPLES_PER_KEY = 4096;
 
     [Requisite] protected readonly IPerformanceProfiler _profiler = null!;
-    private readonly ConcurrentDictionary<string, ConcurrentQueue<PerformanceMetric>> _metricsStore = new();
+    private readonly ConcurrentDictionary<string, ImmutableQueue<PerformanceMetric>> _metricsStore = new();
     private readonly ConcurrentDictionary<string, PerformanceBudget> _budgets = new();
     private readonly MonitoringState _state = new();
 
@@ -230,8 +231,9 @@ public partial class PerformanceMonitor : IAtelier, IPerformanceMonitor, Microso
             }
         };
 
-        var queue = _metricsStore.GetOrAdd(key, _ => new ConcurrentQueue<PerformanceMetric>());
-        queue.Enqueue(metric);
+        _metricsStore.AddOrUpdate(key,
+                                  _ => ImmutableQueue.Create(metric),
+                                  (_, existing) => existing.Enqueue(metric));
     }
 
     [Operation("RegisterBudget")]
@@ -295,26 +297,45 @@ public partial class PerformanceMonitor : IAtelier, IPerformanceMonitor, Microso
 
         foreach (var key in _metricsStore.Keys)
         {
-            if (!_metricsStore.TryGetValue(key, out var queue))
+            if (!_metricsStore.TryGetValue(key, out var snapshot))
             {
                 continue;
             }
 
-            while (queue.TryPeek(out var oldest)
-                   && oldest.Timestamp < cutoff)
+            var retained = new List<PerformanceMetric>();
+            var original = 0;
+
+            foreach (var metric in snapshot)
             {
-                queue.TryDequeue(out _);
+                original++;
+
+                if (metric.Timestamp >= cutoff)
+                {
+                    retained.Add(metric);
+                }
             }
 
-            while (queue.Count > MAX_SAMPLES_PER_KEY)
+            var excess = retained.Count - MAX_SAMPLES_PER_KEY;
+
+            if (excess > 0)
             {
-                queue.TryDequeue(out _);
+                retained.RemoveRange(0, excess);
             }
 
-            if (queue.IsEmpty)
+            if (retained.Count == 0)
             {
-                _metricsStore.TryRemove(new KeyValuePair<string, ConcurrentQueue<PerformanceMetric>>(key, queue));
+                _metricsStore.TryRemove(new KeyValuePair<string, ImmutableQueue<PerformanceMetric>>(key, snapshot));
+                continue;
             }
+
+            if (retained.Count == original)
+            {
+                continue;
+            }
+
+            _metricsStore.TryUpdate(key,
+                                    ImmutableQueue.CreateRange(retained),
+                                    snapshot);
         }
     }
 }

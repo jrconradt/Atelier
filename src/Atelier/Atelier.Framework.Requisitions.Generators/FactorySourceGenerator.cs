@@ -97,7 +97,8 @@ public sealed class FactorySourceGenerator : BaseSourceGenerator
         }
 
         var factoryCode = GenerateFactoryCode(typeSymbol, lifecycleInfo, ctx.SemanticModel.Compilation);
-        var factoryFileName = $"{typeSymbol.Name}Factory.g.cs";
+        var namespacePart = GeneratorNaming.SanitizeNamespace(typeSymbol.ContainingNamespace);
+        var factoryFileName = $"{namespacePart}_{typeSymbol.Name}Factory.g.cs";
 
         string? poolFileName = null;
         string? poolCode = null;
@@ -105,7 +106,7 @@ public sealed class FactorySourceGenerator : BaseSourceGenerator
         if (lifecycleInfo.IsPooled)
         {
             poolCode = GeneratePoolCode(typeSymbol, lifecycleInfo);
-            poolFileName = $"{typeSymbol.Name}Pool.g.cs";
+            poolFileName = $"{namespacePart}_{typeSymbol.Name}Pool.g.cs";
         }
 
         var registration = new RegistrationInfo(

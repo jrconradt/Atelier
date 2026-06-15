@@ -93,19 +93,7 @@ public class OperationNullValidationCodeFixProvider : CodeFixProvider
                         SyntaxKind.SimpleMemberAccessExpression,
                         SyntaxFactory.ParseTypeName(outcomeType),
                         SyntaxFactory.IdentifierName("Failure")))
-                .WithArgumentList(
-                    SyntaxFactory.ArgumentList(
-                        SyntaxFactory.SeparatedList(new[]
-                        {
-                            SyntaxFactory.Argument(
-                                SyntaxFactory.LiteralExpression(
-                                    SyntaxKind.StringLiteralExpression,
-                                    SyntaxFactory.Literal($"Parameter '{parameter.Name}' cannot be null"))),
-                            SyntaxFactory.Argument(
-                                SyntaxFactory.LiteralExpression(
-                                    SyntaxKind.StringLiteralExpression,
-                                    SyntaxFactory.Literal("INVALID_PARAMETER")))
-                        }))));
+                .WithArgumentList(SyntaxFactory.ArgumentList()));
 
             var ifStatement = SyntaxFactory.IfStatement(
                 condition,

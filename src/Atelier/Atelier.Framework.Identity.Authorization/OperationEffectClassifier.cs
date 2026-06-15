@@ -58,15 +58,20 @@ public static class OperationEffectClassifier
 
     public static bool IsMutatingOperation(string methodName)
     {
+        return !IsConfidentReadOperation(methodName);
+    }
+
+    private static bool IsConfidentReadOperation(string methodName)
+    {
         if (string.IsNullOrEmpty(methodName))
         {
-            return true;
+            return false;
         }
 
-        var stripped = methodName.EndsWith("Async") ? methodName.Substring(0, methodName.Length - 5) : methodName;
+        var stripped = methodName.EndsWith("Async") ? methodName.Substring(0, methodName.Length - "Async".Length) : methodName;
         if (string.IsNullOrWhiteSpace(stripped))
         {
-            return true;
+            return false;
         }
 
         var lowered = stripped.ToLowerInvariant();
@@ -83,39 +88,57 @@ public static class OperationEffectClassifier
 
         if (matchedPrefix.Length == 0)
         {
-            return true;
+            return false;
         }
 
-        if (IsLexicallyAmbiguous(lowered, matchedPrefix))
+        return !RemainderShowsMutationSignal(stripped.Substring(matchedPrefix.Length));
+    }
+
+    private static bool RemainderShowsMutationSignal(string remainder)
+    {
+        foreach (var word in SplitRemainderWords(remainder))
         {
-            return true;
+            foreach (var conjunction in CONJUNCTION_TOKENS)
+            {
+                if (word == conjunction)
+                {
+                    return true;
+                }
+            }
+
+            foreach (var token in MUTATOR_TOKENS)
+            {
+                if (word.StartsWith(token))
+                {
+                    return true;
+                }
+            }
         }
 
         return false;
     }
 
-    public static bool IsLexicallyAmbiguous(string loweredStrippedName,
-                                            string matchedReaderPrefix)
+    private static List<string> SplitRemainderWords(string remainder)
     {
-        var remainder = loweredStrippedName.Substring(matchedReaderPrefix.Length);
-
-        foreach (var token in MUTATOR_TOKENS)
+        var words = new List<string>();
+        var current = new List<char>();
+        foreach (var character in remainder)
         {
-            if (remainder.Contains(token))
+            if (char.IsUpper(character)
+                && current.Count > 0)
             {
-                return true;
+                words.Add(new string(current.ToArray()).ToLowerInvariant());
+                current = new List<char>();
             }
+
+            current.Add(character);
         }
 
-        foreach (var conjunction in CONJUNCTION_TOKENS)
+        if (current.Count > 0)
         {
-            if (remainder.StartsWith(conjunction)
-                && remainder.Length > conjunction.Length)
-            {
-                return true;
-            }
+            words.Add(new string(current.ToArray()).ToLowerInvariant());
         }
 
-        return false;
+        return words;
     }
 }

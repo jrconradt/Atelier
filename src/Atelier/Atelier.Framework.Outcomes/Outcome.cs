@@ -86,7 +86,7 @@ public struct Outcome<T> : IOutcome<T>
     }
 
     public static implicit operator Outcome<T>(T data)
-        => Success(data);
+        => data is null ? Failure() : Success(data);
 
     public static bool operator ==(Outcome<T> left, Outcome<T> right)
         => left.IsSuccess == right.IsSuccess
@@ -170,7 +170,14 @@ public static class OutcomeExtensions
             return Outcome<U>.Failure();
         }
 
-        return Outcome<U>.Success(selector(outcome.Data));
+        var projected = selector(outcome.Data);
+
+        if (projected is null)
+        {
+            return Outcome<U>.Failure();
+        }
+
+        return Outcome<U>.Success(projected);
     }
 
     public static R Match<T, R>(this Outcome<T> outcome,

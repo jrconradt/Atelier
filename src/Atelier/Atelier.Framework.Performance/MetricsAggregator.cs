@@ -256,6 +256,16 @@ public partial class MetricsAggregator : IAtelier, IMetricsAggregator
         var firstHalf = values.Take(values.Count / 2).Average();
         var secondHalf = values.Skip(values.Count / 2).Average();
 
+        if (firstHalf == 0)
+        {
+            if (secondHalf == 0)
+            {
+                return TrendDirection.Stable;
+            }
+
+            return secondHalf > 0 ? TrendDirection.Increasing : TrendDirection.Decreasing;
+        }
+
         var changePercent = Math.Abs((secondHalf - firstHalf) / firstHalf * 100);
 
         if (changePercent < 5)
