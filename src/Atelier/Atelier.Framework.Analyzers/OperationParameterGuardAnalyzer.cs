@@ -377,8 +377,7 @@ public sealed class OperationParameterGuardAnalyzer : DiagnosticAnalyzer
             }
 
             if (current is BinaryExpressionSyntax binary
-                && (binary.IsKind(SyntaxKind.LogicalOrExpression)
-                    || binary.IsKind(SyntaxKind.LogicalAndExpression)))
+                && binary.IsKind(SyntaxKind.LogicalOrExpression))
             {
                 work.Push(binary.Left);
                 work.Push(binary.Right);

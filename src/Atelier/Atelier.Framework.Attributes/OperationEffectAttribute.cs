@@ -7,7 +7,7 @@ public enum EffectKind
 }
 
 [AttributeUsage(
-    AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Interface,
+    AttributeTargets.Method,
     AllowMultiple = false,
     Inherited = true)]
 public sealed class OperationEffectAttribute : Attribute

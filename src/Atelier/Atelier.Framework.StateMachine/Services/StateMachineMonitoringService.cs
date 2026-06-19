@@ -29,7 +29,6 @@ public partial class StateMachineMonitoringService : IAtelier, IStateMachineMoni
         public CancellationTokenSource? Stopping;
     }
 
-    [Operation("StartMonitoring")]
     public Task<Outcome> StartMonitoringAsync(CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -87,7 +86,6 @@ public partial class StateMachineMonitoringService : IAtelier, IStateMachineMoni
         }
     }
 
-    [Operation("StopMonitoring")]
     public async Task<Outcome> StopMonitoringAsync(CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested)

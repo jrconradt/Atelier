@@ -70,33 +70,7 @@ public static class ScopeRequirementResolver
     private static EffectKind? ResolveDeclaredEffect(MethodInfo method)
     {
         var methodAttribute = method.GetCustomAttribute<OperationEffectAttribute>(inherit: true);
-        if (methodAttribute != null)
-        {
-            return methodAttribute.Effect;
-        }
-
-        var declaringType = method.DeclaringType;
-        if (declaringType == null)
-        {
-            return null;
-        }
-
-        var typeAttribute = declaringType.GetCustomAttribute<OperationEffectAttribute>(inherit: true);
-        if (typeAttribute != null)
-        {
-            return typeAttribute.Effect;
-        }
-
-        foreach (var contract in declaringType.GetInterfaces())
-        {
-            var contractAttribute = contract.GetCustomAttribute<OperationEffectAttribute>(inherit: true);
-            if (contractAttribute != null)
-            {
-                return contractAttribute.Effect;
-            }
-        }
-
-        return null;
+        return methodAttribute?.Effect;
     }
 
     private static Type? ResolveScopePairType(MethodInfo method)

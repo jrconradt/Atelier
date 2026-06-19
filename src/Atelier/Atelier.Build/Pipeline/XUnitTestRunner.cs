@@ -1,3 +1,5 @@
+using System.Xml;
+using System.Xml.Linq;
 using Atelier.Build.Utils;
 
 namespace Atelier.Build.Pipeline;
@@ -131,7 +133,7 @@ public sealed class XUnitTestRunner
         var projects = new List<string>();
 
         foreach (var csproj in Directory.EnumerateFiles(_context.SolutionRoot,
-                                                        "*.Tests.csproj",
+                                                        "*.csproj",
                                                         SearchOption.AllDirectories))
         {
             if (IsBuildArtifactPath(csproj))
@@ -139,8 +141,7 @@ public sealed class XUnitTestRunner
                 continue;
             }
 
-            var text = File.ReadAllText(csproj);
-            if (text.Contains("Include=\"xunit\"", StringComparison.Ordinal))
+            if (ReferencesXUnit(csproj))
             {
                 projects.Add(csproj);
             }
@@ -148,6 +149,37 @@ public sealed class XUnitTestRunner
 
         projects.Sort(StringComparer.Ordinal);
         return projects;
+    }
+
+    private static bool ReferencesXUnit(string csprojPath)
+    {
+        XDocument document;
+
+        try
+        {
+            document = XDocument.Load(csprojPath);
+        }
+        catch (XmlException)
+        {
+            return false;
+        }
+
+        foreach (var reference in document.Descendants().Where(element => element.Name.LocalName == "PackageReference"))
+        {
+            var include = reference.Attribute("Include")?.Value;
+            if (include is null)
+            {
+                continue;
+            }
+
+            if (string.Equals(include, "xunit", StringComparison.OrdinalIgnoreCase)
+                || include.StartsWith("xunit.", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsBuildArtifactPath(string path)

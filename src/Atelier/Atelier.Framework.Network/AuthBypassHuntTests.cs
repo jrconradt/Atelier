@@ -66,11 +66,6 @@ public static class AuthBypassHuntTests
         public void ListBoutiquesReadOnly()
         {
         }
-
-        [RequiresScope(Scopes.Boutique.READ)]
-        public void UndeclaredEffectExplicitScope()
-        {
-        }
     }
 
     [ScopeResource(typeof(BlankWriteResource))]
@@ -238,18 +233,6 @@ public static class AuthBypassHuntTests
         var readerOnly = Principal(SUBJECT, Scopes.Boutique.READ);
 
         IsTrue(ScopeAuthorizationEvaluator.IsAuthorized(readerOnly, required), "A principal holding READ must be authorized to call a Read-effect operation");
-    }
-
-    [GeneratedTest("network.scope.bypass.undeclared-effect-fails-closed", TARGET)]
-    public static void UndeclaredOperationEffectFailsClosed()
-    {
-        var required = ScopeRequirementResolver.ResolveRequiredScopes(Method<NameInferenceService>(nameof(NameInferenceService.UndeclaredEffectExplicitScope)));
-
-        IsTrue(required.FailClosed, "An operation on a [ScopeResource] type that declares no [OperationEffect] must fail closed: the tier is not derivable");
-
-        var holdsRead = Principal(SUBJECT, Scopes.Boutique.READ);
-
-        IsTrue(!ScopeAuthorizationEvaluator.IsAuthorized(holdsRead, required), "A fail-closed requirement must deny even a principal holding the explicitly named scope");
     }
 
     [GeneratedTest("network.scope.bypass.blank-write-field-not-admitted", TARGET)]

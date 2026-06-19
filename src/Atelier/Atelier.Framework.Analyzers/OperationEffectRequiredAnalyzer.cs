@@ -18,7 +18,7 @@ public sealed class OperationEffectRequiredAnalyzer : DiagnosticAnalyzer
         "Security",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Scope-tier derivation reads the READ or WRITE const from the [ScopeResource]-bound type to authorize an operation. The read-versus-write tier is taken from a declared [OperationEffect], not from the method name. An exposed operation on a [ScopeResource] target that declares no effect on the method, no type-level or interface-level [OperationEffect] default, and no explicit [RequiresScope]/[RequiresScopeContract] has no determinable tier; it is refused at compile time so a deceptively named method cannot resolve to the wrong tier at runtime.",
+        description: "Scope-tier derivation reads the READ or WRITE const from the [ScopeResource]-bound type to authorize an operation. The read-versus-write tier is taken from a method-level [OperationEffect], never from the method name, a type-level or interface-level default, or a [RequiresScope]/[RequiresScopeContract] declaration. An exposed operation on a [ScopeResource] target that declares no method-level [OperationEffect] has no determinable tier; it is refused at compile time so a deceptively named method cannot resolve to the wrong tier, or silently fail closed, at runtime.",
         customTags: new[] { WellKnownDiagnosticTags.Compiler });
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
@@ -62,7 +62,7 @@ public sealed class OperationEffectRequiredAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            if (HasDeterminableEffect(methodSymbol, typeSymbol))
+            if (HasDeterminableEffect(methodSymbol))
             {
                 continue;
             }
@@ -75,30 +75,9 @@ public sealed class OperationEffectRequiredAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    private static bool HasDeterminableEffect(IMethodSymbol method,
-                                              INamedTypeSymbol containingType)
+    private static bool HasDeterminableEffect(IMethodSymbol method)
     {
-        if (HasAttribute(method, "OperationEffectAttribute"))
-        {
-            return true;
-        }
-
-        if (HasScopeAttribute(method))
-        {
-            return true;
-        }
-
-        if (TypeOrInterfacesHaveOperationEffect(containingType))
-        {
-            return true;
-        }
-
-        if (HasScopeAttribute(containingType))
-        {
-            return true;
-        }
-
-        return false;
+        return HasAttribute(method, "OperationEffectAttribute");
     }
 
     private static bool TypeOrInterfacesHaveScopeResource(INamedTypeSymbol typeSymbol)
@@ -117,30 +96,6 @@ public sealed class OperationEffectRequiredAnalyzer : DiagnosticAnalyzer
         }
 
         return false;
-    }
-
-    private static bool TypeOrInterfacesHaveOperationEffect(INamedTypeSymbol typeSymbol)
-    {
-        if (HasAttribute(typeSymbol, "OperationEffectAttribute"))
-        {
-            return true;
-        }
-
-        foreach (var interfaceSymbol in typeSymbol.AllInterfaces)
-        {
-            if (HasAttribute(interfaceSymbol, "OperationEffectAttribute"))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool HasScopeAttribute(ISymbol symbol)
-    {
-        return HasAttribute(symbol, "RequiresScopeAttribute")
-            || HasAttribute(symbol, "RequiresScopeContractAttribute");
     }
 
     private static bool HasAttribute(ISymbol symbol,

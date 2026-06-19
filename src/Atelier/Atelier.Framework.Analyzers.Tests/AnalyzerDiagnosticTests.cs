@@ -574,7 +574,7 @@ public sealed class AnalyzerDiagnosticTests
     }
 
     [Fact]
-    public async Task Atelier0751_SilentWhenOperationHasExplicitScope()
+    public async Task Atelier0751_FiresWhenOperationHasExplicitScopeButNoEffect()
     {
         const string source = """
             using Atelier.Framework.Attributes;
@@ -598,7 +598,11 @@ public sealed class AnalyzerDiagnosticTests
             }
             """;
 
-        await AnalyzerVerify.SilentAsync<OperationEffectRequiredAnalyzer>(source);
+        var expected = new DiagnosticResult("ATELIER0751", Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .WithSpan(15, 19, 15, 30)
+            .WithArguments("GetOrCreate", "BoutiqueService");
+
+        await AnalyzerVerify.FiresAsync<OperationEffectRequiredAnalyzer>(source, expected);
     }
 
     [Fact]

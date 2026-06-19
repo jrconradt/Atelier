@@ -31,12 +31,12 @@ public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDis
     private readonly ConcurrentDictionary<Guid, Func<CapabilityNotice, CancellationToken, Task>> _noticeHandlers = new();
 
     private readonly StrongBox<AttacheConfiguration> _configuration = new(new AttacheConfiguration());
-    private readonly StrongBox<int> _state = new((int)AttacheState.Created);
+    private readonly StrongBox<AttacheState> _state = new(AttacheState.Created);
 
     private readonly ProcessResourceSampler _sampler = new();
 
     public string InstanceId { get; } = Guid.NewGuid().ToString();
-    public AttacheState State => (AttacheState)Volatile.Read(ref _state.Value);
+    public AttacheState State => _state.Value;
     public AttacheConfiguration Configuration => _configuration.Value!;
 
     public Outcome Configure(AttacheConfiguration configuration)
@@ -49,10 +49,7 @@ public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDis
             return Outcome.Failure();
         }
 
-        var observed = (AttacheState)Interlocked.CompareExchange(
-            ref _state.Value,
-            (int)AttacheState.Created,
-            (int)AttacheState.Created);
+        var observed = _state.Value;
 
         if (observed != AttacheState.Created)
         {
@@ -71,23 +68,22 @@ public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDis
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        if (Interlocked.CompareExchange(
-                ref _state.Value,
-                (int)AttacheState.Starting,
-                (int)AttacheState.Created) != (int)AttacheState.Created)
+        if (_state.Value != AttacheState.Created)
         {
             return Task.CompletedTask;
         }
+
+        _state.Value = AttacheState.Starting;
 
         var verification = _auditChannel.VerifyChain();
         if (!verification.IsIntact)
         {
-            Volatile.Write(ref _state.Value, (int)AttacheState.Failed);
+            _state.Value = AttacheState.Failed;
             Observe(LogLevel.Error, values: [("InstanceId", InstanceId), ("AuditChainIntact", false), ("FirstBreakSequence", verification.FirstBreakSequence ?? -1), ("FirstBreakReason", verification.FirstBreakReason ?? string.Empty), ("AnchorSequence", verification.AnchorSequence)]);
             return Task.CompletedTask;
         }
 
-        Volatile.Write(ref _state.Value, (int)AttacheState.Running);
+        _state.Value = AttacheState.Running;
 
         Observe(LogLevel.Information, values: [("InstanceId", InstanceId)]);
 
@@ -96,13 +92,12 @@ public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDis
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        if (Interlocked.CompareExchange(
-                ref _state.Value,
-                (int)AttacheState.Stopped,
-                (int)AttacheState.Running) != (int)AttacheState.Running)
+        if (_state.Value != AttacheState.Running)
         {
             return Task.CompletedTask;
         }
+
+        _state.Value = AttacheState.Stopped;
 
         Observe(LogLevel.Information, values: [("InstanceId", InstanceId)]);
 
