@@ -1,7 +1,5 @@
-using Atelier.Framework.Primitives;
 using Atelier.Framework.Infrastructure;
 using Atelier.Framework.Observability;
-using Atelier.Framework.Infrastructure.Operation;
 using Atelier.Framework.Outcomes;
 using Atelier.Framework.Properties;
 using Atelier.Framework.Requisitions;
@@ -17,8 +15,6 @@ public interface IStateMachineLifecycleInfo
     public TimeSpan? AutoCleanupTimeout { get; }
     public DateTime LastActivity { get; }
 }
-
-[Infrastructure(InfrastructureLifetime.Transient)]
 
 public partial class StateMachineInstance<T> : IAtelier, IStateMachineInstance, IStateMachineLifecycleInfo where T : IStateMachine
 {

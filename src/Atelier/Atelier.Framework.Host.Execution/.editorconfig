@@ -2,3 +2,6 @@ root = true
 
 [*.cs]
 dotnet_diagnostic.ATELIER1503.severity = none
+
+[*Tests.cs]
+dotnet_diagnostic.ATE1004.severity = none

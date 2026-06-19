@@ -1,7 +1,4 @@
-using Atelier.Framework.Primitives;
 using Atelier.Framework.Attributes;
-using Atelier.Framework.Identity.Configuration;
-using Atelier.Framework.Identity.Interfaces;
 using Atelier.Framework.Identity.Models;
 using Atelier.Framework.Identity.Services;
 using Atelier.Framework.Observability;
@@ -12,7 +9,6 @@ using System.Text.Json;
 namespace Atelier.Framework.Identity.Providers;
 
 [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
-[Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class Auth0OidcProvider : GenericOidcProvider, IAtelier
 {
     public override async Task<Outcome<OidcUserInfo>> GetUserInfoAsync(

@@ -1,9 +1,5 @@
-using Atelier.Framework.Primitives;
-using Atelier.Framework.Attributes;
-
 namespace Atelier.Framework.Queueing.Primitives;
 
-[Infrastructure(InfrastructureLifetime.Singleton)]
 public class TaskQueueConfiguration
 {
     public int Capacity { get; set; } = 1000;

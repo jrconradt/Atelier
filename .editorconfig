@@ -165,3 +165,9 @@ dotnet_diagnostic.ATELIER1404.severity = none
 dotnet_diagnostic.ATELIER1503.severity = none
 dotnet_diagnostic.ATELIER1610.severity = none
 dotnet_diagnostic.ATE1002.severity = none
+
+[**/*Tests.cs]
+dotnet_diagnostic.ATE1004.severity = none
+
+[**/benchmarks/**/*.cs]
+dotnet_diagnostic.ATE1004.severity = none

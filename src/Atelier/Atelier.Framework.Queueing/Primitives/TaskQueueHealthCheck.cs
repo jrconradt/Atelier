@@ -1,8 +1,6 @@
 using Atelier.Framework.Primitives;
-using Atelier.Framework.Infrastructure;
 using Atelier.Framework.Attributes;
 using Atelier.Framework.Observability;
-using Atelier.Framework.Infrastructure.Operation;
 using Atelier.Framework.Outcomes;
 using Atelier.Framework.Requisitions;
 
@@ -179,7 +177,6 @@ public class TaskQueueHealthStatus
     public Exception? Exception { get; init; }
 }
 
-[Infrastructure(InfrastructureLifetime.Singleton)]
 public class TaskQueueHealthConfiguration
 {
     public double WarningThresholdPercent { get; set; } = 75.0;
