@@ -138,7 +138,8 @@ public partial class OidcAuthenticationMiddleware : IAtelier
         }
 
         return _options.ExcludedPaths.Any(excludedPath =>
-            path.StartsWith(excludedPath, StringComparison.OrdinalIgnoreCase));
+            string.Equals(path, excludedPath, StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith($"{excludedPath}/", StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task<Outcome<Atelier.Framework.Context.AuthorizationContext>> CreateAuthorizationContextFromTokenAsync(

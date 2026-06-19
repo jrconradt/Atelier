@@ -235,7 +235,7 @@ public partial class GenericOidcProvider : IAtelier, IOidcProvider
     {
         if (string.IsNullOrEmpty(expectedState))
         {
-            return Outcome.Success();
+            return Outcome.Failure();
         }
 
         if (string.Equals(expectedState, returnedState, StringComparison.Ordinal))
@@ -788,7 +788,8 @@ public partial class GenericOidcProvider : IAtelier, IOidcProvider
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(url);
 
-        if (!_config.RequireHttps)
+        if (!_config.RequireHttps
+            && _config.AllowInsecureValidation)
         {
             return Outcome.Success();
         }

@@ -363,7 +363,7 @@ public static class BoutiqueResolver
                 ? Math.Max(1, maxCpuPercent.Value / 25).ToString()
                 : null,
             MemoryLimit = maxMemoryBytes.HasValue
-                ? $"{maxMemoryBytes.Value / (1024 * 1024 * 1024)}G"
+                ? $"{maxMemoryBytes.Value / (1024 * 1024)}M"
                 : null,
         };
     }

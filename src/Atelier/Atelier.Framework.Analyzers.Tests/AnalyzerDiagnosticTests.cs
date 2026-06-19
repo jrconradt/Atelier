@@ -62,7 +62,7 @@ public sealed class AnalyzerDiagnosticTests
 
             namespace Sample;
 
-            [Infrastructure(InfrastructureLifetime.Singleton)]
+            [Infrastructure(Atelier.Framework.Primitives.InfrastructureLifetime.Singleton)]
             public sealed class CounterService
             {
                 private int _count;
@@ -84,7 +84,7 @@ public sealed class AnalyzerDiagnosticTests
 
             namespace Sample;
 
-            [Infrastructure(InfrastructureLifetime.Singleton)]
+            [Infrastructure(Atelier.Framework.Primitives.InfrastructureLifetime.Singleton)]
             public sealed class ClockService
             {
                 private readonly string _name = "clock";
@@ -183,7 +183,7 @@ public sealed class AnalyzerDiagnosticTests
 
             namespace Sample;
 
-            [Infrastructure(InfrastructureLifetime.Scoped)]
+            [Infrastructure(Atelier.Framework.Primitives.InfrastructureLifetime.Scoped)]
             public sealed class PaymentGateway
             {
             }
@@ -324,7 +324,7 @@ public sealed class AnalyzerDiagnosticTests
     }
 
     [Fact]
-    public async Task Atelier0750_FiresOnMutatingApiMethodWithoutScope()
+    public async Task Atelier0750_FiresOnWriteEffectApiMethodWithoutScope()
     {
         const string source = """
             using System.Threading.Tasks;
@@ -335,6 +335,7 @@ public sealed class AnalyzerDiagnosticTests
             [Api(null)]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 public Task CreateBoutiqueAsync()
                 {
                     return Task.CompletedTask;
@@ -343,14 +344,14 @@ public sealed class AnalyzerDiagnosticTests
             """;
 
         var expected = new DiagnosticResult("ATELIER0750", Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
-            .WithSpan(9, 17, 9, 36)
+            .WithSpan(10, 17, 10, 36)
             .WithArguments("CreateBoutiqueAsync", "BoutiqueService");
 
         await AnalyzerVerify.FiresAsync<MutatingApiScopeAnalyzer>(source, expected);
     }
 
     [Fact]
-    public async Task Atelier0750_SilentOnReaderApiMethod()
+    public async Task Atelier0750_SilentOnReadEffectApiMethod()
     {
         const string source = """
             using System.Threading.Tasks;
@@ -361,6 +362,7 @@ public sealed class AnalyzerDiagnosticTests
             [Api(null)]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Read)]
                 public Task DiscoverBoutiquesAsync()
                 {
                     return Task.CompletedTask;
@@ -399,6 +401,7 @@ public sealed class AnalyzerDiagnosticTests
             [ScopeResource(typeof(BoutiqueScopes))]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 public Task CreateBoutiqueAsync()
                 {
                     return Task.CompletedTask;
@@ -421,6 +424,7 @@ public sealed class AnalyzerDiagnosticTests
             [Api(null)]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 [RequiresScope("atelier.boutique.write")]
                 public Task CreateBoutiqueAsync()
                 {
@@ -444,6 +448,7 @@ public sealed class AnalyzerDiagnosticTests
             [Api(null)]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 [AllowAnonymous]
                 public Task CreateBoutiqueAsync()
                 {
@@ -456,7 +461,7 @@ public sealed class AnalyzerDiagnosticTests
     }
 
     [Fact]
-    public async Task Atelier0750_FiresOnMutatingApiMethodWithNonTaskReturn()
+    public async Task Atelier0750_FiresOnWriteEffectApiMethodWithNonTaskReturn()
     {
         const string source = """
             using Atelier.Framework.Attributes;
@@ -466,6 +471,7 @@ public sealed class AnalyzerDiagnosticTests
             [Api(null)]
             public sealed class BoutiqueService
             {
+                [OperationEffect(EffectKind.Write)]
                 public string CreateBoutique()
                 {
                     return "x";
@@ -474,21 +480,27 @@ public sealed class AnalyzerDiagnosticTests
             """;
 
         var expected = new DiagnosticResult("ATELIER0750", Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
-            .WithSpan(8, 19, 8, 33)
+            .WithSpan(9, 19, 9, 33)
             .WithArguments("CreateBoutique", "BoutiqueService");
 
         await AnalyzerVerify.FiresAsync<MutatingApiScopeAnalyzer>(source, expected);
     }
 
     [Fact]
-    public async Task Atelier0751_FiresOnGetOrCreateApiMethod()
+    public async Task Atelier0751_FiresOnScopeResourceOperationWithoutEffect()
     {
         const string source = """
             using Atelier.Framework.Attributes;
 
             namespace Sample;
 
-            [Api(null)]
+            public static class BoutiqueScopes
+            {
+                public const string READ = "atelier.boutique.read";
+                public const string WRITE = "atelier.boutique.write";
+            }
+
+            [ScopeResource(typeof(BoutiqueScopes))]
             public sealed class BoutiqueService
             {
                 public string GetOrCreate()
@@ -499,24 +511,87 @@ public sealed class AnalyzerDiagnosticTests
             """;
 
         var expected = new DiagnosticResult("ATELIER0751", Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
-            .WithSpan(8, 19, 8, 30)
+            .WithSpan(14, 19, 14, 30)
             .WithArguments("GetOrCreate", "BoutiqueService");
 
-        await AnalyzerVerify.FiresAsync<AmbiguousOperationNameAnalyzer>(source, expected);
+        await AnalyzerVerify.FiresAsync<OperationEffectRequiredAnalyzer>(source, expected);
     }
 
     [Fact]
-    public async Task Atelier0751_FiresOnListAndArchiveApiMethod()
+    public async Task Atelier0751_FiresOnInterfaceCarriedScopeResourceOperationWithoutEffect()
     {
         const string source = """
             using Atelier.Framework.Attributes;
 
             namespace Sample;
 
-            [Api(null)]
+            public static class BoutiqueScopes
+            {
+                public const string READ = "atelier.boutique.read";
+                public const string WRITE = "atelier.boutique.write";
+            }
+
+            [ScopeResource(typeof(BoutiqueScopes))]
+            public interface IBoutiqueContract
+            {
+                void ListAndArchive();
+            }
+            """;
+
+        var expected = new DiagnosticResult("ATELIER0751", Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .WithSpan(14, 10, 14, 24)
+            .WithArguments("ListAndArchive", "IBoutiqueContract");
+
+        await AnalyzerVerify.FiresAsync<OperationEffectRequiredAnalyzer>(source, expected);
+    }
+
+    [Fact]
+    public async Task Atelier0751_SilentWhenOperationDeclaresEffect()
+    {
+        const string source = """
+            using Atelier.Framework.Attributes;
+
+            namespace Sample;
+
+            public static class BoutiqueScopes
+            {
+                public const string READ = "atelier.boutique.read";
+                public const string WRITE = "atelier.boutique.write";
+            }
+
+            [ScopeResource(typeof(BoutiqueScopes))]
             public sealed class BoutiqueService
             {
-                public string ListAndArchive()
+                [OperationEffect(EffectKind.Write)]
+                public string GetOrCreate()
+                {
+                    return "x";
+                }
+            }
+            """;
+
+        await AnalyzerVerify.SilentAsync<OperationEffectRequiredAnalyzer>(source);
+    }
+
+    [Fact]
+    public async Task Atelier0751_FiresWhenOperationHasExplicitScopeButNoEffect()
+    {
+        const string source = """
+            using Atelier.Framework.Attributes;
+
+            namespace Sample;
+
+            public static class BoutiqueScopes
+            {
+                public const string READ = "atelier.boutique.read";
+                public const string WRITE = "atelier.boutique.write";
+            }
+
+            [ScopeResource(typeof(BoutiqueScopes))]
+            public sealed class BoutiqueService
+            {
+                [RequiresScope("atelier.boutique.write")]
+                public string GetOrCreate()
                 {
                     return "x";
                 }
@@ -524,52 +599,30 @@ public sealed class AnalyzerDiagnosticTests
             """;
 
         var expected = new DiagnosticResult("ATELIER0751", Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
-            .WithSpan(8, 19, 8, 33)
-            .WithArguments("ListAndArchive", "BoutiqueService");
+            .WithSpan(15, 19, 15, 30)
+            .WithArguments("GetOrCreate", "BoutiqueService");
 
-        await AnalyzerVerify.FiresAsync<AmbiguousOperationNameAnalyzer>(source, expected);
+        await AnalyzerVerify.FiresAsync<OperationEffectRequiredAnalyzer>(source, expected);
     }
 
     [Fact]
-    public async Task Atelier0751_SilentOnCleanReaderApiMethod()
+    public async Task Atelier0751_SilentWhenTypeIsNotScopeResource()
     {
         const string source = """
             using Atelier.Framework.Attributes;
 
             namespace Sample;
 
-            [Api(null)]
             public sealed class BoutiqueService
             {
-                public string GetBoutique()
+                public string GetOrCreate()
                 {
                     return "x";
                 }
             }
             """;
 
-        await AnalyzerVerify.SilentAsync<AmbiguousOperationNameAnalyzer>(source);
-    }
-
-    [Fact]
-    public async Task Atelier0751_SilentOnCleanMutatorApiMethod()
-    {
-        const string source = """
-            using Atelier.Framework.Attributes;
-
-            namespace Sample;
-
-            [Api(null)]
-            public sealed class BoutiqueService
-            {
-                public string CreateBoutique()
-                {
-                    return "x";
-                }
-            }
-            """;
-
-        await AnalyzerVerify.SilentAsync<AmbiguousOperationNameAnalyzer>(source);
+        await AnalyzerVerify.SilentAsync<OperationEffectRequiredAnalyzer>(source);
     }
 
     [Fact]

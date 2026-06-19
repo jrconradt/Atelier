@@ -364,14 +364,12 @@ public partial class EventStreamOffsetStore : IAtelier, IEventStreamOffsetStore
 
     private Task PersistGroupAsync(string consumerGroup, CancellationToken ct)
     {
-        var snapshot = SnapshotGroup(consumerGroup);
-
         while (true)
         {
             var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             var hasPrevious = _persistChains.TryGetValue(consumerGroup, out var previous);
 
-            var next = ChainWriteAsync(gate.Task, previous, consumerGroup, snapshot, ct);
+            var next = ChainWriteAsync(gate.Task, previous, consumerGroup, ct);
 
             if (hasPrevious)
             {
@@ -411,7 +409,6 @@ public partial class EventStreamOffsetStore : IAtelier, IEventStreamOffsetStore
         Task gate,
         Task? previous,
         string consumerGroup,
-        Dictionary<string, long> snapshot,
         CancellationToken ct)
     {
         await gate.ConfigureAwait(false);
@@ -427,16 +424,17 @@ public partial class EventStreamOffsetStore : IAtelier, IEventStreamOffsetStore
             }
         }
 
-        await WriteGroupFileAsync(consumerGroup, snapshot, ct).ConfigureAwait(false);
+        await WriteGroupFileAsync(consumerGroup, ct).ConfigureAwait(false);
     }
 
     private async Task WriteGroupFileAsync(
         string consumerGroup,
-        Dictionary<string, long> snapshot,
         CancellationToken ct)
     {
         var directory = _options.Value.OffsetStoreDirectory;
         Directory.CreateDirectory(directory);
+
+        var snapshot = SnapshotGroup(consumerGroup);
 
         var path = GroupFilePath(consumerGroup);
         var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";

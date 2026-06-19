@@ -329,6 +329,7 @@ public partial class TopicConsumptionProcessor : IAtelier
                     Interlocked.Exchange(ref _currentOffset, streamEvent.Offset);
                     currentOffset = streamEvent.Offset + 1;
                     uncommittedOffset = currentOffset;
+                    processedSinceCommit++;
                     continue;
                 }
 

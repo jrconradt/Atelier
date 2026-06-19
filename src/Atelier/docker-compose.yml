@@ -42,7 +42,7 @@ services:
         limits:
           cpus: "3"
 
-          memory: 4G
+          memory: 4096M
 
 
     read_only: true
@@ -77,11 +77,11 @@ services:
 
 
     ports:
-      - "8080:8080"
+      - "8180:8080"
 
-      - "8081:8081"
+      - "8181:8081"
 
-      - "9090:9090"
+      - "9190:9090"
 
 
     volumes:
@@ -99,7 +99,7 @@ services:
         limits:
           cpus: "3"
 
-          memory: 4G
+          memory: 4096M
 
 
     read_only: true
@@ -134,11 +134,11 @@ services:
 
 
     ports:
-      - "8080:8080"
+      - "8280:8080"
 
-      - "8081:8081"
+      - "8281:8081"
 
-      - "9090:9090"
+      - "9290:9090"
 
 
     volumes:
@@ -156,7 +156,7 @@ services:
         limits:
           cpus: "3"
 
-          memory: 4G
+          memory: 4096M
 
 
     read_only: true
@@ -191,11 +191,11 @@ services:
 
 
     ports:
-      - "8080:8080"
+      - "8380:8080"
 
-      - "8081:8081"
+      - "8381:8081"
 
-      - "9090:9090"
+      - "9390:9090"
 
 
     volumes:
@@ -213,7 +213,7 @@ services:
         limits:
           cpus: "3"
 
-          memory: 4G
+          memory: 4096M
 
 
     read_only: true
@@ -248,11 +248,11 @@ services:
 
 
     ports:
-      - "8080:8080"
+      - "8480:8080"
 
-      - "8081:8081"
+      - "8481:8081"
 
-      - "9090:9090"
+      - "9490:9090"
 
 
     volumes:
@@ -270,7 +270,7 @@ services:
         limits:
           cpus: "3"
 
-          memory: 4G
+          memory: 4096M
 
 
     read_only: true
@@ -305,11 +305,11 @@ services:
 
 
     ports:
-      - "8080:8080"
+      - "8580:8080"
 
-      - "8081:8081"
+      - "8581:8081"
 
-      - "9090:9090"
+      - "9590:9090"
 
 
     volumes:
@@ -327,7 +327,7 @@ services:
         limits:
           cpus: "3"
 
-          memory: 4G
+          memory: 4096M
 
 
     read_only: true
@@ -362,11 +362,11 @@ services:
 
 
     ports:
-      - "8080:8080"
+      - "8680:8080"
 
-      - "8081:8081"
+      - "8681:8081"
 
-      - "9090:9090"
+      - "9690:9090"
 
 
     volumes:
@@ -384,7 +384,7 @@ services:
         limits:
           cpus: "3"
 
-          memory: 4G
+          memory: 4096M
 
 
     read_only: true
@@ -419,11 +419,11 @@ services:
 
 
     ports:
-      - "8080:8080"
+      - "8780:8080"
 
-      - "8081:8081"
+      - "8781:8081"
 
-      - "9090:9090"
+      - "9790:9090"
 
 
     volumes:
@@ -441,7 +441,7 @@ services:
         limits:
           cpus: "3"
 
-          memory: 4G
+          memory: 4096M
 
 
     read_only: true
@@ -476,11 +476,11 @@ services:
 
 
     ports:
-      - "8080:8080"
+      - "8880:8080"
 
-      - "8081:8081"
+      - "8881:8081"
 
-      - "9090:9090"
+      - "9890:9090"
 
 
     volumes:
@@ -498,7 +498,7 @@ services:
         limits:
           cpus: "3"
 
-          memory: 4G
+          memory: 4096M
 
 
     read_only: true
@@ -533,11 +533,11 @@ services:
 
 
     ports:
-      - "8080:8080"
+      - "8980:8080"
 
-      - "8081:8081"
+      - "8981:8081"
 
-      - "9090:9090"
+      - "9990:9090"
 
 
     volumes:
@@ -555,7 +555,7 @@ services:
         limits:
           cpus: "3"
 
-          memory: 4G
+          memory: 4096M
 
 
     read_only: true
@@ -590,11 +590,11 @@ services:
 
 
     ports:
-      - "8080:8080"
+      - "9080:8080"
 
-      - "8081:8081"
+      - "9081:8081"
 
-      - "9090:9090"
+      - "10090:9090"
 
 
     volumes:
@@ -612,7 +612,7 @@ services:
         limits:
           cpus: "3"
 
-          memory: 4G
+          memory: 4096M
 
 
     read_only: true

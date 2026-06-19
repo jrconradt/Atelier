@@ -17,6 +17,8 @@ public partial class InMemoryCache : ICache, IAtelier
 {
     [Requisite] private readonly IContextAccessor _contextAccessor = null!;
 
+    private const int SWEEP_SAMPLE_INTERVAL = 64;
+
     private readonly ConcurrentDictionary<string, StoredEntry> _entries = new(StringComparer.Ordinal);
 
     public Task<Outcome<CacheLookup>> GetAsync(
@@ -114,8 +116,14 @@ public partial class InMemoryCache : ICache, IAtelier
             return Task.FromResult(Outcome.Failure());
         }
 
-        var expiresAt = value.Ttl is { } ttl ? DateTimeOffset.UtcNow + ttl : (DateTimeOffset?)null;
+        var now = DateTimeOffset.UtcNow;
+        var expiresAt = value.Ttl is { } ttl ? now + ttl : (DateTimeOffset?)null;
         _entries[scopedKey] = new StoredEntry(value.Value, expiresAt);
+
+        if (Random.Shared.Next(SWEEP_SAMPLE_INTERVAL) == 0)
+        {
+            SweepExpired(now);
+        }
 
         return Task.FromResult(Outcome.Success());
     }
@@ -147,6 +155,18 @@ public partial class InMemoryCache : ICache, IAtelier
         _entries.TryRemove(scopedKey, out _);
 
         return Task.FromResult(Outcome.Success());
+    }
+
+    private void SweepExpired(DateTimeOffset now)
+    {
+        foreach (var entry in _entries)
+        {
+            if (entry.Value.ExpiresAt is { } expiresAt
+                && expiresAt <= now)
+            {
+                _entries.TryRemove(entry);
+            }
+        }
     }
 
     private static string? Guard(

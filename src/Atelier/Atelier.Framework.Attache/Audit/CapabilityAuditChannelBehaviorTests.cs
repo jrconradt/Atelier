@@ -5,6 +5,12 @@ namespace Atelier.Framework.Attache.Audit;
 public static class CapabilityAuditChannelBehaviorTests
 {
     private const string AUDIT_PATH_ENV = "ATELIER_AUDIT_LOG_PATH";
+    private const string AUDIT_HMAC_KEY_ENV = "ATELIER_AUDIT_HMAC_KEY";
+
+    static CapabilityAuditChannelBehaviorTests()
+    {
+        Environment.SetEnvironmentVariable(AUDIT_HMAC_KEY_ENV, "atelier-test-audit-hmac-key");
+    }
 
     private static CapabilityAuditChannel NewChannel(out string? priorPath, out string path)
     {

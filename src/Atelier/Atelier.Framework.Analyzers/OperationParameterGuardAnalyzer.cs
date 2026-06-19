@@ -285,10 +285,12 @@ public sealed class OperationParameterGuardAnalyzer : DiagnosticAnalyzer
                 return result;
             }
 
-            var nullChecked = ExtractNullCheckedIdentifier(ifStmt.Condition);
-            if (nullChecked != null && paramNames.Contains(nullChecked))
+            foreach (var name in ExtractNullCheckedIdentifiers(ifStmt.Condition))
             {
-                result.Add(nullChecked);
+                if (paramNames.Contains(name))
+                {
+                    result.Add(name);
+                }
             }
 
             foreach (var name in ExtractIsNullOrCheckedIdentifiers(ifStmt.Condition))
@@ -358,7 +360,41 @@ public sealed class OperationParameterGuardAnalyzer : DiagnosticAnalyzer
         return null;
     }
 
-        private static IEnumerable<string> ExtractIsNullOrCheckedIdentifiers(ExpressionSyntax condition)
+    private static IEnumerable<string> ExtractNullCheckedIdentifiers(ExpressionSyntax condition)
+    {
+        var result = new List<string>();
+        var work = new Stack<ExpressionSyntax>();
+        work.Push(condition);
+
+        while (work.Count > 0)
+        {
+            var current = work.Pop();
+
+            if (current is ParenthesizedExpressionSyntax paren)
+            {
+                work.Push(paren.Expression);
+                continue;
+            }
+
+            if (current is BinaryExpressionSyntax binary
+                && binary.IsKind(SyntaxKind.LogicalOrExpression))
+            {
+                work.Push(binary.Left);
+                work.Push(binary.Right);
+                continue;
+            }
+
+            var single = ExtractNullCheckedIdentifier(current);
+            if (single != null)
+            {
+                result.Add(single);
+            }
+        }
+
+        return result;
+    }
+
+    private static IEnumerable<string> ExtractIsNullOrCheckedIdentifiers(ExpressionSyntax condition)
     {
         foreach (var node in condition.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
         {
@@ -405,7 +441,7 @@ public sealed class OperationParameterGuardAnalyzer : DiagnosticAnalyzer
 
     private static bool NodeDereferencesParam(SyntaxNode node, string paramName)
     {
-        foreach (var descendant in node.DescendantNodes())
+        foreach (var descendant in node.DescendantNodesAndSelf())
         {
 
             if (descendant is MemberAccessExpressionSyntax mae &&

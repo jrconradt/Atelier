@@ -60,7 +60,12 @@ public static class NamingConventions
 
     public static bool IsReaderMethod(string methodName)
     {
-        var stripped = methodName.EndsWith("Async") ? methodName.Substring(0, methodName.Length - 5) : methodName;
+        if (string.IsNullOrEmpty(methodName))
+        {
+            return false;
+        }
+
+        var stripped = methodName.EndsWith("Async") ? methodName.Substring(0, methodName.Length - "Async".Length) : methodName;
         if (string.IsNullOrWhiteSpace(stripped))
         {
             return false;
@@ -83,37 +88,55 @@ public static class NamingConventions
             return false;
         }
 
-        if (IsLexicallyAmbiguous(methodLower, matchedPrefix))
-        {
-            return false;
-        }
-
-        return true;
+        return !RemainderShowsMutationSignal(stripped.Substring(matchedPrefix.Length));
     }
 
-    public static bool IsLexicallyAmbiguous(string loweredStrippedName,
-                                            string matchedReaderPrefix)
+    private static bool RemainderShowsMutationSignal(string remainder)
     {
-        var remainder = loweredStrippedName.Substring(matchedReaderPrefix.Length);
-
-        foreach (var token in MUTATOR_TOKENS)
+        foreach (var word in SplitRemainderWords(remainder))
         {
-            if (remainder.Contains(token))
+            foreach (var conjunction in CONJUNCTION_TOKENS)
             {
-                return true;
+                if (word == conjunction)
+                {
+                    return true;
+                }
             }
-        }
 
-        foreach (var conjunction in CONJUNCTION_TOKENS)
-        {
-            if (remainder.StartsWith(conjunction)
-                && remainder.Length > conjunction.Length)
+            foreach (var token in MUTATOR_TOKENS)
             {
-                return true;
+                if (word.StartsWith(token))
+                {
+                    return true;
+                }
             }
         }
 
         return false;
+    }
+
+    private static List<string> SplitRemainderWords(string remainder)
+    {
+        var words = new List<string>();
+        var current = new List<char>();
+        foreach (var character in remainder)
+        {
+            if (char.IsUpper(character)
+                && current.Count > 0)
+            {
+                words.Add(new string(current.ToArray()).ToLowerInvariant());
+                current = new List<char>();
+            }
+
+            current.Add(character);
+        }
+
+        if (current.Count > 0)
+        {
+            words.Add(new string(current.ToArray()).ToLowerInvariant());
+        }
+
+        return words;
     }
 
     public static string ExtractResourceName(string className)

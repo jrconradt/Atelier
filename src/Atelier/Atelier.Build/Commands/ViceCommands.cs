@@ -54,7 +54,21 @@ public static class ViceCommands
                                                                                   filter,
                                                                                   maxNf,
                                                                                   allowlistPath)).ConfigureAwait(false);
-                    return outcome.ExitCode;
+
+                    var xunitExitCode = 0;
+                    if (string.IsNullOrEmpty(filter))
+                    {
+                        var xunitRunner = new XUnitTestRunner(buildContext);
+                        var xunitOutcome = await xunitRunner.RunAsync(dryRun).ConfigureAwait(false);
+                        xunitExitCode = xunitOutcome.ExitCode;
+                    }
+
+                    if (outcome.ExitCode != 0 || xunitExitCode != 0)
+                    {
+                        return 1;
+                    }
+
+                    return 0;
                 }
                 catch (Exception ex)
                 {

@@ -27,7 +27,7 @@ public partial class StateMachineInstance<T> : IAtelier, IStateMachineInstance, 
     private string _instanceId = string.Empty;
     [Requisite(Required = false)] protected readonly IStateMachineMonitor _monitor = null!;
 
-    private readonly StateTransitionCoordinator _coordinator = new();
+    private readonly Queue<DateTime> _recentTransitions = new();
 
     public StateMachineInstance() { }
 
@@ -44,27 +44,11 @@ public partial class StateMachineInstance<T> : IAtelier, IStateMachineInstance, 
     public IReadOnlyDictionary<string, string> Tags => Configuration.Tags ?? EmptyTags;
     public T StateMachine { get; private set; } = default(T)!;
 
-    private sealed record LifecycleSnapshot(string CurrentState, bool IsHealthy, DateTime? LastTransition);
+    public string CurrentState { get; private set; } = string.Empty;
 
-    private LifecycleSnapshot _lifecycle = new(string.Empty, true, null);
+    public bool IsHealthy { get; private set; } = true;
 
-    public string CurrentState
-    {
-        get => Volatile.Read(ref _lifecycle).CurrentState;
-        private set => Volatile.Write(ref _lifecycle, Volatile.Read(ref _lifecycle) with { CurrentState = value });
-    }
-
-    public bool IsHealthy
-    {
-        get => Volatile.Read(ref _lifecycle).IsHealthy;
-        private set => Volatile.Write(ref _lifecycle, Volatile.Read(ref _lifecycle) with { IsHealthy = value });
-    }
-
-    public DateTime? LastTransition
-    {
-        get => Volatile.Read(ref _lifecycle).LastTransition;
-        private set => Volatile.Write(ref _lifecycle, Volatile.Read(ref _lifecycle) with { LastTransition = value });
-    }
+    public DateTime? LastTransition { get; private set; }
 
     public DateTime CreatedAt { get; } = DateTime.UtcNow;
 
@@ -105,11 +89,7 @@ public partial class StateMachineInstance<T> : IAtelier, IStateMachineInstance, 
             return Outcome.Failure();
         }
 
-        var admitted = await _coordinator.EnterTransitionAsync(
-            Configuration.MaxTransitionsPerMinute,
-            cancellationToken).ConfigureAwait(false);
-
-        if (!admitted)
+        if (!TryAdmitTransition())
         {
             Observe(
                 LogLevel.Warning,
@@ -118,30 +98,53 @@ public partial class StateMachineInstance<T> : IAtelier, IStateMachineInstance, 
             return Outcome.Failure();
         }
 
-        try
+        var result = StateMachine.ExecuteTransition(transitionName);
+
+        if (!result.IsSuccess)
         {
-            var result = StateMachine.ExecuteTransition(transitionName);
+            IsHealthy = false;
+            Observe(
+                LogLevel.Warning,
+                null,
+                values: [("Reason", "State machine transition failed"), ("InstanceId", _instanceId), ("TransitionName", transitionName)]);
+            return Outcome.Failure();
+        }
 
-            if (!result.IsSuccess)
-            {
-                IsHealthy = false;
-                Observe(
-                    LogLevel.Warning,
-                    null,
-                    values: [("Reason", "State machine transition failed"), ("InstanceId", _instanceId), ("TransitionName", transitionName)]);
-                return Outcome.Failure();
-            }
-
-            IsHealthy = true;
-            LastTransition = DateTime.UtcNow;
-            CurrentState = StateMachine.CurrentState;
+        IsHealthy = true;
+        LastTransition = DateTime.UtcNow;
+        CurrentState = StateMachine.CurrentState;
+        if (_monitor is not null)
+        {
             await _monitor.RecordTransitionAsync(this, transitionName, cancellationToken).ConfigureAwait(false);
-            return Outcome.Success();
         }
-        finally
+        return Outcome.Success();
+    }
+
+    private bool TryAdmitTransition()
+    {
+        var maxTransitionsPerMinute = Configuration.MaxTransitionsPerMinute;
+        if (maxTransitionsPerMinute is null
+            || maxTransitionsPerMinute.Value <= 0)
         {
-            _coordinator.ExitTransition();
+            return true;
         }
+
+        var now = DateTime.UtcNow;
+        var windowStart = now - TimeSpan.FromMinutes(1);
+
+        while (_recentTransitions.Count > 0
+               && _recentTransitions.Peek() < windowStart)
+        {
+            _recentTransitions.Dequeue();
+        }
+
+        if (_recentTransitions.Count >= maxTransitionsPerMinute.Value)
+        {
+            return false;
+        }
+
+        _recentTransitions.Enqueue(now);
+        return true;
     }
 
     [Operation("CreateSnapshot")]
@@ -189,11 +192,7 @@ public partial class StateMachineInstance<T> : IAtelier, IStateMachineInstance, 
 
     private void RegisterStateChangeHandler()
     {
-        StateMachine.RegisterStateChangeHandler(
-            (from, to) =>
-            {
-                _coordinator.RunStateChange(() => ApplyStateChange(from, to));
-            });
+        StateMachine.RegisterStateChangeHandler((from, to) => ApplyStateChange(from, to));
     }
 
     private void ApplyStateChange(string from, string to)
@@ -210,6 +209,11 @@ public partial class StateMachineInstance<T> : IAtelier, IStateMachineInstance, 
     {
         ArgumentNullException.ThrowIfNull(from);
         ArgumentNullException.ThrowIfNull(to);
+
+        if (_monitor is null)
+        {
+            return;
+        }
 
         var recordTask = _monitor.RecordStateChangeAsync(
             this,
@@ -304,26 +308,14 @@ public partial class StateMachineInstance<T> : IAtelier, IStateMachineInstance, 
             return configurationValidation;
         }
 
-        var applied = _coordinator.RunGuarded(() =>
-        {
-            CurrentState = current.CurrentState ?? string.Empty;
-            LastTransition = current.LastTransition;
-            Configuration = restoredConfiguration;
+        CurrentState = current.CurrentState ?? string.Empty;
+        LastTransition = current.LastTransition;
+        Configuration = restoredConfiguration;
 
-            if (current.Data is not null)
-            {
-                StateMachine.RestoreFromSnapshot(current.Data);
-                CurrentState = StateMachine.CurrentState;
-            }
-        });
-
-        if (!applied)
+        if (current.Data is not null)
         {
-            Observe(
-                LogLevel.Warning,
-                null,
-                values: [("Reason", "State machine is transitioning and cannot be restored concurrently"), ("InstanceId", _instanceId)]);
-            return Outcome.Failure();
+            StateMachine.RestoreFromSnapshot(current.Data);
+            CurrentState = StateMachine.CurrentState;
         }
 
         return Outcome.Success();

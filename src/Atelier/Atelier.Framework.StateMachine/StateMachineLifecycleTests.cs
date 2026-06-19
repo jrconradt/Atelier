@@ -10,7 +10,6 @@ public static class StateMachineLifecycleTests
 {
     private const string INSTANCE_TARGET = "global::Atelier.Framework.StateMachine.StateMachineInstance`1";
     private const string REGISTRY_TARGET = "global::Atelier.Framework.StateMachine.Service.StateMachineRegistry";
-    private const string COORDINATOR_TARGET = "global::Atelier.Framework.StateMachine.StateTransitionCoordinator";
 
     private sealed class FakeStateMachine : IStateMachine
     {
@@ -173,26 +172,5 @@ public static class StateMachineLifecycleTests
 
         var unregister = await registry.Unregister("absent");
         IsTrue(unregister.IsSuccess, "Unregister of absent instance should be idempotent success");
-    }
-
-    [GeneratedTest("statemachine.coordinator.guard-blocks-while-held", COORDINATOR_TARGET)]
-    public static async Task GuardRejectsWhileTransitionHeld()
-    {
-        var coordinator = new StateTransitionCoordinator();
-
-        var entered = await coordinator.EnterTransitionAsync(null, CancellationToken.None);
-        IsTrue(entered, "Failed to enter the transition gate");
-
-        var ranWhileHeld = false;
-        var applied = coordinator.RunGuarded(() => ranWhileHeld = true);
-        IsTrue(!applied, "RunGuarded reported success while the gate was held");
-        IsTrue(!ranWhileHeld, "RunGuarded ran the mutator while the gate was held");
-
-        coordinator.ExitTransition();
-
-        var ranAfterExit = false;
-        var appliedAfterExit = coordinator.RunGuarded(() => ranAfterExit = true);
-        IsTrue(appliedAfterExit, "RunGuarded did not run after the gate was released");
-        IsTrue(ranAfterExit, "RunGuarded did not invoke the mutator after release");
     }
 }

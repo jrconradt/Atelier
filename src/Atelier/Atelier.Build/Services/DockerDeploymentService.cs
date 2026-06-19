@@ -119,16 +119,11 @@ public class DockerDeploymentService : IDeploymentService
                 "-d"
             };
 
-            foreach (var kv in configuration.EnvironmentVariables)
-            {
-                arguments.Add("-e");
-                arguments.Add($"{kv.Key}={kv.Value}");
-            }
-
             var (success, output) = await RunDockerCommandAsync(
                 arguments,
                 composeDirectory,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                configuration.EnvironmentVariables).ConfigureAwait(false);
 
             if (!success)
             {
@@ -338,7 +333,8 @@ public class DockerDeploymentService : IDeploymentService
     private async Task<(bool Success, string Output)> RunDockerCommandAsync(
         IReadOnlyList<string> arguments,
         string workingDirectory,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<string, string>? environment = null)
     {
         var processInfo = new ProcessStartInfo
         {
@@ -353,6 +349,14 @@ public class DockerDeploymentService : IDeploymentService
         foreach (var argument in arguments)
         {
             processInfo.ArgumentList.Add(argument);
+        }
+
+        if (environment is not null)
+        {
+            foreach (var kv in environment)
+            {
+                processInfo.Environment[kv.Key] = kv.Value;
+            }
         }
 
         using var process = Process.Start(processInfo);

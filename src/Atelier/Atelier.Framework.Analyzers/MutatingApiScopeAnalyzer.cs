@@ -11,72 +11,18 @@ public sealed class MutatingApiScopeAnalyzer : DiagnosticAnalyzer
 {
     public const string DIAGNOSTIC_ID = "ATELIER0750";
 
-    private static readonly string[] ReaderPrefixes = new[]
-    {
-        "get",
-        "fetch",
-        "retrieve",
-        "discover",
-        "find",
-        "list",
-        "query",
-        "search",
-    };
-
-    private static readonly string[] MutatorTokens = new[]
-    {
-        "create",
-        "add",
-        "insert",
-        "register",
-        "publish",
-        "submit",
-        "send",
-        "post",
-        "start",
-        "begin",
-        "invoke",
-        "execute",
-        "handle",
-        "update",
-        "modify",
-        "edit",
-        "replace",
-        "set",
-        "delete",
-        "remove",
-        "unregister",
-        "release",
-        "revoke",
-        "stop",
-        "cancel",
-        "patch",
-        "purge",
-        "archive",
-        "reset",
-        "provision",
-        "furnish",
-    };
-
-    private static readonly string[] ConjunctionTokens = new[]
-    {
-        "or",
-        "and",
-        "then",
-    };
-
-    private static readonly DiagnosticDescriptor MutatingApiWithoutWriteScopeRule = new DiagnosticDescriptor(
+    private static readonly DiagnosticDescriptor WriteEffectApiWithoutWriteScopeRule = new DiagnosticDescriptor(
         DIAGNOSTIC_ID,
-        "Mutating API operation has no write-tier scope",
-        "Mutating method '{0}' on [Api] class '{1}' declares no write-tier authorization scope. Add [ScopeResource(typeof(...))] to the class or interface so the write scope is derived, or an explicit [RequiresScope] on the method, or mark the method [AllowAnonymous] to expose it unprotected.",
+        "Write-effect API operation has no write-tier scope",
+        "Operation '{0}' on [Api] class '{1}' declares the Write effect but has no write-tier authorization scope. Bind [ScopeResource(typeof(...))] on the class or an implemented interface, add an explicit [RequiresScope] on the method, or mark the method [AllowAnonymous] to expose it unprotected.",
         "Security",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "A public mutating operation exposed by an [Api] class must carry a write-tier scope. The scope is either derived from a [ScopeResource] binding on the declaring type (write tier inferred from the mutating method name) or supplied explicitly with [RequiresScope]. A mutating operation with neither would ship as an unprotected write surface; it is refused at compile time.",
+        description: "An [Api] operation whose declared effect is Write must carry a write-tier scope. The scope is derived from a [ScopeResource] binding on the declaring type or an implemented interface, or supplied explicitly with [RequiresScope]/[RequiresScopeContract]. A Write-effect operation with neither would ship as an unprotected write surface; it is refused at compile time. The effect is taken from a declared [OperationEffect] on the method or a type/interface-level default, not from the method name.",
         customTags: new[] { WellKnownDiagnosticTags.Compiler });
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        ImmutableArray.Create(MutatingApiWithoutWriteScopeRule);
+        ImmutableArray.Create(WriteEffectApiWithoutWriteScopeRule);
 
     public override void Initialize(AnalysisContext context)
     {
@@ -129,7 +75,7 @@ public sealed class MutatingApiScopeAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            if (!IsMutatingOperation(methodSymbol.Name))
+            if (!ResolvesToWriteEffect(methodSymbol))
             {
                 continue;
             }
@@ -145,76 +91,83 @@ public sealed class MutatingApiScopeAnalyzer : DiagnosticAnalyzer
             }
 
             context.ReportDiagnostic(Diagnostic.Create(
-                MutatingApiWithoutWriteScopeRule,
+                WriteEffectApiWithoutWriteScopeRule,
                 member.Identifier.GetLocation(),
                 methodSymbol.Name,
                 classSymbol.Name));
         }
     }
 
-    private static bool IsMutatingOperation(string methodName)
+    private static bool ResolvesToWriteEffect(IMethodSymbol method)
     {
-        if (string.IsNullOrEmpty(methodName))
+        var methodEffect = OperationEffectName(method);
+        if (methodEffect != null)
         {
-            return true;
+            return string.Equals(methodEffect, "Write", StringComparison.Ordinal);
         }
 
-        var stripped = methodName.EndsWith("Async")
-            ? methodName.Substring(0, methodName.Length - "Async".Length)
-            : methodName;
-        if (string.IsNullOrWhiteSpace(stripped))
+        return TypeOrInterfacesDeclareWriteEffect(method.ContainingType);
+    }
+
+    private static bool TypeOrInterfacesDeclareWriteEffect(INamedTypeSymbol type)
+    {
+        var typeEffect = OperationEffectName(type);
+        if (typeEffect != null)
         {
-            return true;
+            return string.Equals(typeEffect, "Write", StringComparison.Ordinal);
         }
 
-        var lowered = stripped.ToLowerInvariant();
-
-        var matchedPrefix = string.Empty;
-        foreach (var prefix in ReaderPrefixes)
+        foreach (var interfaceSymbol in type.AllInterfaces)
         {
-            if (lowered.StartsWith(prefix))
+            var interfaceEffect = OperationEffectName(interfaceSymbol);
+            if (interfaceEffect != null)
             {
-                matchedPrefix = prefix;
-                break;
+                return string.Equals(interfaceEffect, "Write", StringComparison.Ordinal);
             }
-        }
-
-        if (matchedPrefix.Length == 0)
-        {
-            return true;
-        }
-
-        if (IsLexicallyAmbiguous(lowered, matchedPrefix))
-        {
-            return true;
         }
 
         return false;
     }
 
-    private static bool IsLexicallyAmbiguous(string loweredStrippedName,
-                                             string matchedReaderPrefix)
+    private static string? OperationEffectName(ISymbol symbol)
     {
-        var remainder = loweredStrippedName.Substring(matchedReaderPrefix.Length);
-
-        foreach (var token in MutatorTokens)
+        foreach (var attribute in symbol.GetAttributes())
         {
-            if (remainder.Contains(token))
+            if (attribute.AttributeClass?.Name != "OperationEffectAttribute")
             {
-                return true;
+                continue;
+            }
+
+            if (attribute.ConstructorArguments.Length == 0)
+            {
+                return null;
+            }
+
+            return EnumMemberName(attribute.ConstructorArguments[0]);
+        }
+
+        return null;
+    }
+
+    private static string? EnumMemberName(TypedConstant argument)
+    {
+        if (argument.Type is not INamedTypeSymbol enumType
+            || enumType.TypeKind != TypeKind.Enum)
+        {
+            return null;
+        }
+
+        foreach (var member in enumType.GetMembers())
+        {
+            if (member is IFieldSymbol field
+                && field.HasConstantValue
+                && Equals(field.ConstantValue, argument.Value))
+            {
+                return field.Name;
             }
         }
 
-        foreach (var conjunction in ConjunctionTokens)
-        {
-            if (remainder.StartsWith(conjunction)
-                && remainder.Length > conjunction.Length)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return null;
     }
 
     private static bool TypeOrInterfacesHaveScopeResource(INamedTypeSymbol classSymbol)

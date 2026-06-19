@@ -43,18 +43,22 @@ public static class ScopeEnforcementTests
     [ScopeResource(typeof(Scopes.Boutique))]
     private sealed class TieredService
     {
+        [OperationEffect(EffectKind.Read)]
         public void GetBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void UpdateBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void Reticulate()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         [RequiresScope(Scopes.Boutique.WRITE)]
         public void UpdateBoutiqueExplicit()
         {
@@ -64,11 +68,13 @@ public static class ScopeEnforcementTests
     [ScopeResource(typeof(Scopes.Boutique))]
     private interface ITieredContract
     {
+        [OperationEffect(EffectKind.Write)]
         void UpdateBoutique();
     }
 
     private sealed class TieredContractService : ITieredContract
     {
+        [OperationEffect(EffectKind.Write)]
         public void UpdateBoutique()
         {
         }
@@ -189,16 +195,16 @@ public static class ScopeEnforcementTests
         IsTrue(ScopeAuthorizationEvaluator.IsAuthorized(auth, required), "Principal holding the READ tier scope should pass a reader operation");
     }
 
-    [GeneratedTest("network.scope.tier.unmatched-name-is-mutator", TARGET)]
-    public static void UnmatchedNameOnBoundServiceTreatedAsMutator()
+    [GeneratedTest("network.scope.tier.non-verb-name-write-effect", TARGET)]
+    public static void NonVerbNameWithWriteEffectDerivesWrite()
     {
         var required = ScopeRequirementResolver.ResolveRequiredScopes(Method<TieredService>(nameof(TieredService.Reticulate)));
 
-        IsTrue(required.Contains(Scopes.Boutique.WRITE), "An unmatched method name should fail closed and derive the WRITE tier scope");
+        IsTrue(required.Contains(Scopes.Boutique.WRITE), "A method whose name is not a recognizable verb still resolves the WRITE tier from its declared Write effect");
 
         var auth = Principal(SUBJECT, Scopes.Boutique.READ);
 
-        IsTrue(!ScopeAuthorizationEvaluator.IsAuthorized(auth, required), "Principal holding only the READ tier scope should be rejected on an unmatched-name operation");
+        IsTrue(!ScopeAuthorizationEvaluator.IsAuthorized(auth, required), "Principal holding only the READ tier scope should be rejected on a Write-effect operation");
     }
 
     [GeneratedTest("network.scope.tier.explicit-and-derived-dedupe", TARGET)]

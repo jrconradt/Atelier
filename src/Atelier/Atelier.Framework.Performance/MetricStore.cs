@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 
 namespace Atelier.Framework.Performance;
 
@@ -6,7 +7,9 @@ internal sealed class MetricStore
 {
     private const int MAX_SAMPLES_PER_KEY = 4096;
 
-    private readonly ConcurrentDictionary<string, ConcurrentQueue<PerformanceMetric>> _metrics = new();
+    private sealed record MetricBucket(ImmutableQueue<PerformanceMetric> Queue, int Count);
+
+    private readonly ConcurrentDictionary<string, MetricBucket> _metrics = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _keysByComponent = new();
     private readonly TimeSpan _retentionWindow;
 
@@ -18,12 +21,13 @@ internal sealed class MetricStore
     public void Record(PerformanceMetric metric)
     {
         var key = $"{metric.Component}:{metric.Operation}";
-        var queue = _metrics.GetOrAdd(key, _ => new ConcurrentQueue<PerformanceMetric>());
 
         var componentKeys = _keysByComponent.GetOrAdd(metric.Component, _ => new ConcurrentDictionary<string, byte>());
         componentKeys.TryAdd(key, 0);
 
-        queue.Enqueue(metric);
+        _metrics.AddOrUpdate(key,
+                             _ => new MetricBucket(ImmutableQueue.Create(metric), 1),
+                             (_, existing) => new MetricBucket(existing.Queue.Enqueue(metric), existing.Count + 1));
     }
 
     private DateTime EffectiveStart(DateTime windowStart)
@@ -52,12 +56,12 @@ internal sealed class MetricStore
                 continue;
             }
 
-            if (!_metrics.TryGetValue(key, out var queue))
+            if (!_metrics.TryGetValue(key, out var bucket))
             {
                 continue;
             }
 
-            foreach (var metric in queue)
+            foreach (var metric in bucket.Queue)
             {
                 if (metric.Timestamp >= effectiveStart)
                 {
@@ -80,12 +84,12 @@ internal sealed class MetricStore
 
             foreach (var key in componentEntry.Value.Keys)
             {
-                if (!_metrics.TryGetValue(key, out var queue))
+                if (!_metrics.TryGetValue(key, out var bucket))
                 {
                     continue;
                 }
 
-                foreach (var metric in queue)
+                foreach (var metric in bucket.Queue)
                 {
                     if (metric.Timestamp >= effectiveStart)
                     {
@@ -107,16 +111,35 @@ internal sealed class MetricStore
         var results = new List<PerformanceMetric>();
         var effectiveStart = EffectiveStart(windowStart);
 
-        if (!_metrics.TryGetValue(key, out var queue))
+        if (!_metrics.TryGetValue(key, out var bucket))
         {
             return results;
         }
 
-        foreach (var metric in queue)
+        foreach (var metric in bucket.Queue)
         {
             if (metric.Timestamp >= effectiveStart)
             {
                 results.Add(metric);
+            }
+        }
+
+        return results;
+    }
+
+    public List<PerformanceMetric> SnapshotAll(DateTime windowStart)
+    {
+        var results = new List<PerformanceMetric>();
+        var effectiveStart = EffectiveStart(windowStart);
+
+        foreach (var bucket in _metrics.Values)
+        {
+            foreach (var metric in bucket.Queue)
+            {
+                if (metric.Timestamp >= effectiveStart)
+                {
+                    results.Add(metric);
+                }
             }
         }
 
@@ -129,29 +152,45 @@ internal sealed class MetricStore
 
         foreach (var key in _metrics.Keys)
         {
-            if (!_metrics.TryGetValue(key, out var queue))
+            if (!_metrics.TryGetValue(key, out var bucket))
             {
                 continue;
             }
 
-            while (queue.TryPeek(out var oldest)
-                   && oldest.Timestamp < windowStart)
+            var queue = bucket.Queue;
+            var count = bucket.Count;
+
+            while (count > 0
+                   && queue.Peek().Timestamp < windowStart)
             {
-                queue.TryDequeue(out _);
+                queue = queue.Dequeue();
+                count--;
             }
 
-            while (queue.Count > MAX_SAMPLES_PER_KEY)
+            while (count > MAX_SAMPLES_PER_KEY)
             {
-                queue.TryDequeue(out _);
+                queue = queue.Dequeue();
+                count--;
             }
 
-            if (queue.IsEmpty)
+            if (count == bucket.Count)
             {
-                if (_metrics.TryRemove(new KeyValuePair<string, ConcurrentQueue<PerformanceMetric>>(key, queue)))
+                continue;
+            }
+
+            if (count == 0)
+            {
+                if (_metrics.TryRemove(new KeyValuePair<string, MetricBucket>(key, bucket)))
                 {
                     RemoveFromIndex(key);
                 }
+
+                continue;
             }
+
+            _metrics.TryUpdate(key,
+                               new MetricBucket(queue, count),
+                               bucket);
         }
     }
 

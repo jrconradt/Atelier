@@ -64,14 +64,36 @@ public sealed class FullPipelineRunner
                                                                               Filter: null,
                                                                               MaxNeedsFixture: 0,
                                                                               AllowlistPath: null)).ConfigureAwait(false);
-            if (testOutcome.ExitCode != 0)
+            var generatedFailed = testOutcome.ExitCode != 0;
+            if (generatedFailed)
             {
                 AnsiConsole.MarkupLine("[red]  ✗[/] Generated tests failed");
-                return BuildResult.Failure($"Generated tests failed: {testOutcome.Fail} failing, {testOutcome.BudgetBreaches} budget breaches");
             }
-
-            AnsiConsole.MarkupLine("[green]  ✓[/] Generated tests passed");
+            else
+            {
+                AnsiConsole.MarkupLine("[green]  ✓[/] Generated tests passed");
+            }
             _presenter.Newline();
+
+            AnsiConsole.MarkupLine("[yellow]Phase 2c:[/] Running xUnit test projects...");
+            var xunitRunner = new XUnitTestRunner(_context);
+            var xunitOutcome = await xunitRunner.RunAsync(dryRun: false).ConfigureAwait(false);
+            var xunitFailed = xunitOutcome.ExitCode != 0;
+            if (xunitFailed)
+            {
+                AnsiConsole.MarkupLine("[red]  ✗[/] xUnit tests failed");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[green]  ✓[/] xUnit tests passed");
+            }
+            _presenter.Newline();
+
+            if (generatedFailed
+                || xunitFailed)
+            {
+                return BuildResult.Failure($"Tests failed: generated {testOutcome.Fail} failing, xUnit {xunitOutcome.Failed} failing");
+            }
         }
 
         await GenerateFullBuildArtifactsAsync(boutiques, sharedOutputDir, artifacts).ConfigureAwait(false);

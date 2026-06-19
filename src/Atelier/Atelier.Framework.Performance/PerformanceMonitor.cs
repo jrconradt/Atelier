@@ -27,10 +27,8 @@ public partial class PerformanceMonitor : IAtelier, IPerformanceMonitor, Microso
     private static readonly TimeSpan DefaultMetricsWindow = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan MetricsRetention = TimeSpan.FromHours(1);
 
-    private const int MAX_SAMPLES_PER_KEY = 4096;
-
     [Requisite] protected readonly IPerformanceProfiler _profiler = null!;
-    private readonly ConcurrentDictionary<string, ConcurrentQueue<PerformanceMetric>> _metricsStore = new();
+    private readonly MetricStore _metricStore = new(MetricsRetention);
     private readonly ConcurrentDictionary<string, PerformanceBudget> _budgets = new();
     private readonly MonitoringState _state = new();
 
@@ -90,19 +88,15 @@ public partial class PerformanceMonitor : IAtelier, IPerformanceMonitor, Microso
             var windowStart = DateTime.UtcNow - (window ?? DefaultMetricsWindow);
             var componentMetrics = new Dictionary<string, ComponentMetrics>();
 
-            var snapshot = _metricsStore
-                .SelectMany(kvp => kvp.Value)
-                .ToList();
-
-            var componentGroups = snapshot
-                .Where(m => m.Timestamp >= windowStart)
-                .GroupBy(m => m.Component);
-
-            foreach (var group in componentGroups)
+            foreach (var (component, metrics) in _metricStore.SnapshotByComponent(windowStart))
             {
-                var metrics = group.ToList();
-                componentMetrics[group.Key] = MetricCalculations.CalculateComponentMetrics(
-                    group.Key,
+                if (metrics.Count == 0)
+                {
+                    continue;
+                }
+
+                componentMetrics[component] = MetricCalculations.CalculateComponentMetrics(
+                    component,
                     metrics);
             }
 
@@ -128,9 +122,7 @@ public partial class PerformanceMonitor : IAtelier, IPerformanceMonitor, Microso
 
         try
         {
-            var snapshot = _metricsStore
-                .SelectMany(kvp => kvp.Value)
-                .ToList();
+            var snapshot = _metricStore.SnapshotAll(DateTime.UtcNow - MetricsRetention);
 
             var metrics = snapshot.AsEnumerable();
 
@@ -194,7 +186,7 @@ public partial class PerformanceMonitor : IAtelier, IPerformanceMonitor, Microso
                     await EvaluateBudgetAsync(componentName, metrics).ConfigureAwait(false);
                 }
 
-                CleanupOldMetrics();
+                _metricStore.Prune();
             }
         }
         catch (Exception ex)
@@ -209,8 +201,6 @@ public partial class PerformanceMonitor : IAtelier, IPerformanceMonitor, Microso
 
     private void StoreComponentMetrics(string componentName, ComponentMetrics metrics)
     {
-        var key = $"{componentName}:aggregate";
-
         var metric = new PerformanceMetric
         {
             MetricId = Guid.NewGuid().ToString("N"),
@@ -230,8 +220,7 @@ public partial class PerformanceMonitor : IAtelier, IPerformanceMonitor, Microso
             }
         };
 
-        var queue = _metricsStore.GetOrAdd(key, _ => new ConcurrentQueue<PerformanceMetric>());
-        queue.Enqueue(metric);
+        _metricStore.Record(metric);
     }
 
     [Operation("RegisterBudget")]
@@ -289,32 +278,4 @@ public partial class PerformanceMonitor : IAtelier, IPerformanceMonitor, Microso
         }
     }
 
-    private void CleanupOldMetrics()
-    {
-        var cutoff = DateTime.UtcNow - MetricsRetention;
-
-        foreach (var key in _metricsStore.Keys)
-        {
-            if (!_metricsStore.TryGetValue(key, out var queue))
-            {
-                continue;
-            }
-
-            while (queue.TryPeek(out var oldest)
-                   && oldest.Timestamp < cutoff)
-            {
-                queue.TryDequeue(out _);
-            }
-
-            while (queue.Count > MAX_SAMPLES_PER_KEY)
-            {
-                queue.TryDequeue(out _);
-            }
-
-            if (queue.IsEmpty)
-            {
-                _metricsStore.TryRemove(new KeyValuePair<string, ConcurrentQueue<PerformanceMetric>>(key, queue));
-            }
-        }
-    }
 }

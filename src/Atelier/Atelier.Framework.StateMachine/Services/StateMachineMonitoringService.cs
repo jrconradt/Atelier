@@ -24,72 +24,59 @@ public partial class StateMachineMonitoringService : IAtelier, IStateMachineMoni
 
     private sealed class MonitoringState
     {
-        public Timer? Timer;
-        public int IsMonitoring;
-        public int TickInProgress;
-        public volatile Task CurrentTick = Task.CompletedTask;
+        public PeriodicTimer? Timer;
+        public Task Loop = Task.CompletedTask;
+        public CancellationTokenSource? Stopping;
     }
 
-    [Operation("StartMonitoring")]
-    public async Task<Outcome> StartMonitoringAsync(CancellationToken cancellationToken = default)
+    public Task<Outcome> StartMonitoringAsync(CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested)
         {
-            return Outcome.Failure();
+            return Task.FromResult(Outcome.Failure());
         }
 
-        if (Interlocked.CompareExchange(ref _state.IsMonitoring, 1, 0) != 0)
+        if (_state.Stopping is not null)
         {
-            return Outcome.Success();
+            return Task.FromResult(Outcome.Success());
         }
 
-        Timer timer;
-        try
-        {
-            timer = new Timer(
-                _ =>
-                {
-                    var gate = new TaskCompletionSource();
-
-                    if (Interlocked.CompareExchange(ref _state.TickInProgress, 1, 0) != 0)
-                    {
-                        return;
-                    }
-
-                    _state.CurrentTick = RunTickAsync(gate.Task);
-                    gate.SetResult();
-                },
-                null,
-                TimeSpan.Zero,
-                _monitoringInterval);
-        }
-        catch (Exception ex)
-        {
-            Interlocked.Exchange(ref _state.IsMonitoring, 0);
-
-            Observe(
-                LogLevel.Error,
-                ex, values: [("Reason", "Failed to start state machine monitoring")]);
-            return Outcome.Failure();
-        }
-
-        Interlocked.Exchange(ref _state.Timer, timer);
+        _state.Stopping = new CancellationTokenSource();
+        _state.Timer = new PeriodicTimer(_monitoringInterval);
+        _state.Loop = RunMonitorLoopAsync(_state.Stopping.Token);
 
         Observe(
             LogLevel.Information,
             null, values: [("Message", "State machine monitoring started"), ("IntervalSeconds", _monitoringInterval.TotalSeconds)]);
 
-        return Outcome.Success();
+        return Task.FromResult(Outcome.Success());
     }
 
-    private async Task RunTickAsync(Task gate)
+    private async Task RunMonitorLoopAsync(CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(gate);
-        await gate.ConfigureAwait(false);
+        var timer = _state.Timer;
+        if (timer is null)
+        {
+            return;
+        }
 
+        await RunTickAsync(cancellationToken).ConfigureAwait(false);
+
+        while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+        {
+            await RunTickAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async Task RunTickAsync(CancellationToken cancellationToken)
+    {
         try
         {
-            await MonitorStateMachinesAsync(CancellationToken.None).ConfigureAwait(false);
+            await MonitorStateMachinesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -97,13 +84,8 @@ public partial class StateMachineMonitoringService : IAtelier, IStateMachineMoni
                 LogLevel.Error,
                 ex, values: [("Message", "State machine monitoring tick failed")]);
         }
-        finally
-        {
-            Interlocked.Exchange(ref _state.TickInProgress, 0);
-        }
     }
 
-    [Operation("StopMonitoring")]
     public async Task<Outcome> StopMonitoringAsync(CancellationToken cancellationToken = default)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -111,31 +93,39 @@ public partial class StateMachineMonitoringService : IAtelier, IStateMachineMoni
             return Outcome.Failure();
         }
 
-        if (Interlocked.CompareExchange(ref _state.IsMonitoring, 0, 1) != 1)
+        if (_state.Stopping is null)
         {
             return Outcome.Success();
         }
 
-        var timer = Interlocked.Exchange(ref _state.Timer, null);
-        timer?.Dispose();
+        _state.Stopping.Cancel();
+        _state.Timer?.Dispose();
 
-        var inFlight = _state.CurrentTick;
+        try
+        {
+            await _state.Loop.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            _state.Stopping.Dispose();
+            _state.Stopping = null;
+            _state.Timer = null;
+        }
 
         Observe(
             LogLevel.Information,
             null, values: [("Message", "State machine monitoring stopped")]);
-
-        await inFlight.ConfigureAwait(false);
 
         return Outcome.Success();
     }
 
     public void Dispose()
     {
-        Interlocked.Exchange(ref _state.IsMonitoring, 0);
-
-        var timer = Interlocked.Exchange(ref _state.Timer, null);
-        timer?.Dispose();
+        _state.Stopping?.Cancel();
+        _state.Timer?.Dispose();
     }
 
     [Operation("MonitorStateMachines")]

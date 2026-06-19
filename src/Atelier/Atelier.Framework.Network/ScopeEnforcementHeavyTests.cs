@@ -89,10 +89,12 @@ public static class ScopeEnforcementHeavyTests
     [ScopeResource(typeof(Scopes.Boutique))]
     private sealed class TieredService
     {
+        [OperationEffect(EffectKind.Read)]
         public void GetBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void UpdateBoutique()
         {
         }

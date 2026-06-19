@@ -20,11 +20,11 @@ services:
 
 
     ports:
-      - "8080:8080"
+      - "8880:8080"
 
-      - "8081:8081"
+      - "8881:8081"
 
-      - "9090:9090"
+      - "9890:9090"
 
 
     volumes:
@@ -42,7 +42,7 @@ services:
         limits:
           cpus: "3"
 
-          memory: 4G
+          memory: 4096M
 
 
     read_only: true

@@ -15,95 +15,118 @@ public static class ScopeTierHeavyTests
     [ScopeResource(typeof(Scopes.Boutique))]
     private sealed class BoundService
     {
+        [OperationEffect(EffectKind.Read)]
         public void GetBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Read)]
         public void FetchBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Read)]
         public void RetrieveBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Read)]
         public void DiscoverBoutiques()
         {
         }
 
+        [OperationEffect(EffectKind.Read)]
         public void FindBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Read)]
         public void ListBoutiques()
         {
         }
 
+        [OperationEffect(EffectKind.Read)]
         public void QueryBoutiques()
         {
         }
 
+        [OperationEffect(EffectKind.Read)]
         public void SearchBoutiques()
         {
         }
 
+        [OperationEffect(EffectKind.Read)]
         public void GetBoutiqueAsync()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void CreateBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void DeleteBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void UpdateBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void PublishBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void RevokeBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void CreateBoutiqueAsync()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void Reticulate()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void GetOrCreateBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void FindOrCreateBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void ListAndPurgeBoutiques()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void SearchAndReplaceBoutiques()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         public void RetrieveAndDeleteBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Write)]
         [RequiresScope(Scopes.Boutique.WRITE)]
         public void UpdateBoutiqueExplicit()
         {
         }
 
+        [OperationEffect(EffectKind.Read)]
         [RequiresScope(Scopes.Boutique.READ)]
         public void GetBoutiqueExplicitRead()
         {
@@ -124,17 +147,21 @@ public static class ScopeTierHeavyTests
     [ScopeResource(typeof(Scopes.Boutique))]
     private interface IBoundContract
     {
+        [OperationEffect(EffectKind.Write)]
         void UpdateBoutique();
 
+        [OperationEffect(EffectKind.Read)]
         void GetBoutique();
     }
 
     private sealed class BoundContractService : IBoundContract
     {
+        [OperationEffect(EffectKind.Write)]
         public void UpdateBoutique()
         {
         }
 
+        [OperationEffect(EffectKind.Read)]
         public void GetBoutique()
         {
         }
@@ -152,6 +179,7 @@ public static class ScopeTierHeavyTests
 
     private sealed class DeepContractService : IOuterContract
     {
+        [OperationEffect(EffectKind.Write)]
         public void UpdateBoutique()
         {
         }
