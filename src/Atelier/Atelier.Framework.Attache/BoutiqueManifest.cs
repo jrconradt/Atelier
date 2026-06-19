@@ -1,9 +1,7 @@
-using Atelier.Framework.Primitives;
 using Atelier.Framework.Attributes;
 
 namespace Atelier.Framework.Attache;
 
-[Infrastructure(InfrastructureLifetime.Singleton)]
 [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public class BoutiqueManifest
 {

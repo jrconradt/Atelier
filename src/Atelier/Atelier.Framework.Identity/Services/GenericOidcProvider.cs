@@ -1,7 +1,4 @@
-using Atelier.Framework.Primitives;
-using Atelier.Framework.Infrastructure;
 using Atelier.Framework.Attributes;
-using Atelier.Framework.Infrastructure.Operation;
 using Atelier.Framework.Identity.Configuration;
 using Atelier.Framework.Identity.Interfaces;
 using Atelier.Framework.Identity.Models;
@@ -12,7 +9,6 @@ using Atelier.Framework.Resilience;
 using System.Collections.Concurrent;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
-using System.Security.Claims;
 using System.Text;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -21,7 +17,6 @@ using Microsoft.IdentityModel.Tokens;
 namespace Atelier.Framework.Identity.Services;
 
 [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
-[Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class GenericOidcProvider : IAtelier, IOidcProvider
 {
     [Requisite] protected readonly HttpClient _httpClient = null!;

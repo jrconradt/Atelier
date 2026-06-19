@@ -10,14 +10,8 @@ namespace Atelier.Framework.Contract;
 [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public sealed partial class ContractValidator : IContractValidator
 {
-    private readonly IContractRegistry _registry;
+    [Requisite] private readonly IContractRegistry _registry = null!;
     private static readonly ConcurrentDictionary<Type, IReadOnlyDictionary<string, PropertyInfo>> PropertyMaps = new();
-
-        public ContractValidator(IContractRegistry registry)
-    {
-        ArgumentNullException.ThrowIfNull(registry);
-        _registry = registry;
-    }
 
         public ContractValidationResult Validate<T>(T contract) where T : class
     {
