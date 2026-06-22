@@ -1,5 +1,7 @@
 # Atelier
 
+[![CI](https://github.com/jrconradt/Atelier/actions/workflows/ci.yml/badge.svg)](https://github.com/jrconradt/Atelier/actions/workflows/ci.yml) ![.NET](https://img.shields.io/badge/.NET-10-512BD4) [![License](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
+
 Infrastructure host and orchestration framework for .NET 10.
 
 Hosts run Offerings (units of service). Offerings compose into Products. Products wire together via Requisites — dependency injection driven by Roslyn source generators rather than runtime container plumbing. Result-typed contracts (`Outcome` / `Outcome<T>`) flow through messaging, an event stream, and state machines, with cross-cutting concerns for identity, network, queueing, observability, performance, and resilience.
@@ -126,6 +128,10 @@ See [`docs/reference/smash.md`](docs/reference/smash.md) for the build and test 
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
+## Status
+
+Active development; APIs and `ATELIER*` diagnostics are still evolving.
+
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache-2.0. Copyright 2026 Infalligence Labs LLC — see [LICENSE](LICENSE).
