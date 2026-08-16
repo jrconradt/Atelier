@@ -152,7 +152,7 @@ public sealed class ProcessExecutor
                     standardErrorLines: errorLines.ToArray());
             }
 
-            process.WaitForExit();
+            process.WaitForExit(3000);
 
             var exitCode = process.ExitCode;
 

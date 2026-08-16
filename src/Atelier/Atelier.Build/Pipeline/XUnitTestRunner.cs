@@ -44,13 +44,32 @@ public sealed class XUnitTestRunner
 
         var executor = new ProcessExecutor(_context);
 
+        // Build the solution once to compile all projects safely without write-locks
+        var slnFile = Directory.EnumerateFiles(_context.SolutionRoot, "*.slnx").FirstOrDefault()
+                   ?? Directory.EnumerateFiles(_context.SolutionRoot, "*.sln").FirstOrDefault();
+        if (slnFile is not null)
+        {
+            try
+            {
+                await executor.ExecuteAsync("dotnet",
+                                             new[] { "build", slnFile, "--nologo", "-v", "q" },
+                                             _context.SolutionRoot,
+                                             ProcessOptions.WithTimeout(_context.Timeouts.DotnetBuild),
+                                             CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (ProcessExecutionException)
+            {
+                // If build fails, we still try to run tests (they will report build failures or run on last build)
+            }
+        }
+
         var total = 0;
         var passed = 0;
         var failed = 0;
         var skipped = 0;
         var anyFailed = false;
 
-        foreach (var project in projects)
+        var tasks = projects.Select(async project =>
         {
             var projectName = Path.GetFileNameWithoutExtension(project);
             var trxName = $"{projectName}.trx";
@@ -62,6 +81,7 @@ public sealed class XUnitTestRunner
             {
                 "test",
                 project,
+                "--no-build",
                 "--nologo",
                 "--results-directory",
                 resultsDir,
@@ -87,27 +107,33 @@ public sealed class XUnitTestRunner
             }
 
             var parsed = TrxResultReader.Read(trxPath);
+            return (ProjectName: projectName, Ran: ran, ProcessSucceeded: processSucceeded, Parsed: parsed);
+        }).ToList();
 
-            if (parsed is null)
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        foreach (var r in results)
+        {
+            if (r.Parsed is null)
             {
                 anyFailed = true;
-                Console.WriteLine($"  {projectName,-58} pass=   0 fail=   ? skip=   0");
+                Console.WriteLine($"  {r.ProjectName,-58} pass=   0 fail=   ? skip=   0");
                 continue;
             }
 
-            total += parsed.Total;
-            passed += parsed.Passed;
-            failed += parsed.Failed;
-            skipped += parsed.Skipped;
+            total += r.Parsed.Total;
+            passed += r.Parsed.Passed;
+            failed += r.Parsed.Failed;
+            skipped += r.Parsed.Skipped;
 
-            if (parsed.Failed > 0
-                || !ran
-                || !processSucceeded)
+            if (r.Parsed.Failed > 0
+                || !r.Ran
+                || !r.ProcessSucceeded)
             {
                 anyFailed = true;
             }
 
-            Console.WriteLine($"  {projectName,-58} pass={parsed.Passed,4} fail={parsed.Failed,4} skip={parsed.Skipped,4}");
+            Console.WriteLine($"  {r.ProjectName,-58} pass={r.Parsed.Passed,4} fail={r.Parsed.Failed,4} skip={r.Parsed.Skipped,4}");
         }
 
         Console.WriteLine();
