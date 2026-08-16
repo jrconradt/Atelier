@@ -13,13 +13,13 @@ namespace Atelier.Facilities.Cache.Redis;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
 [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
-public partial class RedisCache : ICache, IAtelier
+public partial class RedisCache : CacheAccessWrapperBase, IAtelier
 {
     [Requisite] private readonly IRedisConnectionProvider _connection = null!;
     [Requisite] private readonly IContextAccessor _contextAccessor = null!;
     [Requisite] private readonly ResiliencePipelineFactory _resilience = null!;
 
-    public async Task<Outcome<CacheLookup>> GetAsync(
+    public override async Task<Outcome<CacheLookup>> GetAsync(
         CacheKey key,
         CancellationToken cancellationToken = default)
     {
@@ -78,7 +78,7 @@ public partial class RedisCache : ICache, IAtelier
         });
     }
 
-    public async Task<Outcome> SetAsync(
+    public override async Task<Outcome> SetAsync(
         CacheKey key,
         CacheValue value,
         CancellationToken cancellationToken = default)
@@ -134,7 +134,7 @@ public partial class RedisCache : ICache, IAtelier
         return Outcome.Success();
     }
 
-    public async Task<Outcome> RemoveAsync(
+    public override async Task<Outcome> RemoveAsync(
         CacheKey key,
         CancellationToken cancellationToken = default)
     {

@@ -13,7 +13,7 @@ namespace Atelier.Facilities.Cache.InMemory;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
 [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
-public partial class InMemoryCache : ICache, IAtelier
+public partial class InMemoryCache : CacheAccessWrapperBase, IAtelier
 {
     [Requisite] private readonly IContextAccessor _contextAccessor = null!;
 
@@ -21,7 +21,7 @@ public partial class InMemoryCache : ICache, IAtelier
 
     private readonly ConcurrentDictionary<string, StoredEntry> _entries = new(StringComparer.Ordinal);
 
-    public Task<Outcome<CacheLookup>> GetAsync(
+    public override Task<Outcome<CacheLookup>> GetAsync(
         CacheKey key,
         CancellationToken cancellationToken = default)
     {
@@ -77,7 +77,7 @@ public partial class InMemoryCache : ICache, IAtelier
         }));
     }
 
-    public Task<Outcome> SetAsync(
+    public override Task<Outcome> SetAsync(
         CacheKey key,
         CacheValue value,
         CancellationToken cancellationToken = default)
@@ -128,7 +128,7 @@ public partial class InMemoryCache : ICache, IAtelier
         return Task.FromResult(Outcome.Success());
     }
 
-    public Task<Outcome> RemoveAsync(
+    public override Task<Outcome> RemoveAsync(
         CacheKey key,
         CancellationToken cancellationToken = default)
     {

@@ -1,9 +1,14 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Atelier.Framework.Generators.Requisition;
+using Templar.Rendering;
+using FT = Atelier.Framework.Infrastructure.Generators.Compositors.Facility;
 
 namespace Atelier.Framework.Infrastructure.Generators;
 
@@ -39,9 +44,12 @@ public sealed class FacilityGatewaySourceGenerator : IIncrementalGenerator
                     spc.ReportDiagnostic(diagnostic);
                 }
 
-                spc.AddSource(
-                    result.HintName,
-                    SourceText.From(result.Source, Encoding.UTF8));
+                foreach (var file in result.Files)
+                {
+                    spc.AddSource(
+                        file.HintName,
+                        SourceText.From(file.Source, Encoding.UTF8));
+                }
             });
     }
 
@@ -72,12 +80,19 @@ public sealed class FacilityGatewaySourceGenerator : IIncrementalGenerator
         }
 
         var diagnostics = new List<Diagnostic>();
-        var generated = GenerateGateway(interfaceSymbol, diagnostics);
-        var className = SymbolNaming.ImplName(interfaceSymbol.Name);
-        return new FacilityGatewayResult(
-            $"{className}.Gateway.g.cs",
-            generated,
-            diagnostics.ToImmutableArray());
+        var (requiresAuth, requiredClaims, requiredScopes, facilityName) = ReadFacilityAuth(interfaceSymbol);
+        var gatewaySource = GenerateGateway(interfaceSymbol, requiresAuth, requiredClaims, requiredScopes, diagnostics);
+        var clientSource = GenerateClient(interfaceSymbol, facilityName);
+        var endpointsSource = GenerateEndpoints(interfaceSymbol, facilityName);
+
+        var implName = SymbolNaming.ImplName(interfaceSymbol.Name);
+        var files = ImmutableArray.Create(
+            new GeneratedFile($"{implName}.Gateway.g.cs", gatewaySource),
+            new GeneratedFile($"{implName}.Client.g.cs", clientSource),
+            new GeneratedFile($"{implName}.Endpoints.g.cs", endpointsSource)
+        );
+
+        return new FacilityGatewayResult(files, diagnostics.ToImmutableArray());
     }
 
     private static bool HasFacilityAttribute(INamedTypeSymbol interfaceSymbol)
@@ -86,82 +101,85 @@ public sealed class FacilityGatewaySourceGenerator : IIncrementalGenerator
             .Any(a => a.AttributeClass?.Name == "FacilityAttribute");
     }
 
-    private static string GenerateGateway(INamedTypeSymbol interfaceSymbol, List<Diagnostic> diagnostics)
+    private static string GenerateGateway(
+        INamedTypeSymbol interfaceSymbol,
+        bool requiresAuth,
+        string[] requiredClaims,
+        string[] requiredScopes,
+        List<Diagnostic> diagnostics)
     {
-        var namespaceName = interfaceSymbol.ContainingNamespace.ToDisplayString();
-        var interfaceName = DisplayName(interfaceSymbol);
-        var className = SymbolNaming.ImplName(interfaceSymbol.Name);
-
-        var (requiresAuth, requiredClaims, requiredScopes) = ReadFacilityAuth(interfaceSymbol);
-
-        var members = new List<string>
-        {
-            $"    [Requisite] private readonly {interfaceName} _backend = null!;"
-        };
-
-        if (requiresAuth)
-        {
-            members.Add("    [Requisite] private readonly global::Atelier.Framework.Identity.Interfaces.IJwtTokenValidator _tokenValidator = null!;");
-            members.Add(BuildAuthMethod(requiredClaims, requiredScopes));
-        }
-
-        var ordinaryMethods = interfaceSymbol.GetMembers()
-            .OfType<IMethodSymbol>()
-            .Where(m => m.MethodKind == MethodKind.Ordinary)
-            .ToList();
-
-        foreach (var method in ordinaryMethods)
-        {
-            if (requiresAuth
-                && !IsOutcomeOfT(method.ReturnType)
-                && !IsBareOutcome(method.ReturnType))
-            {
-                diagnostics.Add(Diagnostic.Create(
-                    NonOutcomeAuthenticatedMethodRule,
-                    method.Locations.FirstOrDefault() ?? interfaceSymbol.Locations.FirstOrDefault() ?? Location.None,
-                    method.Name,
-                    interfaceSymbol.Name));
-                continue;
-            }
-
-            members.Add(BuildMethod(method));
-        }
-
-        var body = string.Join("\n\n", members);
-
-        return $$"""
-            using System.Linq;
-            using System.Collections.Generic;
-            using System.Threading;
-            using System.Threading.Tasks;
-            using Atelier.Framework.Attributes;
-            using Atelier.Framework.Primitives;
-            using Atelier.Framework.Observability;
-            using Atelier.Framework.Offering;
-            using Atelier.Framework.Offering.Attributes;
-            using Atelier.Framework.Outcomes;
-            using Atelier.Framework.Requisitions;
-
-            namespace {{namespaceName}};
-
-            [Offering]
-            [Infrastructure(InfrastructureLifetime.Scoped)]
-            public sealed partial class {{className}} : global::Atelier.Framework.Offering.GatewayBase, {{interfaceName}}
-            {
-            {{body}}
-            }
-
-            """;
+        return new FT.Gateway(interfaceSymbol, requiresAuth, requiredClaims, requiredScopes, diagnostics, NonOutcomeAuthenticatedMethodRule).Render();
     }
 
-    private static (bool RequiresAuth, string[] Claims, string[] Scopes) ReadFacilityAuth(INamedTypeSymbol interfaceSymbol)
+    internal static ITypeSymbol? GetOutcomeInnerType(ITypeSymbol returnType)
+    {
+        if (UnwrapTask(returnType) is INamedTypeSymbol named
+            && named.IsGenericType
+            && named.ConstructedFrom.Name == "Outcome")
+        {
+            return named.TypeArguments[0];
+        }
+
+        return null;
+    }
+
+    internal static bool IsOutcomeOfT(ITypeSymbol returnType)
+    {
+        return UnwrapTask(returnType) is INamedTypeSymbol named
+            && named.IsGenericType
+            && named.ConstructedFrom.Name == "Outcome";
+    }
+
+    internal static bool IsBareOutcome(ITypeSymbol returnType)
+    {
+        return UnwrapTask(returnType) is INamedTypeSymbol named
+            && !named.IsGenericType
+            && named.Name == "Outcome";
+    }
+
+    internal static ITypeSymbol UnwrapTask(ITypeSymbol type)
+    {
+        if (type is INamedTypeSymbol named
+            && named.IsGenericType
+            && (named.ConstructedFrom.Name == "Task" || named.ConstructedFrom.Name == "ValueTask"))
+        {
+            return named.TypeArguments[0];
+        }
+
+        return type;
+    }
+
+    internal static string DisplayName(ITypeSymbol type)
+    {
+        var format = new SymbolDisplayFormat(
+            globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Included,
+            typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
+            genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
+            miscellaneousOptions: SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers |
+                                  SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
+
+        return type.ToDisplayString(format);
+    }
+    private static string GenerateClient(INamedTypeSymbol interfaceSymbol, string facilityName)
+    {
+        return new FT.Client(interfaceSymbol, facilityName).Render();
+    }
+
+    private static string GenerateEndpoints(INamedTypeSymbol interfaceSymbol, string facilityName)
+    {
+        return new FT.Endpoints(interfaceSymbol, facilityName).Render();
+    }
+
+    private static (bool RequiresAuth, string[] Claims, string[] Scopes, string FacilityName) ReadFacilityAuth(INamedTypeSymbol interfaceSymbol)
     {
         var attribute = interfaceSymbol.GetAttributes()
             .FirstOrDefault(a => a.AttributeClass?.Name == "FacilityAttribute");
 
+        var facilityName = attribute?.ConstructorArguments.Length > 0 ? attribute.ConstructorArguments[0].Value?.ToString() ?? interfaceSymbol.Name : interfaceSymbol.Name;
+
         if (attribute is null)
         {
-            return (false, System.Array.Empty<string>(), System.Array.Empty<string>());
+            return (false, System.Array.Empty<string>(), System.Array.Empty<string>(), facilityName);
         }
 
         var requiresAuthentication = true;
@@ -195,179 +213,12 @@ public sealed class FacilityGatewaySourceGenerator : IIncrementalGenerator
             }
         }
 
-        return (requiresAuthentication && !allowAnonymous, claims, scopes);
+        return (requiresAuthentication && !allowAnonymous, claims, scopes, facilityName);
     }
-
-    private static string BuildAuthMethod(string[] requiredClaims, string[] requiredScopes)
-    {
-        var lines = new List<string>
-        {
-            "    protected override global::System.Threading.Tasks.Task<global::Atelier.Framework.Outcomes.Outcome> AuthorizeAsync()",
-            "    {",
-            "        if (!Context.TryGetValue(\"Authorization\", out var header) || string.IsNullOrWhiteSpace(header))",
-            "        {",
-            "            return global::System.Threading.Tasks.Task.FromResult(global::Atelier.Framework.Outcomes.Outcome.Failure());",
-            "        }",
-            "",
-            "        var token = header.StartsWith(\"Bearer \", global::System.StringComparison.OrdinalIgnoreCase) ? header.Substring(7) : header;",
-            "        var validation = _tokenValidator.Validate(token);",
-            "        if (!validation.IsSuccess)",
-            "        {",
-            "            return global::System.Threading.Tasks.Task.FromResult(global::Atelier.Framework.Outcomes.Outcome.Failure());",
-            "        }"
-        };
-
-        foreach (var claim in requiredClaims)
-        {
-            var claimLiteral = Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(claim, quote: true);
-            lines.Add("");
-            lines.Add($"        if (!validation.Data!.Claims.Any(claim => claim.Type == {claimLiteral}))");
-            lines.Add("        {");
-            lines.Add("            return global::System.Threading.Tasks.Task.FromResult(global::Atelier.Framework.Outcomes.Outcome.Failure());");
-            lines.Add("        }");
-        }
-
-        if (requiredScopes.Length > 0)
-        {
-            lines.Add("");
-            lines.Add("        var grantedScopes = validation.Data!.Claims");
-            lines.Add("            .Where(entry => entry.Type == \"scope\" || entry.Type == \"scp\")");
-            lines.Add("            .SelectMany(entry => entry.Value.Split(' ', global::System.StringSplitOptions.RemoveEmptyEntries))");
-            lines.Add("            .ToHashSet();");
-
-            foreach (var scope in requiredScopes)
-            {
-                var scopeLiteral = Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(scope, quote: true);
-                lines.Add("");
-                lines.Add($"        if (!grantedScopes.Contains({scopeLiteral}))");
-                lines.Add("        {");
-                lines.Add("            return global::System.Threading.Tasks.Task.FromResult(global::Atelier.Framework.Outcomes.Outcome.Failure());");
-                lines.Add("        }");
-            }
-        }
-
-        lines.Add("");
-        lines.Add("        ApplyPrincipal(validation.Data!);");
-        lines.Add("");
-        lines.Add("        return global::System.Threading.Tasks.Task.FromResult(global::Atelier.Framework.Outcomes.Outcome.Success());");
-        lines.Add("    }");
-
-        return string.Join("\n", lines);
-    }
-
-    private static string BuildMethod(IMethodSymbol method)
-    {
-        var returnType = DisplayName(method.ReturnType);
-        var methodName = method.Name;
-
-        var parameters = string.Join(
-            ", ",
-            method.Parameters.Select(p => $"{DisplayName(p.Type)} {p.Name}"));
-
-        var arguments = string.Join(", ", method.Parameters.Select(p => p.Name));
-
-        if (IsOutcomeOfT(method.ReturnType))
-        {
-            var validateResponse = BuildResponseValidator(method);
-
-            return $$"""
-                    public async {{returnType}} {{methodName}}({{parameters}})
-                    {
-                        return await ForwardAsync(
-                            nameof({{methodName}}),
-                            {{validateResponse}},
-                            () => _backend.{{methodName}}({{arguments}}));
-                    }
-                """;
-        }
-
-        if (IsBareOutcome(method.ReturnType))
-        {
-            return $$"""
-                    public async {{returnType}} {{methodName}}({{parameters}})
-                    {
-                        return await ForwardAsync(
-                            nameof({{methodName}}),
-                            () => _backend.{{methodName}}({{arguments}}));
-                    }
-                """;
-        }
-
-        return $$"""
-                public {{returnType}} {{methodName}}({{parameters}})
-                {
-                    return _backend.{{methodName}}({{arguments}});
-                }
-            """;
-    }
-
-    private static string BuildResponseValidator(IMethodSymbol method)
-    {
-        if (GetOutcomeInnerType(method.ReturnType) is INamedTypeSymbol inner
-            && inner.GetAttributes().Any(a => a.AttributeClass?.Name == "ContractAttribute"))
-        {
-            var validatorType = $"global::{inner.ContainingNamespace.ToDisplayString()}.{inner.Name}ContractValidationExtensions";
-            var outcomeType = $"global::Atelier.Framework.Outcomes.Outcome<{DisplayName(inner)}>";
-
-            return $"response => response.Data is not null && !{validatorType}.IsValid(response.Data) ? {outcomeType}.Failure() : response";
-        }
-
-        return "response => response";
-    }
-
-    private static ITypeSymbol? GetOutcomeInnerType(ITypeSymbol returnType)
-    {
-        if (UnwrapTask(returnType) is INamedTypeSymbol named
-            && named.IsGenericType
-            && named.ConstructedFrom.Name == "Outcome")
-        {
-            return named.TypeArguments[0];
-        }
-
-        return null;
-    }
-
-    private static bool IsOutcomeOfT(ITypeSymbol returnType)
-    {
-        return UnwrapTask(returnType) is INamedTypeSymbol named
-            && named.IsGenericType
-            && named.ConstructedFrom.Name == "Outcome";
-    }
-
-    private static bool IsBareOutcome(ITypeSymbol returnType)
-    {
-        return UnwrapTask(returnType) is INamedTypeSymbol named
-            && !named.IsGenericType
-            && named.Name == "Outcome";
-    }
-
-    private static ITypeSymbol UnwrapTask(ITypeSymbol type)
-    {
-        if (type is INamedTypeSymbol named
-            && named.IsGenericType
-            && (named.ConstructedFrom.Name == "Task" || named.ConstructedFrom.Name == "ValueTask"))
-        {
-            return named.TypeArguments[0];
-        }
-
-        return type;
-    }
-
-    private static string DisplayName(ITypeSymbol type)
-    {
-        var format = new SymbolDisplayFormat(
-            globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Included,
-            typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
-            genericsOptions: SymbolDisplayGenericsOptions.IncludeTypeParameters,
-            miscellaneousOptions: SymbolDisplayMiscellaneousOptions.EscapeKeywordIdentifiers |
-                                  SymbolDisplayMiscellaneousOptions.UseSpecialTypes);
-
-        return type.ToDisplayString(format);
-    }
-
 }
 
+internal sealed record GeneratedFile(string HintName, string Source);
+
 internal sealed record FacilityGatewayResult(
-    string HintName,
-    string Source,
+    ImmutableArray<GeneratedFile> Files,
     ImmutableArray<Diagnostic> Diagnostics);

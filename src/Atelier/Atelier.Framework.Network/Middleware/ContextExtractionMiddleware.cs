@@ -103,6 +103,11 @@ public partial class ContextExtractionMiddleware : IAtelier
 
         if (extractedContext != null)
         {
+            if (httpContext.Request.Headers.TryGetValue("Authorization", out var authVal))
+            {
+                extractedContext.AddValue("Authorization", authVal.ToString());
+            }
+
             Observe(LogLevel.Debug, values: [("Operation", nameof(InvokeAsync)), ("UserIdRedacted", WireContextCodec.RedactIdentifier(ContextExtensions.GetUserId(extractedContext)))]);
 
             _contextAccessor.SetCurrent(extractedContext);
