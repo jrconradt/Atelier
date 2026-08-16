@@ -2,6 +2,7 @@
   <Project Path="Atelier.Build/Atelier.Build.csproj" />
   <Project Path="Atelier.Facilities.Cache/Atelier.Facilities.Cache.csproj" />
   <Project Path="Atelier.Facilities.Cache.Redis/Atelier.Facilities.Cache.Redis.csproj" />
+  <Project Path="Atelier.Facilities.Database/Atelier.Facilities.Database.csproj" />
   <Project Path="Atelier.Facilities.Cache.InMemory/Atelier.Facilities.Cache.InMemory.csproj" />
   <Project Path="Atelier.Framework.Attributes/Atelier.Framework.Attributes.csproj" />
   <Project Path="Atelier.Framework.Primitives/Atelier.Framework.Primitives.csproj" />

@@ -12,4 +12,4 @@
       timeout: 3s
       retries: 5
     networks:
-      - {{ network }}
+{{ networks }}

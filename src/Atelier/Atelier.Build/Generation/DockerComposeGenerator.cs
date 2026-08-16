@@ -144,6 +144,29 @@ public class DockerComposeGenerator
             });
         }
 
+        var microSegmented = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var r in resolved)
+        {
+            var shortName = r.Name.Replace("atelier-", string.Empty).ToLowerInvariant();
+            if (r.InfrastructureDeps.RedisEnabled)
+            {
+                microSegmented.Add($"net-{shortName}-redis");
+            }
+            if (r.InfrastructureDeps.PostgresEnabled)
+            {
+                microSegmented.Add($"net-{shortName}-postgres");
+            }
+        }
+
+        foreach (var network in microSegmented.OrderBy(n => n, StringComparer.Ordinal))
+        {
+            networks.Add(new T.IsolatedNetworkEntry
+            {
+                Name = SanitizeScalar(network),
+                Driver = "bridge",
+            });
+        }
+
         return Sequence.Lines(networks);
     }
 
@@ -186,6 +209,19 @@ public class DockerComposeGenerator
         var sections = new List<Compositor>();
         if (needsPostgres)
         {
+            var pgNetworks = new List<string> { DEFAULT_NETWORK_NAME };
+            foreach (var r in resolved)
+            {
+                if (r.InfrastructureDeps.PostgresEnabled)
+                {
+                    var shortName = r.Name.Replace("atelier-", string.Empty).ToLowerInvariant();
+                    pgNetworks.Add($"net-{shortName}-postgres");
+                }
+            }
+
+            var pgNetworksSeq = Sequence.Lines(pgNetworks.Distinct(StringComparer.Ordinal)
+                .Select(n => (Compositor)new T.ServiceNetworkLine { Name = SanitizeScalar(n) }));
+
             sections.Add(new T.Postgres
             {
                 Image = InfrastructurePolicy.PostgresImage,
@@ -193,17 +229,30 @@ public class DockerComposeGenerator
                 Database = InfrastructurePolicy.PostgresDatabase,
                 Port = InfrastructurePolicy.PostgresPort,
                 Volume = InfrastructurePolicy.PostgresVolume,
-                Network = DEFAULT_NETWORK_NAME,
+                Networks = pgNetworksSeq,
             });
         }
         if (needsRedis)
         {
+            var redisNetworks = new List<string> { DEFAULT_NETWORK_NAME };
+            foreach (var r in resolved)
+            {
+                if (r.InfrastructureDeps.RedisEnabled)
+                {
+                    var shortName = r.Name.Replace("atelier-", string.Empty).ToLowerInvariant();
+                    redisNetworks.Add($"net-{shortName}-redis");
+                }
+            }
+
+            var redisNetworksSeq = Sequence.Lines(redisNetworks.Distinct(StringComparer.Ordinal)
+                .Select(n => (Compositor)new T.ServiceNetworkLine { Name = SanitizeScalar(n) }));
+
             sections.Add(new T.Redis
             {
                 Image = InfrastructurePolicy.RedisImage,
                 Port = InfrastructurePolicy.RedisPort,
                 Volume = InfrastructurePolicy.RedisVolume,
-                Network = DEFAULT_NETWORK_NAME,
+                Networks = redisNetworksSeq,
             });
         }
 
@@ -264,6 +313,16 @@ public class DockerComposeGenerator
     {
         var names = new List<string> { DEFAULT_NETWORK_NAME };
         names.AddRange(resolved.NetworkZoning.IsolatedNetworks);
+
+        var shortName = resolved.Name.Replace("atelier-", string.Empty).ToLowerInvariant();
+        if (resolved.InfrastructureDeps.RedisEnabled)
+        {
+            names.Add($"net-{shortName}-redis");
+        }
+        if (resolved.InfrastructureDeps.PostgresEnabled)
+        {
+            names.Add($"net-{shortName}-postgres");
+        }
 
         return Sequence.Lines(names.Distinct(StringComparer.Ordinal)
             .Select(n => (Compositor)new T.ServiceNetworkLine { Name = SanitizeScalar(n) }));
