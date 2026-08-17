@@ -2,7 +2,6 @@ using Atelier.Framework.Primitives;
 using System.Security.Cryptography;
 using System.Text;
 using Atelier.Framework.Context;
-using Atelier.Framework.Context.Extensions;
 using Atelier.Framework.Attributes;
 using Atelier.Framework.Observability;
 using Atelier.Framework.Outcomes;
@@ -16,7 +15,6 @@ namespace Atelier.Facilities.Cache.Redis;
 public partial class RedisCache : CacheAccessWrapperBase, IAtelier
 {
     [Requisite] private readonly IRedisConnectionProvider _connection = null!;
-    [Requisite] private readonly IContextAccessor _contextAccessor = null!;
     [Requisite] private readonly ResiliencePipelineFactory _resilience = null!;
 
     public override async Task<Outcome<CacheLookup>> GetAsync(
@@ -32,10 +30,7 @@ public partial class RedisCache : CacheAccessWrapperBase, IAtelier
 
         using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "CacheKey", keyHash);
 
-        if (!TryScopedKey(key, "Get", keyHash, out var scopedKey))
-        {
-            return Outcome<CacheLookup>.Failure();
-        }
+        var scopedKey = key.Composite();
 
         var lookup = await _resilience.ExecuteWithResilienceAsync(
             _resilience.RedisPipeline,
@@ -104,10 +99,7 @@ public partial class RedisCache : CacheAccessWrapperBase, IAtelier
             return Outcome.Failure();
         }
 
-        if (!TryScopedKey(key, "Set", keyHash, out var scopedKey))
-        {
-            return Outcome.Failure();
-        }
+        var scopedKey = key.Composite();
 
         var write = await _resilience.ExecuteWithResilienceAsync(
             _resilience.RedisPipeline,
@@ -147,10 +139,7 @@ public partial class RedisCache : CacheAccessWrapperBase, IAtelier
 
         using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "CacheKey", keyHash);
 
-        if (!TryScopedKey(key, "Remove", keyHash, out var scopedKey))
-        {
-            return Outcome.Failure();
-        }
+        var scopedKey = key.Composite();
 
         var removal = await _resilience.ExecuteWithResilienceAsync(
             _resilience.RedisPipeline,
@@ -169,20 +158,6 @@ public partial class RedisCache : CacheAccessWrapperBase, IAtelier
         }
 
         return Outcome.Success();
-    }
-
-    private bool TryScopedKey(
-        CacheKey key,
-        string operation,
-        string keyHash,
-        out string scopedKey)
-    {
-        return TenantScope.TryScopedKey(_contextAccessor,
-                                        key,
-                                        operation,
-                                        keyHash,
-                                        this,
-                                        out scopedKey);
     }
 
     private static string HashKey(string key)

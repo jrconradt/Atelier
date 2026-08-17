@@ -1,5 +1,4 @@
 using Atelier.Facilities.Cache;
-using Atelier.Framework.Context;
 using Atelier.Framework.Outcomes;
 using Atelier.Framework.Resilience;
 using Atelier.Framework.Testing;
@@ -11,30 +10,15 @@ namespace Atelier.Facilities.Cache.Redis;
 
 public static class RedisCacheBehaviorTests
 {
-    private const string TENANT = "tenant-a";
-
     private static ResiliencePipelineFactory CreateResilience()
     {
         return new ResiliencePipelineFactory(new ConfigurationBuilder().Build(),
                                              AutoMockProvider.For<ILogger>());
     }
 
-    private static IContextAccessor AccessorWithTenant(string? tenant)
-    {
-        var context = Context.Empty;
-        if (tenant is not null)
-        {
-            context.Authorization = AuthorizationContext.Create(tenantId: tenant);
-        }
-        return new StubContextAccessor(context);
-    }
-
-    private static RedisCache CreateCache(
-        IRedisConnectionProvider connection,
-        IContextAccessor accessor)
+    private static RedisCache CreateCache(IRedisConnectionProvider connection)
     {
         return new RedisCache(connection,
-                              accessor,
                               CreateResilience(),
                               AutoMockProvider.For<ILogger>());
     }
@@ -48,50 +32,14 @@ public static class RedisCacheBehaviorTests
         };
     }
 
-    [GeneratedTest("Cache/Redis-Get-Without-Tenant-Fails-Closed", "global::Atelier.Facilities.Cache.Redis.RedisCache")]
-    public static async Task GetWithoutTenantScopeFailsClosed()
-    {
-        var connection = new StubConnectionProvider();
-        var cache = CreateCache(connection, AccessorWithTenant(null));
-
-        var outcome = await cache.GetAsync(Key()).ConfigureAwait(false);
-
-        if (outcome.IsSuccess)
-        {
-            throw new InvalidOperationException("Get without a tenant in context succeeded; the tenant boundary failed open");
-        }
-        if (connection.LastKey is not null)
-        {
-            throw new InvalidOperationException("Get reached the connection despite the missing tenant scope");
-        }
-    }
-
-    [GeneratedTest("Cache/Redis-Set-Without-Tenant-Fails-Closed", "global::Atelier.Facilities.Cache.Redis.RedisCache")]
-    public static async Task SetWithoutTenantScopeFailsClosed()
-    {
-        var connection = new StubConnectionProvider();
-        var cache = CreateCache(connection, AccessorWithTenant(null));
-
-        var outcome = await cache.SetAsync(Key(), new CacheValue { Value = "v" }).ConfigureAwait(false);
-
-        if (outcome.IsSuccess)
-        {
-            throw new InvalidOperationException("Set without a tenant in context succeeded; the tenant boundary failed open");
-        }
-        if (connection.LastValue is not null)
-        {
-            throw new InvalidOperationException("Set reached the connection despite the missing tenant scope");
-        }
-    }
-
-    [GeneratedTest("Cache/Redis-Composite-Key-Includes-Tenant", "global::Atelier.Facilities.Cache.Redis.RedisCache")]
-    public static async Task ScopedKeyIncludesTenantAndNamespace()
+    [GeneratedTest("Cache/Redis-Composite-Key-Includes-Namespace", "global::Atelier.Facilities.Cache.Redis.RedisCache")]
+    public static async Task ScopedKeyIncludesNamespace()
     {
         var connection = new StubConnectionProvider
         {
             StoredValue = "payload"
         };
-        var cache = CreateCache(connection, AccessorWithTenant(TENANT));
+        var cache = CreateCache(connection);
 
         var outcome = await cache.GetAsync(Key()).ConfigureAwait(false);
 
@@ -103,14 +51,9 @@ public static class RedisCacheBehaviorTests
         {
             throw new InvalidOperationException("Get never reached the connection");
         }
-        if (!connection.LastKey.StartsWith($"{TENANT}:", StringComparison.Ordinal))
+        if (connection.LastKey != "sessions:user:42")
         {
-            throw new InvalidOperationException($"composite key '{connection.LastKey}' is not tenant-prefixed");
-        }
-        if (!connection.LastKey.Contains("sessions", StringComparison.Ordinal)
-            || !connection.LastKey.Contains("user", StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException($"composite key '{connection.LastKey}' omits the namespace or key");
+            throw new InvalidOperationException($"composite key '{connection.LastKey}' is not namespace-prefixed correctly");
         }
     }
 
@@ -121,7 +64,7 @@ public static class RedisCacheBehaviorTests
         {
             StoredValue = null
         };
-        var cache = CreateCache(connection, AccessorWithTenant(TENANT));
+        var cache = CreateCache(connection);
 
         var outcome = await cache.GetAsync(Key()).ConfigureAwait(false);
 
@@ -147,7 +90,7 @@ public static class RedisCacheBehaviorTests
             StoredValue = "stored-payload",
             StoredTtl = TimeSpan.FromMinutes(3)
         };
-        var cache = CreateCache(connection, AccessorWithTenant(TENANT));
+        var cache = CreateCache(connection);
 
         var outcome = await cache.GetAsync(Key()).ConfigureAwait(false);
 
@@ -176,7 +119,7 @@ public static class RedisCacheBehaviorTests
         {
             SetResult = false
         };
-        var cache = CreateCache(connection, AccessorWithTenant(TENANT));
+        var cache = CreateCache(connection);
 
         var outcome = await cache.SetAsync(Key(), new CacheValue { Value = "v" }).ConfigureAwait(false);
 
@@ -197,7 +140,7 @@ public static class RedisCacheBehaviorTests
         {
             SetResult = true
         };
-        var cache = CreateCache(connection, AccessorWithTenant(TENANT));
+        var cache = CreateCache(connection);
 
         var outcome = await cache.SetAsync(Key(), new CacheValue { Value = "v" }).ConfigureAwait(false);
 
@@ -218,7 +161,7 @@ public static class RedisCacheBehaviorTests
         {
             ThrowOnGet = () => new RedisTimeoutException("boom", CommandStatus.Unknown)
         };
-        var cache = CreateCache(connection, AccessorWithTenant(TENANT));
+        var cache = CreateCache(connection);
 
         var outcome = await cache.GetAsync(Key()).ConfigureAwait(false);
 
@@ -235,7 +178,7 @@ public static class RedisCacheBehaviorTests
         {
             ThrowOnGet = () => new RedisConnectionException(ConnectionFailureType.UnableToConnect, "down")
         };
-        var cache = CreateCache(connection, AccessorWithTenant(TENANT));
+        var cache = CreateCache(connection);
 
         var outcome = await cache.GetAsync(Key()).ConfigureAwait(false);
 
@@ -252,7 +195,7 @@ public static class RedisCacheBehaviorTests
         {
             ThrowOnGet = () => new ObjectDisposedException("multiplexer")
         };
-        var cache = CreateCache(connection, AccessorWithTenant(TENANT));
+        var cache = CreateCache(connection);
 
         var outcome = await cache.GetAsync(Key()).ConfigureAwait(false);
 
@@ -266,7 +209,7 @@ public static class RedisCacheBehaviorTests
     public static async Task CancelledTokenIsGuarded()
     {
         var connection = new StubConnectionProvider();
-        var cache = CreateCache(connection, AccessorWithTenant(TENANT));
+        var cache = CreateCache(connection);
 
         using var cts = new CancellationTokenSource();
         cts.Cancel();
@@ -287,7 +230,7 @@ public static class RedisCacheBehaviorTests
     public static async Task EmptyKeyIsGuarded()
     {
         var connection = new StubConnectionProvider();
-        var cache = CreateCache(connection, AccessorWithTenant(TENANT));
+        var cache = CreateCache(connection);
 
         var outcome = await cache.GetAsync(new CacheKey { Key = "   " }).ConfigureAwait(false);
 
@@ -308,7 +251,7 @@ public static class RedisCacheBehaviorTests
         {
             DeleteResult = true
         };
-        var cache = CreateCache(connection, AccessorWithTenant(TENANT));
+        var cache = CreateCache(connection);
 
         var outcome = await cache.RemoveAsync(Key()).ConfigureAwait(false);
 
@@ -316,27 +259,9 @@ public static class RedisCacheBehaviorTests
         {
             throw new InvalidOperationException("Remove failed unexpectedly");
         }
-        if (connection.LastKey is null
-            || !connection.LastKey.StartsWith($"{TENANT}:", StringComparison.Ordinal))
+        if (connection.LastKey is null || connection.LastKey != "sessions:user:42")
         {
-            throw new InvalidOperationException($"Remove did not scope the key to the tenant: '{connection.LastKey}'");
-        }
-    }
-
-    private sealed class StubContextAccessor : IContextAccessor
-    {
-        private IContext _current;
-
-        public StubContextAccessor(IContext current)
-        {
-            _current = current;
-        }
-
-        public IContext Current => _current;
-
-        public void SetCurrent(IContext context)
-        {
-            _current = context;
+            throw new InvalidOperationException($"Remove did not construct the correct key: '{connection.LastKey}'");
         }
     }
 

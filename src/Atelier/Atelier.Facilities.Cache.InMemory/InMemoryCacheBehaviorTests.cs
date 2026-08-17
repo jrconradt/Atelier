@@ -1,4 +1,3 @@
-using Atelier.Framework.Context;
 using Atelier.Framework.Testing;
 using ILogger = Atelier.Framework.Observability.ILogger;
 
@@ -7,22 +6,9 @@ namespace Atelier.Facilities.Cache.InMemory;
 
 public static class InMemoryCacheBehaviorTests
 {
-    private const string TENANT = "tenant-a";
-
-    private static IContextAccessor AccessorWithTenant(string? tenant)
+    private static InMemoryCache CreateCache()
     {
-        var context = Context.Empty;
-        if (tenant is not null)
-        {
-            context.Authorization = AuthorizationContext.Create(tenantId: tenant);
-        }
-        return new StubContextAccessor(context);
-    }
-
-    private static InMemoryCache CreateCache(IContextAccessor accessor)
-    {
-        return new InMemoryCache(accessor,
-                                 AutoMockProvider.For<ILogger>());
+        return new InMemoryCache(AutoMockProvider.For<ILogger>());
     }
 
     private static CacheKey Key()
@@ -34,36 +20,10 @@ public static class InMemoryCacheBehaviorTests
         };
     }
 
-    [GeneratedTest("Cache/InMemory-Get-Without-Tenant-Fails-Closed", "global::Atelier.Facilities.Cache.InMemoryCache")]
-    public static async Task GetWithoutTenantScopeFailsClosed()
-    {
-        var cache = CreateCache(AccessorWithTenant(null));
-
-        var outcome = await cache.GetAsync(Key()).ConfigureAwait(false);
-
-        if (outcome.IsSuccess)
-        {
-            throw new InvalidOperationException("Get without a tenant in context succeeded; the tenant boundary failed open");
-        }
-    }
-
-    [GeneratedTest("Cache/InMemory-Set-Without-Tenant-Fails-Closed", "global::Atelier.Facilities.Cache.InMemoryCache")]
-    public static async Task SetWithoutTenantScopeFailsClosed()
-    {
-        var cache = CreateCache(AccessorWithTenant(null));
-
-        var outcome = await cache.SetAsync(Key(), new CacheValue { Value = "v" }).ConfigureAwait(false);
-
-        if (outcome.IsSuccess)
-        {
-            throw new InvalidOperationException("Set without a tenant in context succeeded; the tenant boundary failed open");
-        }
-    }
-
     [GeneratedTest("Cache/InMemory-Get-Miss-Shape", "global::Atelier.Facilities.Cache.InMemoryCache")]
     public static async Task GetMissReturnsNotFound()
     {
-        var cache = CreateCache(AccessorWithTenant(TENANT));
+        var cache = CreateCache();
 
         var outcome = await cache.GetAsync(Key()).ConfigureAwait(false);
 
@@ -84,7 +44,7 @@ public static class InMemoryCacheBehaviorTests
     [GeneratedTest("Cache/InMemory-Set-Then-Get-Roundtrip", "global::Atelier.Facilities.Cache.InMemoryCache")]
     public static async Task SetThenGetReturnsStoredValue()
     {
-        var cache = CreateCache(AccessorWithTenant(TENANT));
+        var cache = CreateCache();
 
         var set = await cache.SetAsync(Key(),
                                        new CacheValue
@@ -124,7 +84,7 @@ public static class InMemoryCacheBehaviorTests
     [GeneratedTest("Cache/InMemory-Expired-Entry-Reads-As-Miss", "global::Atelier.Facilities.Cache.InMemoryCache")]
     public static async Task ExpiredEntryReadsAsMiss()
     {
-        var cache = CreateCache(AccessorWithTenant(TENANT));
+        var cache = CreateCache();
 
         var set = await cache.SetAsync(Key(),
                                        new CacheValue
@@ -150,30 +110,10 @@ public static class InMemoryCacheBehaviorTests
         }
     }
 
-    [GeneratedTest("Cache/InMemory-Composite-Key-Isolates-Tenants", "global::Atelier.Facilities.Cache.InMemoryCache")]
-    public static async Task DifferentTenantsDoNotShareEntries()
-    {
-        var tenantA = CreateCache(AccessorWithTenant("tenant-a"));
-        var tenantB = CreateCache(AccessorWithTenant("tenant-b"));
-
-        await tenantA.SetAsync(Key(), new CacheValue { Value = "a-only" }).ConfigureAwait(false);
-
-        var crossTenant = await tenantB.GetAsync(Key()).ConfigureAwait(false);
-
-        if (!crossTenant.IsSuccess)
-        {
-            throw new InvalidOperationException("cross-tenant read surfaced a failure");
-        }
-        if (crossTenant.Data.Found)
-        {
-            throw new InvalidOperationException("a second cache instance observed another tenant's entry");
-        }
-    }
-
     [GeneratedTest("Cache/InMemory-Remove-Then-Get-Misses", "global::Atelier.Facilities.Cache.InMemoryCache")]
     public static async Task RemoveDeletesTheEntry()
     {
-        var cache = CreateCache(AccessorWithTenant(TENANT));
+        var cache = CreateCache();
 
         await cache.SetAsync(Key(), new CacheValue { Value = "v" }).ConfigureAwait(false);
 
@@ -199,7 +139,7 @@ public static class InMemoryCacheBehaviorTests
     [GeneratedTest("Cache/InMemory-Cancelled-Guard", "global::Atelier.Facilities.Cache.InMemoryCache")]
     public static async Task CancelledTokenIsGuarded()
     {
-        var cache = CreateCache(AccessorWithTenant(TENANT));
+        var cache = CreateCache();
 
         using var cts = new CancellationTokenSource();
         cts.Cancel();
@@ -215,30 +155,13 @@ public static class InMemoryCacheBehaviorTests
     [GeneratedTest("Cache/InMemory-Empty-Key-Guard", "global::Atelier.Facilities.Cache.InMemoryCache")]
     public static async Task EmptyKeyIsGuarded()
     {
-        var cache = CreateCache(AccessorWithTenant(TENANT));
+        var cache = CreateCache();
 
         var outcome = await cache.GetAsync(new CacheKey { Key = "   " }).ConfigureAwait(false);
 
         if (outcome.IsSuccess)
         {
             throw new InvalidOperationException("Get succeeded on a whitespace key");
-        }
-    }
-
-    private sealed class StubContextAccessor : IContextAccessor
-    {
-        private IContext _current;
-
-        public StubContextAccessor(IContext current)
-        {
-            _current = current;
-        }
-
-        public IContext Current => _current;
-
-        public void SetCurrent(IContext context)
-        {
-            _current = context;
         }
     }
 }
