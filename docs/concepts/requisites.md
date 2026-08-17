@@ -43,6 +43,14 @@ public sealed class GreetingService
 
 `Atelier.Framework.Requisitions.Generators` also emits factories for these lifetimes (`FactorySourceGenerator`) and registration wiring, so the host can construct types with their requisites resolved.
 
+## Direct Topology Wiring
+
+Rather than routing dependencies through intermediate generic wrappers or redirection layers, the compile-time topology engine resolves interface-based `[Requisite]` fields directly:
+
+- **No generic facility wrappers**: Offerings declare dependencies directly on the interfaces they require (e.g. `IRedisConnectionProvider`, `IDbConnection`).
+- **Direct Resolution**: The generated DI container maps these interfaces directly to their compiled, concrete implementation classes.
+- **Zero Overhead**: This ensures there is no runtime redirect overhead, and concrete generated classes are wired directly into the host execution context.
+
 ## Validation
 
 `RequisiteDependencyAnalyzer` (`ATELIER0600`) flags a `[Requisite]` whose dependency has no discoverable registration, turning a runtime resolution failure into a compile-time diagnostic.

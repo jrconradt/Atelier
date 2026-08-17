@@ -1,78 +1,57 @@
-# Facilities, Attache, and Gateways
+# Infrastructure, Attache, and Gateways
 
-A **Facility** is a concrete infrastructure capability — a cache, a database, a message broker — exposed to offerings through a flat, `Outcome`-typed contract. **Attache** is the per-instance runtime that brokers capability requests against facilities, and a **Gateway** is the source-generated bridge that lets one domain call another.
+In Atelier, infrastructure capabilities (such as database connections or Redis connections) are wired directly to the offerings that need them using their direct interfaces, avoiding intermediate framework wrappers. Cross-domain boundary communication is brokered by **Attache** at the host level and routed through source-generated **Gateways**.
 
-## The facility contract
+---
 
-A facility surface is an interface marked with `[Facility]`. The attribute declares the capability name and its access policy:
+## Direct Infrastructure Wiring
+
+Rather than routing operations through generic, framework-defined layers (such as a generic `ICache` or `IDatabase` wrapper):
+*   **Direct Interfaces**: Offerings declare dependencies directly on the client/driver interfaces they require (e.g. `IRedisConnectionProvider`, `IDbConnection`).
+*   **Compile-Time Injection**: The `[Requisite]` generator matches these dependencies at compile time and registers them in the dependency injection container.
+*   **Zero Redirect Overhead**: Infrastructure providers expose native concrete capabilities directly, matching the physical topology of the dedicated boutique.
+
+---
+
+## Attache
+
+`IAttache` is the runtime broker for each boutique (unit of deployment). It manages capability requests, registers endpoints, and reports boutique health:
 
 ```csharp
-[Facility("Cache",
-          RequiresAuthentication = true,
-          AllowAnonymous = false,
-          RequiredScopes = new[] { "cache.access" })]
-public interface ICache
+public interface IAttache
 {
-    public Task<Outcome<CacheLookup>> GetAsync(
-        CacheKey key,
+    public Task<Outcome<CapabilityGrant>> RequestCapabilityAsync(
+        CapabilityRequest request,
         CancellationToken cancellationToken = default);
 
-    public Task<Outcome> SetAsync(
-        CacheKey key,
-        CacheValue value,
+    public Task<Outcome> ReleaseCapabilityAsync(
+        string ticketId,
         CancellationToken cancellationToken = default);
-
-    public Task<Outcome> RemoveAsync(
-        CacheKey key,
+        
+    public Task<Outcome<HealthReport>> GetHealthReportAsync(
         CancellationToken cancellationToken = default);
 }
 ```
 
-Every method returns `Outcome` / `Outcome<T>` and takes a `CancellationToken`. Inputs and outputs are flat `[Contract]` DTOs (`CacheKey`, `CacheValue`, `CacheLookup`), never object graphs the consumer has to navigate.
+The Attache manages resources, tracks slots using compare-and-swap (lock-free concurrency), and exposes the host's runtime health check telemetry.
 
-## Providers
-
-A facility provider derives from `FacilityBase`; it brokers resources and provisions the offering that implements the contract. `FacilityBase` supplies the resource-accounting surface: `FacilityId`, `FacilityName`, `Type` (`InProcess`, `OutOfProcess`, `NetworkMapped`, `Hybrid`), `CanFulfill`, `CheckResourceAvailabilityAsync`, `ProvisionAsync`, and `ReleaseAsync`. Resource slots are tracked with a `ConcurrentDictionary` and lock-free compare-and-swap, so providers never reach for synchronization primitives.
-
-`RedisCacheFacility : FacilityBase` is the worked example: it provisions and manages the `RedisCache : ICache` offering that implements the contract against Redis.
-
-## Cache operational contract
-
-The `RedisCache` provider connects to a single Redis endpoint and has no local or second-level fallback tier. A Redis outage therefore surfaces as a failed `Outcome` on every `GetAsync` / `SetAsync` / `RemoveAsync` rather than degrading to a cache miss. Availability is an operational requirement, not a provider responsibility: deploy Redis in a highly available topology (Sentinel or Cluster) behind a single advertised endpoint. Callers must treat a failed cache `Outcome` as a hard error and decide whether to fall through to their source of truth; the cache layer does not silently swallow connection failures.
-
-Cache values are stored in Redis as plaintext. Confidentiality at rest depends entirely on Redis and host configuration; the `ICache` layer applies no application-level encryption. Callers must not place PII, secrets, or other sensitive data in the cache. The cache is a transient performance tier, not a system of record, and carries no confidentiality guarantee for its contents.
-
-## Attache
-
-`IAttache` is the runtime broker an offering talks to when it wants a capability rather than a specific provider:
-
-```csharp
-public Task<Outcome<CapabilityGrant>> RequestCapabilityAsync(
-    CapabilityRequest request,
-    CancellationToken cancellationToken = default);
-
-public Task<Outcome> ReleaseCapabilityAsync(
-    string ticketId,
-    CancellationToken cancellationToken = default);
-```
-
-Attache resolves a request to a facility, provisions resources, and returns a `CapabilityGrant` carrying the ticket used to release them later. It also delivers and subscribes to `CapabilityNotice`s and reports health via `GetHealthReportAsync`. Attache hosts a Boutique — the unit of deployment — and exposes its endpoints and manifest.
+---
 
 ## Gateways
 
-A **Gateway** crosses a domain boundary. Mark an interface with `[DomainGateway]`, naming the source and target domains:
+A **Gateway** is a bridge that crosses a domain/network zone boundary. Mark an interface with `[DomainGateway]`, defining the source and target domains:
 
 ```csharp
 [DomainGateway("Ordering", "Billing")]
 public interface IBillingGateway
 {
+    // The GatewaySourceGenerator will emit the HTTP/gRPC transport bridge code 
+    // to serialize and route calls across the network boundaries.
 }
 ```
 
-`GatewaySourceGenerator` emits the bridge wiring. Both domains are required: `ATELIER0701` is an error when a gateway does not specify source and target domains.
+The `GatewaySourceGenerator` automatically emits all transport and serialization wiring based on the network zone topology configuration.
 
-## See also
-
-- [Network zones](network.md) — facilities and gateways are zone-governed.
-- [Outcomes](outcomes.md) — every facility method is `Outcome`-typed.
-- [Diagnostics](../reference/diagnostics.md) — `ATELIER0700` / `ATELIER0701` / `ATELIER0720`.
+### Validation Rules
+*   **ATELIER0701**: Every gateway must specify both a valid source domain and target domain.
+*   **Boundary Enforcement**: Gateways sit at the boundary of a zone. All inbound and outbound traffic crossing a network zone boundary must traverse a designated gateway.
