@@ -31,13 +31,6 @@ public static class CacheKeyExtensions
         return string.IsNullOrEmpty(key.Namespace) ? encodedKey : $"{EncodeSegment(key.Namespace)}:{encodedKey}";
     }
 
-    public static string Composite(
-        this CacheKey key,
-        string tenantScope)
-    {
-        return $"{EncodeSegment(tenantScope)}:{key.Composite()}";
-    }
-
     public static IReadOnlyList<string> DecomposeSegments(string composite)
     {
         ArgumentNullException.ThrowIfNull(composite);

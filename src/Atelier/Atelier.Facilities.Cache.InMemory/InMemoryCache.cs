@@ -1,7 +1,6 @@
 using Atelier.Framework.Primitives;
 using System.Collections.Concurrent;
 using Atelier.Framework.Context;
-using Atelier.Framework.Context.Extensions;
 using Atelier.Framework.Attributes;
 using Atelier.Framework.Infrastructure;
 using Atelier.Framework.Observability;
@@ -15,8 +14,6 @@ namespace Atelier.Facilities.Cache.InMemory;
 [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class InMemoryCache : CacheAccessWrapperBase, IAtelier
 {
-    [Requisite] private readonly IContextAccessor _contextAccessor = null!;
-
     private const int SWEEP_SAMPLE_INTERVAL = 64;
 
     private readonly ConcurrentDictionary<string, StoredEntry> _entries = new(StringComparer.Ordinal);
@@ -35,23 +32,15 @@ public partial class InMemoryCache : CacheAccessWrapperBase, IAtelier
 
         using var __entity = EntityContext.Enter(ContextAccessor, "CacheKey", key.Key);
 
-        if (!TenantScope.TryScopedKey(_contextAccessor,
-                                      key,
-                                      "Get",
-                                      key.Key,
-                                      this,
-                                      out var scopedKey))
-        {
-            return Task.FromResult(Outcome<CacheLookup>.Failure());
-        }
+        var cacheKey = key.Composite();
 
-        if (_entries.TryGetValue(scopedKey, out var stored))
+        if (_entries.TryGetValue(cacheKey, out var stored))
         {
             var now = DateTimeOffset.UtcNow;
             if (stored.ExpiresAt is { } expiresAt
                 && expiresAt <= now)
             {
-                _entries.TryRemove(new KeyValuePair<string, StoredEntry>(scopedKey, stored));
+                _entries.TryRemove(new KeyValuePair<string, StoredEntry>(cacheKey, stored));
                 return Task.FromResult(Outcome<CacheLookup>.Success(new CacheLookup
                 {
                     Found = false
@@ -106,19 +95,11 @@ public partial class InMemoryCache : CacheAccessWrapperBase, IAtelier
             return Task.FromResult(Outcome.Failure());
         }
 
-        if (!TenantScope.TryScopedKey(_contextAccessor,
-                                      key,
-                                      "Set",
-                                      key.Key,
-                                      this,
-                                      out var scopedKey))
-        {
-            return Task.FromResult(Outcome.Failure());
-        }
+        var cacheKey = key.Composite();
 
         var now = DateTimeOffset.UtcNow;
         var expiresAt = value.Ttl is { } ttl ? now + ttl : (DateTimeOffset?)null;
-        _entries[scopedKey] = new StoredEntry(value.Value, expiresAt);
+        _entries[cacheKey] = new StoredEntry(value.Value, expiresAt);
 
         if (Random.Shared.Next(SWEEP_SAMPLE_INTERVAL) == 0)
         {
@@ -142,17 +123,9 @@ public partial class InMemoryCache : CacheAccessWrapperBase, IAtelier
 
         using var __entity = EntityContext.Enter(ContextAccessor, "CacheKey", key.Key);
 
-        if (!TenantScope.TryScopedKey(_contextAccessor,
-                                      key,
-                                      "Remove",
-                                      key.Key,
-                                      this,
-                                      out var scopedKey))
-        {
-            return Task.FromResult(Outcome.Failure());
-        }
+        var cacheKey = key.Composite();
 
-        _entries.TryRemove(scopedKey, out _);
+        _entries.TryRemove(cacheKey, out _);
 
         return Task.FromResult(Outcome.Success());
     }
