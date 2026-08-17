@@ -87,6 +87,32 @@ public static class OidcServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddOidcServer(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddOptions<OidcServerOptions>()
+            .Bind(configuration.GetSection("IdentityService"))
+            .ValidateDataAnnotations();
+
+        services.AddSingleton<IOidcTokenIssuer, OidcTokenIssuer>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddOidcServer(
+        this IServiceCollection services,
+        Action<OidcServerOptions> configureOptions)
+    {
+        services.AddOptions<OidcServerOptions>()
+            .Configure(configureOptions)
+            .ValidateDataAnnotations();
+
+        services.AddSingleton<IOidcTokenIssuer, OidcTokenIssuer>();
+
+        return services;
+    }
+
     public static IApplicationBuilder UseOidcAuthentication(
         this IApplicationBuilder app)
     {

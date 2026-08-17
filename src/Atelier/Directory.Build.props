@@ -16,6 +16,10 @@
         <NuGetAuditLevel>low</NuGetAuditLevel>
     </PropertyGroup>
 
+    <ItemGroup>
+        <PackageReference Include="Microsoft.OpenApi" />
+    </ItemGroup>
+
     <PropertyGroup>
         <Authors>Infalligence Labs LLC</Authors>
         <Company>Infalligence Labs LLC</Company>

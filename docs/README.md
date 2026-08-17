@@ -17,6 +17,7 @@ New here? Read [`src/Atelier/examples/example-showcase`](../src/Atelier/examples
 | [Network zones](concepts/network.md) | Zero-trust zones, `[NetworkZone]`, and connection policy |
 | [Facilities](concepts/facilities.md) | The Facility / Attache / Gateway model for infrastructure capabilities |
 | [Observability](concepts/observability.md) | `IAtelier` and the `Observe(...)` contract |
+| [Identity and Auth](concepts/identity.md) | Authentication, JWT, and OIDC server/client setups |
 
 ## Reference
 
@@ -35,7 +36,6 @@ These subsystems ship in the framework but do not yet have concept pages here. U
 | Performance (budgets, instrumentation, Prometheus export) | `Atelier.Framework.Performance` |
 | Queueing | `Atelier.Framework.Queueing` |
 | State machine (snapshot, migrator, coordinator) | `Atelier.Framework.StateMachine` |
-| Identity (principal, claims, JWT/OIDC) | `Atelier.Framework.Identity` |
 | Contract versioning and migration | `Atelier.Framework.Contract` |
 | Strategy primitives | `Atelier.Framework.Strategy` |
 

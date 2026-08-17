@@ -87,7 +87,6 @@ public partial class ApiConfiguration
 public partial class AuthenticationConfiguration
 {
     public JwtConfiguration? Jwt { get; set; }
-    public ApiKeyConfiguration? ApiKey { get; set; }
 }
 
 [Contract("JwtConfiguration", Version = "1.0", Namespace = "Framework.Infrastructure.Extensions")]
@@ -97,13 +96,6 @@ public partial class JwtConfiguration
     public string? Audience { get; set; }
     public string? SecretKeyReference { get; set; }
     public int ExpirationMinutes { get; set; } = 60;
-}
-
-[Contract("ApiKeyConfiguration", Version = "1.0", Namespace = "Framework.Infrastructure.Extensions")]
-public partial class ApiKeyConfiguration
-{
-    public string? HeaderName { get; set; } = "X-Api-Key";
-    public string[]? ValidKeys { get; set; }
 }
 
 [Contract("CorsConfiguration", Version = "1.0", Namespace = "Framework.Infrastructure.Extensions")]
