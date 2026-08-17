@@ -36,7 +36,6 @@ public partial class OidcProviderFactory : IOidcProviderFactory, IAtelier, IDisp
             return Outcome<IOidcProvider>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", providerName);
 
         if (_providers.TryGetValue(providerName, out var existingProvider))
         {
@@ -122,7 +121,6 @@ public partial class OidcProviderFactory : IOidcProviderFactory, IAtelier, IDisp
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", providerName);
 
         var providerResult = await GetProviderAsync(providerName, cancellationToken).ConfigureAwait(false);
         if (!providerResult.IsSuccess || providerResult.Data == null)
@@ -148,7 +146,6 @@ public partial class OidcProviderFactory : IOidcProviderFactory, IAtelier, IDisp
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", providerName);
 
         if (_providers.TryRemove(providerName, out var removed)
             && removed is IDisposable disposable)

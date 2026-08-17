@@ -54,7 +54,6 @@ public partial class StateMachineFactory : IAtelier, IStateMachineFactory
             return Outcome<T>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "StateMachine", instanceId);
 
         var existingMachine = await _registryService.GetStateMachineAsync<T>(instanceId, cancellationToken).ConfigureAwait(false);
         if (existingMachine.IsSuccess)
@@ -115,7 +114,6 @@ public partial class StateMachineFactory : IAtelier, IStateMachineFactory
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "StateMachine", instanceId);
 
         var unregisterResult = await _registryService.UnregisterStateMachineAsync(instanceId, cancellationToken).ConfigureAwait(false);
         if (!unregisterResult.IsSuccess)

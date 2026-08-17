@@ -70,18 +70,6 @@ public sealed class SingleHandlerFactory : IHandlerFactory
     }
 }
 
-public sealed class IntegrationProbeContextAccessor : IContextAccessor
-{
-    private IContext _current = global::Atelier.Framework.Context.Context.Empty;
-
-    public IContext Current => _current;
-
-    public void SetCurrent(IContext context)
-    {
-        _current = context;
-    }
-}
-
 public static class HandlerRegistryDispatchIntegrationTests
 {
     private const string TARGET = "global::Atelier.Framework.Messaging.HandlerRegistry";
@@ -91,7 +79,6 @@ public static class HandlerRegistryDispatchIntegrationTests
     {
         var factory = new SingleHandlerFactory(new IntegrationPingHandler());
         var registry = new HandlerRegistry(factory,
-                                           new IntegrationProbeContextAccessor(),
                                            null);
 
         var outcome = await registry.HandleAsync<IntegrationPingRequest, IntegrationPongResponse>(
@@ -118,7 +105,6 @@ public static class HandlerRegistryDispatchIntegrationTests
     {
         var factory = new SingleHandlerFactory(new IntegrationPingHandler());
         var registry = new HandlerRegistry(factory,
-                                           new IntegrationProbeContextAccessor(),
                                            null);
 
         var outcome = await registry.HandleAsync<IntegrationPingRequest, IntegrationPongResponse>(
@@ -139,7 +125,6 @@ public static class HandlerRegistryDispatchIntegrationTests
     {
         var factory = new SingleHandlerFactory(new IntegrationPingHandler());
         var registry = new HandlerRegistry(factory,
-                                           new IntegrationProbeContextAccessor(),
                                            null);
 
         var outcome = await registry.HandleAsync<IntegrationPongResponse, IntegrationPingRequest>(
@@ -160,7 +145,6 @@ public static class HandlerRegistryDispatchIntegrationTests
     {
         var factory = new SingleHandlerFactory(new IntegrationThrowingHandler());
         var registry = new HandlerRegistry(factory,
-                                           new IntegrationProbeContextAccessor(),
                                            null);
 
         var outcome = await registry.HandleAsync<IntegrationPingRequest, IntegrationPongResponse>(

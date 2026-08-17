@@ -41,7 +41,6 @@ public partial class FacilitySelector : IAtelier, IFacilitySelector
             return Outcome<IFacility>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Requirement", requirement.RequirementId);
 
         var facilities = availableFacilities.ToList();
         if (!facilities.Any())

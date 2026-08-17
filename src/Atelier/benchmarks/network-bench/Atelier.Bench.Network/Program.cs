@@ -18,9 +18,9 @@ public class NetworkBench
         _encoded = WireContextCodec.Encode(NewContext()) ?? throw new InvalidOperationException("encode produced null");
     }
 
-    private static CompositeContext NewContext()
+    private static global::Atelier.Framework.Context.Context NewContext()
     {
-        var context = new CompositeContext(Guid.NewGuid().ToString(),
+        var context = new global::Atelier.Framework.Context.Context(Guid.NewGuid().ToString(),
                                            "edge")
         {
             TraceId = "trace-abc",

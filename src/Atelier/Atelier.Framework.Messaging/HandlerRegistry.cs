@@ -14,7 +14,6 @@ namespace Atelier.Framework.Messaging;
 public partial class HandlerRegistry : IAtelier, IHandlerRegistry
 {
     [Requisite] protected readonly IHandlerFactory _handlerFactory = null!;
-    [Requisite] protected readonly IContextAccessor _contextAccessor = null!;
 
     public async Task<Outcome<TResponse>> HandleAsync<TRequest, TResponse>(
         TRequest request,
@@ -26,10 +25,10 @@ public partial class HandlerRegistry : IAtelier, IHandlerRegistry
         var responseTypeName = typeof(TResponse).Name;
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
-        var ambientContext = _contextAccessor.Current;
+        var ambientContext = AmbientContext.Current;
         var dispatchContext = ambientContext.CreateChildWithTracing(requestTypeName);
 
-        _contextAccessor.SetCurrent(dispatchContext);
+        AmbientContext.SetCurrent(dispatchContext);
 
         ApplicationMetrics.MessagingDispatchTotal.WithLabels(
             requestTypeName,
@@ -58,7 +57,7 @@ public partial class HandlerRegistry : IAtelier, IHandlerRegistry
                 null,
                 values: [("Reason", "No handler registered"), ("RequestType", requestTypeName), ("ResponseType", responseTypeName)]);
 
-            _contextAccessor.SetCurrent(ambientContext);
+            AmbientContext.SetCurrent(ambientContext);
 
             return Outcome<TResponse>.Failure();
         }
@@ -148,7 +147,7 @@ public partial class HandlerRegistry : IAtelier, IHandlerRegistry
         }
         finally
         {
-            _contextAccessor.SetCurrent(ambientContext);
+            AmbientContext.SetCurrent(ambientContext);
         }
     }
 }

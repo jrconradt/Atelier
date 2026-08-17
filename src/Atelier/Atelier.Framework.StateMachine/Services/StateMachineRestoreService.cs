@@ -68,7 +68,6 @@ public partial class StateMachineRestoreService : IAtelier, IStateMachineRestore
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "StateMachine", instanceId);
 
         var existingMachine = await _registryService.GetStateMachineAsync<IStateMachine>(instanceId, cancellationToken).ConfigureAwait(false);
         if (existingMachine.IsSuccess)

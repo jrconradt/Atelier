@@ -12,7 +12,6 @@ namespace Atelier.Framework.Queueing.Workers;
 
 public abstract partial class QueueWorkerBase : IAtelier, IQueueWorker, IDisposable
 {
-    [Requisite] protected readonly IContextAccessor _contextAccessor = null!;
     [Requisite] protected readonly IQueueManager _queueManager = null!;
 
     private readonly ConcurrentDictionary<string, Channel<QueueMessage>> _activeChannels = new();
@@ -314,7 +313,7 @@ public abstract partial class QueueWorkerBase : IAtelier, IQueueWorker, IDisposa
                 return Outcome.Success();
             }
 
-            var messageContext = new CompositeContext(
+            var messageContext = new global::Atelier.Framework.Context.Context(
                 Guid.NewGuid().ToString(),
                 $"QueueMessage-{message.Id}",
                 null);
@@ -336,7 +335,7 @@ public abstract partial class QueueWorkerBase : IAtelier, IQueueWorker, IDisposa
                 }
             }
 
-            _contextAccessor.SetCurrent(messageContext);
+            AmbientContext.SetCurrent(messageContext);
 
             var handlerConfig = ResolveHandlerConfig(message.MessageType);
 
@@ -429,7 +428,7 @@ public abstract partial class QueueWorkerBase : IAtelier, IQueueWorker, IDisposa
         }
         finally
         {
-            _contextAccessor.SetCurrent(null!);
+            AmbientContext.SetCurrent(null!);
         }
     }
 

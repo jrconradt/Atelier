@@ -247,7 +247,6 @@ public partial class DockerHost : IHost, IAsyncDisposable, IAtelier
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "DockerImage", imageReference);
 
         var match = ImageReferenceRegex.Match(imageReference);
         if (!match.Success)

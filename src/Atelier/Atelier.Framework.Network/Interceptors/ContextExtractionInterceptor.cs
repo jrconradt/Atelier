@@ -13,7 +13,6 @@ namespace Atelier.Framework.Network.Interceptors;
 [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class ContextExtractionInterceptor : Interceptor, IAtelier
 {
-    [Requisite] private readonly IContextAccessor _contextAccessor = null!;
 
     public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(
         TRequest request,
@@ -28,7 +27,7 @@ public partial class ContextExtractionInterceptor : Interceptor, IAtelier
         }
         finally
         {
-            _contextAccessor.SetCurrent(null!);
+            AmbientContext.SetCurrent(null!);
         }
     }
 
@@ -45,7 +44,7 @@ public partial class ContextExtractionInterceptor : Interceptor, IAtelier
         }
         finally
         {
-            _contextAccessor.SetCurrent(null!);
+            AmbientContext.SetCurrent(null!);
         }
     }
 
@@ -63,7 +62,7 @@ public partial class ContextExtractionInterceptor : Interceptor, IAtelier
         }
         finally
         {
-            _contextAccessor.SetCurrent(null!);
+            AmbientContext.SetCurrent(null!);
         }
     }
 
@@ -81,7 +80,7 @@ public partial class ContextExtractionInterceptor : Interceptor, IAtelier
         }
         finally
         {
-            _contextAccessor.SetCurrent(null!);
+            AmbientContext.SetCurrent(null!);
         }
     }
 
@@ -98,7 +97,7 @@ public partial class ContextExtractionInterceptor : Interceptor, IAtelier
 
         if (extractedContext != null)
         {
-            _contextAccessor.SetCurrent(extractedContext);
+            AmbientContext.SetCurrent(extractedContext);
         }
 
         if (Logger?.IsEnabled(global::Atelier.Framework.Observability.LogLevel.Debug) ?? false)

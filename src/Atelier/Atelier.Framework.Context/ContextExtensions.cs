@@ -199,7 +199,7 @@ namespace Atelier.Framework.Context
                 && limiter.AllowedDataKeys.Count == 0
                 && limiter.BlockedDataKeys.Count == 0)
             {
-                if (context is CompositeContext
+                if (context is Context
                     && allData is Dictionary<string, string> merged)
                 {
                     return merged;

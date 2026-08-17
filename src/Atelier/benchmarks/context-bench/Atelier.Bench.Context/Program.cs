@@ -24,9 +24,9 @@ public class ContextBench
         _serializedContext = _serializer.Serialize(NewContext());
     }
 
-    private static CompositeContext NewContext()
+    private static global::Atelier.Framework.Context.Context NewContext()
     {
-        var context = new CompositeContext(Guid.NewGuid().ToString(),
+        var context = new global::Atelier.Framework.Context.Context(Guid.NewGuid().ToString(),
                                            "checkout")
         {
             Scope = ContextScope.Service,

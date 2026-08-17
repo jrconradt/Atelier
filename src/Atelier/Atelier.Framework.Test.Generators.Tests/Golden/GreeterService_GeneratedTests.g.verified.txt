@@ -136,6 +136,11 @@ internal static class GreeterService_GeneratedTests
             [GeneratedTest("Operation/No-Throw-On-Default-Input", "global::Sample.GreeterService.GreetAsync(2)")]
             public static async Task Test_Op_NoThrow_GreetAsync()
             {
+                global::Atelier.Framework.Context.AmbientContext.SetCurrent(
+                    global::Atelier.Framework.Context.Context.CreateSystemContext("GreetAsync")
+                        .WithAuthorization(global::Atelier.Framework.Context.AuthorizationContext.Create(
+                            userId: "atelier-happy",
+                            tenantId: "atelier-happy")));
                 var type = typeof(global::Sample.GreeterService);
                 Func<object> newReceiver;
                 if (TestFixtures.HasReceiver(type, "GreetAsync"))
@@ -212,6 +217,11 @@ internal static class GreeterService_GeneratedTests
             [GeneratedTest("Operation/Happy-Path-Success", "global::Sample.GreeterService.GreetAsync(2)")]
             public static async Task Test_Op_HappyPath_GreetAsync()
             {
+                global::Atelier.Framework.Context.AmbientContext.SetCurrent(
+                    global::Atelier.Framework.Context.Context.CreateSystemContext("GreetAsync")
+                        .WithAuthorization(global::Atelier.Framework.Context.AuthorizationContext.Create(
+                            userId: "atelier-happy",
+                            tenantId: "atelier-happy")));
                 var type = typeof(global::Sample.GreeterService);
                 Func<object> newReceiver;
                 if (TestFixtures.HasReceiver(type, "GreetAsync"))
@@ -316,6 +326,11 @@ internal static class GreeterService_GeneratedTests
             [GeneratedTest("Operation/Cancellation-Honored", "global::Sample.GreeterService.GreetAsync(2)")]
             public static async Task Test_Op_Cancellation_GreetAsync()
             {
+                global::Atelier.Framework.Context.AmbientContext.SetCurrent(
+                    global::Atelier.Framework.Context.Context.CreateSystemContext("GreetAsync")
+                        .WithAuthorization(global::Atelier.Framework.Context.AuthorizationContext.Create(
+                            userId: "atelier-happy",
+                            tenantId: "atelier-happy")));
                 var type = typeof(global::Sample.GreeterService);
                 Func<object> newReceiver;
                 if (TestFixtures.HasReceiver(type, "GreetAsync"))
@@ -397,6 +412,11 @@ internal static class GreeterService_GeneratedTests
             [GeneratedTest("Operation/Null-Param-Honored", "global::Sample.GreeterService.GreetAsync(2)")]
             public static async Task Test_Op_NullParam_GreetAsync_name()
             {
+                global::Atelier.Framework.Context.AmbientContext.SetCurrent(
+                    global::Atelier.Framework.Context.Context.CreateSystemContext("GreetAsync")
+                        .WithAuthorization(global::Atelier.Framework.Context.AuthorizationContext.Create(
+                            userId: "atelier-happy",
+                            tenantId: "atelier-happy")));
                 var type = typeof(global::Sample.GreeterService);
                 Func<object> newReceiver;
                 if (TestFixtures.HasReceiver(type, "GreetAsync"))
@@ -476,6 +496,11 @@ internal static class GreeterService_GeneratedTests
             [GeneratedTest("Operation/Empty-String-Tolerated", "global::Sample.GreeterService.GreetAsync(2)")]
             public static async Task Test_Op_EmptyString_GreetAsync_name()
             {
+                global::Atelier.Framework.Context.AmbientContext.SetCurrent(
+                    global::Atelier.Framework.Context.Context.CreateSystemContext("GreetAsync")
+                        .WithAuthorization(global::Atelier.Framework.Context.AuthorizationContext.Create(
+                            userId: "atelier-happy",
+                            tenantId: "atelier-happy")));
                 var type = typeof(global::Sample.GreeterService);
                 Func<object> newReceiver;
                 if (TestFixtures.HasReceiver(type, "GreetAsync"))
@@ -553,6 +578,11 @@ internal static class GreeterService_GeneratedTests
             [GeneratedTest("Operation/Concurrent-Invocation-Safe", "global::Sample.GreeterService.GreetAsync(2)")]
             public static async Task Test_Op_Concurrent_GreetAsync()
             {
+                global::Atelier.Framework.Context.AmbientContext.SetCurrent(
+                    global::Atelier.Framework.Context.Context.CreateSystemContext("GreetAsync")
+                        .WithAuthorization(global::Atelier.Framework.Context.AuthorizationContext.Create(
+                            userId: "atelier-happy",
+                            tenantId: "atelier-happy")));
                 var type = typeof(global::Sample.GreeterService);
                 Func<object> newReceiver;
                 if (TestFixtures.HasReceiver(type, "GreetAsync"))

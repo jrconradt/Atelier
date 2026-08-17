@@ -13,18 +13,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Atelier.Framework.Offering;
 
-public sealed class LifecycleProbeContextAccessor : IContextAccessor
-{
-    private IContext _current = global::Atelier.Framework.Context.Context.Empty;
-
-    public IContext Current => _current;
-
-    public void SetCurrent(IContext context)
-    {
-        _current = context;
-    }
-}
-
 [Infrastructure(InfrastructureLifetime.Singleton)]
 [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public sealed class LifecycleProbeService
@@ -112,9 +100,7 @@ public static class ProductLifecycleIntegrationTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<ILoggingStrategy, ConsoleLoggingStrategy>();
-        services.AddSingleton<IContextAccessor, LifecycleProbeContextAccessor>();
-        services.AddSingleton<ILogger>(sp => new Logger(sp.GetRequiredService<IContextAccessor>(),
-                                                        sp.GetRequiredService<ILoggingStrategy>()));
+        services.AddSingleton<ILogger>(sp => new Logger(sp.GetRequiredService<ILoggingStrategy>()));
         services.AddSingleton<IOfferingProvider, ServiceProviderOfferingProvider>();
         services.AddSingleton<LifecycleProbeService>();
         services.AddSingleton<LifecycleProbeOffering>();

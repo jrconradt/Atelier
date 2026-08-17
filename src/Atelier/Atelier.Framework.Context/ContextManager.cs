@@ -17,7 +17,7 @@ namespace Atelier.Framework.Context
                 ? $"{parent.ContextId}.{Guid.NewGuid():N}"
                 : Guid.NewGuid().ToString();
 
-            var context = new CompositeContext(contextId, name, parent)
+            var context = new Context(contextId, name, parent)
             {
                 Scope = scope,
                 ServiceId = serviceId,

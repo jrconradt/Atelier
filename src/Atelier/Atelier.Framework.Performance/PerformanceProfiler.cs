@@ -27,8 +27,7 @@ public partial class PerformanceProfiler : IAtelier, IPerformanceProfiler, IAsyn
     private const double HIGH_LATENCY_THRESHOLD_MS = 1000.0;
     private const double CRITICAL_LATENCY_THRESHOLD_MS = 5000.0;
 
-    [Requisite] protected readonly IContextAccessor _contextAccessor = null!;
-    protected IContext? Context => _contextAccessor.Current;
+    protected IContext? Context => AmbientContext.Current;
 
     private readonly MetricStore _metrics = new(MetricRetentionWindow);
     private readonly BaselineRegistry _baselines = new(BaselineRetentionWindow);
@@ -112,7 +111,6 @@ public partial class PerformanceProfiler : IAtelier, IPerformanceProfiler, IAsyn
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Component", metric.Component);
 
         if (Volatile.Read(ref _lifecycle.Disposed) == 1)
         {
@@ -153,7 +151,6 @@ public partial class PerformanceProfiler : IAtelier, IPerformanceProfiler, IAsyn
             return Task.FromResult(Outcome<ComponentMetrics>.Failure());
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Component", componentName);
 
         try
         {
@@ -211,7 +208,6 @@ public partial class PerformanceProfiler : IAtelier, IPerformanceProfiler, IAsyn
             return Task.FromResult(Outcome.Failure());
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Alert", alert.AlertId);
 
         Observe(
             alert.Severity == AlertSeverity.Critical ? LogLevel.Error : LogLevel.Warning,
@@ -246,7 +242,6 @@ public partial class PerformanceProfiler : IAtelier, IPerformanceProfiler, IAsyn
             return Task.FromResult(Outcome<PerformanceBaseline>.Failure());
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Component", component);
 
         Observe(LogLevel.Information, values: [("Component", component), ("Operation", operation)]);
 
@@ -313,7 +308,6 @@ public partial class PerformanceProfiler : IAtelier, IPerformanceProfiler, IAsyn
             return Task.FromResult(Outcome.Failure());
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Component", component);
 
         try
         {

@@ -93,7 +93,7 @@ public abstract class GatewayBase : OfferingBase
         ArgumentNullException.ThrowIfNull(operation);
         ArgumentNullException.ThrowIfNull(forward);
 
-        var parent = ContextAccessor.Current;
+        var parent = AmbientContext.Current;
         var authorization = parent.Authorization;
         var child = parent.CreateChild(operation, parent.Scope);
 
@@ -102,14 +102,14 @@ public abstract class GatewayBase : OfferingBase
             child = child.WithAuthorization(authorization);
         }
 
-        ContextAccessor.SetCurrent(child);
+        AmbientContext.SetCurrent(child);
         try
         {
             return await forward().ConfigureAwait(false);
         }
         finally
         {
-            ContextAccessor.SetCurrent(parent);
+            AmbientContext.SetCurrent(parent);
         }
     }
 }

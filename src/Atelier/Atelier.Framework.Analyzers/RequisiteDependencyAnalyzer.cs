@@ -296,8 +296,7 @@ public sealed class RequisiteDependencyAnalyzer : DiagnosticAnalyzer
 
     private static bool IsHostSuppliedContract(string fullName)
     {
-        return fullName == "Atelier.Framework.Context.IContextAccessor"
-               || fullName == "Atelier.Framework.Observability.ILogger"
+        return fullName == "Atelier.Framework.Observability.ILogger"
                || fullName == "Atelier.Framework.EventStream.Orchestration.IEventStreamManager"
                || fullName == "Atelier.Framework.EventStream.Consumers.IEventStreamConsumer"
                || fullName == "Atelier.Framework.StateMachine.Service.IStateMachinePersistence";

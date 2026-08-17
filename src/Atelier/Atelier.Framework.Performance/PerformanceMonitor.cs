@@ -239,7 +239,6 @@ public partial class PerformanceMonitor : IAtelier, IPerformanceMonitor, Microso
             return Task.FromResult(Outcome.Failure());
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Component", budget.Component);
 
         _budgets[budget.Component] = budget;
 

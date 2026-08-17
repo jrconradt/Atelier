@@ -6,11 +6,11 @@ internal static class ContextHeaderInjector
 {
     public const string TRACEPARENT_HEADER_NAME = "traceparent";
 
-    public static void Apply(HttpRequestMessage request, IContextAccessor? contextAccessor)
+    public static void Apply(HttpRequestMessage request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var current = CurrentContext(contextAccessor);
+        var current = CurrentContext();
         if (current == null)
         {
             return;
@@ -29,11 +29,11 @@ internal static class ContextHeaderInjector
         }
     }
 
-    public static void Stamp(IDictionary<string, string> headers, IContextAccessor? contextAccessor)
+    public static void Stamp(IDictionary<string, string> headers)
     {
         ArgumentNullException.ThrowIfNull(headers);
 
-        var current = CurrentContext(contextAccessor);
+        var current = CurrentContext();
         if (current == null)
         {
             return;
@@ -52,16 +52,10 @@ internal static class ContextHeaderInjector
         }
     }
 
-    private static IContext? CurrentContext(IContextAccessor? contextAccessor)
+    private static IContext? CurrentContext()
     {
-        if (contextAccessor == null)
-        {
-            return null;
-        }
-
-        var current = contextAccessor.Current;
-        if (current == null
-            || !HasPropagatablePayload(current))
+        var current = AmbientContext.Current;
+        if (!HasPropagatablePayload(current))
         {
             return null;
         }

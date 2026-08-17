@@ -20,9 +20,7 @@ internal static class Program
     {
         var services = new ServiceCollection();
         services.AddSingleton<ILoggingStrategy, ConsoleLoggingStrategy>();
-        services.AddSingleton<IContextAccessor, ShowcaseContextAccessor>();
-        services.AddSingleton<ILogger>(sp => new Logger(sp.GetRequiredService<IContextAccessor>(),
-                                                        sp.GetRequiredService<ILoggingStrategy>()));
+        services.AddSingleton<ILogger>(sp => new Logger(sp.GetRequiredService<ILoggingStrategy>()));
         services.AddSingleton<IOfferingProvider, ServiceProviderOfferingProvider>();
         services.AddSingleton<GreetingService>();
         services.AddSingleton<GreetingOffering>();
@@ -51,18 +49,6 @@ internal static class Program
 
         await product.StopAsync().ConfigureAwait(false);
         return greeting.IsSuccess ? 0 : 1;
-    }
-}
-
-public sealed class ShowcaseContextAccessor : IContextAccessor
-{
-    private IContext _current = Context.Empty;
-
-    public IContext Current => _current;
-
-    public void SetCurrent(IContext context)
-    {
-        _current = context;
     }
 }
 

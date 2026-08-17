@@ -23,7 +23,6 @@ public partial class OfferingManager : IOfferingManager, IAtelier, IAsyncDisposa
 
     [Requisite] protected readonly IOfferingResourceMonitor _resourceMonitor = null!;
 
-    [Requisite] protected readonly IContextAccessor _contextAccessor = null!;
     private readonly ConcurrentDictionary<string, Atelier.Framework.Host.Execution.HostExecutionContext> _activeOfferings = new();
     private readonly ConcurrentDictionary<string, byte> _capacityReservations = new();
 
@@ -32,7 +31,7 @@ public partial class OfferingManager : IOfferingManager, IAtelier, IAsyncDisposa
 
     private string ResolveAnnouncerIdentity()
     {
-        var userId = _contextAccessor.GetCurrentUserId();
+        var userId = AmbientContext.CurrentUserId;
         return string.IsNullOrEmpty(userId)
             ? SystemAnnouncerOwner
             : userId;
@@ -224,7 +223,6 @@ public partial class OfferingManager : IOfferingManager, IAtelier, IAsyncDisposa
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Offering", instanceId);
 
         if (!_activeOfferings.TryRemove(instanceId, out var context))
         {
@@ -262,7 +260,6 @@ public partial class OfferingManager : IOfferingManager, IAtelier, IAsyncDisposa
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Offering", instanceId);
 
         if (!_activeOfferings.TryRemove(instanceId, out var context))
         {
@@ -311,7 +308,6 @@ public partial class OfferingManager : IOfferingManager, IAtelier, IAsyncDisposa
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Offering", instanceId);
 
         if (!_activeOfferings.ContainsKey(instanceId))
         {
@@ -405,7 +401,6 @@ public partial class OfferingManager : IOfferingManager, IAtelier, IAsyncDisposa
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Offering", input);
 
         var result = await StopOfferingAsync(input, cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)

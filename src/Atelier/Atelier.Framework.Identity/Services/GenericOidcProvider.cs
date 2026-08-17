@@ -131,7 +131,6 @@ public partial class GenericOidcProvider : IAtelier, IOidcProvider
         ArgumentNullException.ThrowIfNull(exchange);
         ArgumentException.ThrowIfNullOrWhiteSpace(exchange.AuthorizationCode);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", _providerName);
 
         var stateCheck = VerifyState(exchange.ExpectedState, exchange.ReturnedState);
         if (!stateCheck.IsSuccess)
@@ -417,7 +416,6 @@ public partial class GenericOidcProvider : IAtelier, IOidcProvider
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(refreshToken);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", _providerName);
 
         try
         {
@@ -493,7 +491,6 @@ public partial class GenericOidcProvider : IAtelier, IOidcProvider
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", _providerName);
 
         try
         {
@@ -568,7 +565,6 @@ public partial class GenericOidcProvider : IAtelier, IOidcProvider
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", _providerName);
 
         try
         {
@@ -805,7 +801,6 @@ public partial class GenericOidcProvider : IAtelier, IOidcProvider
         string? codeChallengeMethod = null,
         CancellationToken cancellationToken = default)
     {
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", _providerName);
 
         try
         {
@@ -871,7 +866,6 @@ public partial class GenericOidcProvider : IAtelier, IOidcProvider
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", _providerName);
 
         try
         {
@@ -934,7 +928,6 @@ public partial class GenericOidcProvider : IAtelier, IOidcProvider
         string? idToken = null,
         CancellationToken cancellationToken = default)
     {
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", _providerName);
 
         try
         {
@@ -975,7 +968,6 @@ public partial class GenericOidcProvider : IAtelier, IOidcProvider
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", _providerName);
 
         try
         {

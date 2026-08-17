@@ -33,7 +33,6 @@ public partial class StateMachineTransitionService : IAtelier, IStateMachineTran
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "StateMachine", instanceId);
 
         if (string.IsNullOrWhiteSpace(transitionName))
         {
@@ -104,7 +103,6 @@ public partial class StateMachineTransitionService : IAtelier, IStateMachineTran
             return Outcome<IEnumerable<string>>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "StateMachine", instanceId);
 
         var instance = _registryService.GetInstance(instanceId);
         if (instance == null)

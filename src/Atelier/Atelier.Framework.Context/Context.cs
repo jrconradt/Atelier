@@ -3,13 +3,12 @@ using Atelier.Framework.Context.Extensions;
 using Atelier.Framework.Outcomes;
 namespace Atelier.Framework.Context
 {
-    public abstract class Context : IContext
+    public class Context : IContext
     {
         private string _contextId;
         private string _name;
         private IContext? _parent;
         private readonly Dictionary<string, string> _data;
-        private readonly Dictionary<string, string> _additionalData;
         private readonly List<IContext> _children = new();
         private readonly Dictionary<string, object> _results = new();
         private readonly Dictionary<string, Type> _compileTimeTypes = new();
@@ -65,20 +64,18 @@ namespace Atelier.Framework.Context
 
         public IReadOnlyDictionary<string, string> Data => _data;
 
-        public IReadOnlyDictionary<string, string> AdditionalData => _additionalData;
+        public IReadOnlyDictionary<string, string> AdditionalData => _data;
 
         public Context(
             string contextId,
             string name,
-            IContext? parent,
-            Dictionary<string, string> data,
-            Dictionary<string, string> additionalData)
+            IContext? parent = null,
+            Dictionary<string, string>? data = null)
         {
             _contextId = contextId;
             _name = name;
             _parent = parent;
-            _data = data;
-            _additionalData = additionalData;
+            _data = data ?? new Dictionary<string, string>();
             ScopeLimiter = ContextScopeLimiter.Create();
 
             CorrelationId = parent?.CorrelationId ?? Guid.NewGuid().ToString();
@@ -96,12 +93,56 @@ namespace Atelier.Framework.Context
 
         public virtual bool TryGetValue(string key, out string value)
         {
-            return _data.TryGetValue(key, out value!);
+            IContext? current = this;
+            while (current is Context context)
+            {
+                if (context._data.TryGetValue(key, out value!))
+                {
+                    return true;
+                }
+
+                current = context.Parent;
+            }
+
+            if (current != null)
+            {
+                return current.TryGetValue(key, out value!);
+            }
+
+            value = null!;
+            return false;
         }
 
         public virtual IReadOnlyDictionary<string, string> GetAllValues()
         {
-            return _data;
+            var chain = new Stack<IReadOnlyDictionary<string, string>>();
+            IContext? current = this;
+
+            while (current is Context context)
+            {
+                chain.Push(context._data);
+                current = context.Parent;
+            }
+
+            var merged = new Dictionary<string, string>();
+
+            if (current != null)
+            {
+                foreach (var kvp in current.GetAllValues())
+                {
+                    merged[kvp.Key] = kvp.Value;
+                }
+            }
+
+            while (chain.Count > 0)
+            {
+                foreach (var kvp in chain.Pop())
+                {
+                    merged[kvp.Key] = kvp.Value;
+                }
+            }
+
+            return merged;
         }
 
         public virtual void AddValue(string key, string value)
@@ -121,7 +162,7 @@ namespace Atelier.Framework.Context
             }
 
             var childId = $"{ContextId}.{Guid.NewGuid():N}";
-            var child = new CompositeContext(childId, name, this);
+            var child = new Context(childId, name, this);
             child.Scope = scope;
 
             PropagateInheritableState(child);
@@ -351,9 +392,7 @@ namespace Atelier.Framework.Context
             public EmptyContext() : base(
                 Guid.Empty.ToString(),
                 "Empty",
-                null,
-                new Dictionary<string, string>(),
-                new Dictionary<string, string>())
+                null)
             {
                 Scope = ContextScope.System;
                 Lifecycle = ContextLifecycle.Completed;
@@ -373,8 +412,7 @@ namespace Atelier.Framework.Context
                     ["OperationType"] = "System",
                     ["OperationName"] = operationName,
                     ["InitiatedBy"] = "BackgroundService"
-                },
-                new Dictionary<string, string>())
+                })
             {
                 Scope = ContextScope.System;
                 Lifecycle = ContextLifecycle.Active;

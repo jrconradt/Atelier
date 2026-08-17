@@ -47,7 +47,6 @@ public partial class StateMachineRegistryService : IAtelier, IStateMachineRegist
             return Outcome<T>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "StateMachine", instanceId);
 
         if (!_instances.TryGetValue(instanceId, out var instance))
         {
@@ -124,7 +123,6 @@ public partial class StateMachineRegistryService : IAtelier, IStateMachineRegist
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "StateMachine", instanceId);
 
         if (!_instances.TryAdd(instanceId, instance))
         {
@@ -163,7 +161,6 @@ public partial class StateMachineRegistryService : IAtelier, IStateMachineRegist
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "StateMachine", instanceId);
 
         if (!_instances.TryRemove(instanceId, out var instance))
         {

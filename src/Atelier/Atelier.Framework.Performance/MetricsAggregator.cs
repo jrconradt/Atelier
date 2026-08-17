@@ -155,7 +155,6 @@ public partial class MetricsAggregator : IAtelier, IMetricsAggregator
             return Task.FromResult(Outcome<AggregateComparison>.Failure());
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Aggregate", baselineAggregateId);
 
         try
         {

@@ -24,7 +24,6 @@ public static class JsonContractSerializerFuzzTests
         registry.Register<FuzzContract>();
 
         var migrator = new ContractMigrator(registry,
-                                            null,
                                             null);
         var validator = new ContractValidator(registry);
 
@@ -32,7 +31,6 @@ public static class JsonContractSerializerFuzzTests
             registry,
             migrator,
             validator,
-            null,
             null);
     }
 

@@ -31,7 +31,6 @@ public record GeneratedArtifacts
     public string ProjectPath { get; init; } = string.Empty;
     public string AssemblyLoaderPath { get; init; } = string.Empty;
     public string DockerfilePath { get; init; } = string.Empty;
-    public string ContextAccessorPath { get; init; } = string.Empty;
     public IReadOnlyList<string> StubServicePaths { get; init; } = [];
 
     public IReadOnlyList<string> AllPaths =>
@@ -40,7 +39,6 @@ public record GeneratedArtifacts
         ProjectPath,
         AssemblyLoaderPath,
         DockerfilePath,
-        ContextAccessorPath,
         .. StubServicePaths
     ];
 }

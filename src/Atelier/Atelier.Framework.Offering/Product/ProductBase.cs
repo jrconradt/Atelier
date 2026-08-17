@@ -97,7 +97,6 @@ public abstract partial class ProductBase : IAtelier
 
     public async Task<Outcome> StartAsync(CancellationToken cancellationToken = default)
     {
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Product", Name);
 
         if (_isRunning)
         {
@@ -143,7 +142,6 @@ public abstract partial class ProductBase : IAtelier
 
     public async Task<Outcome> StopAsync(CancellationToken cancellationToken = default)
     {
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Product", Name);
 
         if (!_isRunning)
         {

@@ -154,7 +154,6 @@ public partial class OidcAuthenticationMiddleware : IAtelier
             return Outcome<Atelier.Framework.Context.AuthorizationContext>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", _options.ProviderName);
 
         try
         {

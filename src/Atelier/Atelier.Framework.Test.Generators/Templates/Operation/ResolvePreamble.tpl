@@ -1,3 +1,8 @@
+global::Atelier.Framework.Context.AmbientContext.SetCurrent(
+    global::Atelier.Framework.Context.Context.CreateSystemContext("{{ opName }}")
+        .WithAuthorization(global::Atelier.Framework.Context.AuthorizationContext.Create(
+            userId: "atelier-happy",
+            tenantId: "atelier-happy")));
 var type = typeof({{ fqn }});
 Func<object> newReceiver;
 if (TestFixtures.HasReceiver(type, "{{ opName }}"))

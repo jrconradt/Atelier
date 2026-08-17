@@ -12,7 +12,7 @@ public static class MessagingContextSerializerTests
     {
         var serializer = new MessagingContextSerializer();
 
-        var context = new CompositeContext(
+        var context = new global::Atelier.Framework.Context.Context(
             "ctx-roundtrip",
             "RoundTrip");
         context.AddResult("status", "ok");

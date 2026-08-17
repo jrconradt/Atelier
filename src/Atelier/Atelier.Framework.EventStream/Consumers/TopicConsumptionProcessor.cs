@@ -21,7 +21,6 @@ namespace Atelier.Framework.EventStream.Consumers;
 public partial class TopicConsumptionProcessor : IAtelier
 {
     [Requisite] private readonly IEventStreamConsumer _consumer = null!;
-    [Requisite] private readonly IContextAccessor _contextAccessor = null!;
     [Requisite] private readonly IEventStreamManager _streamManager = null!;
     [Requisite] private readonly IEventStreamOffsetStore _offsetStore = null!;
     [Requisite] private readonly EventStreamMetrics _metrics = null!;
@@ -57,7 +56,6 @@ public partial class TopicConsumptionProcessor : IAtelier
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Consumer", ConsumerName);
 
         if (Interlocked.CompareExchange(ref _lifecycleState, LIFECYCLE_RUNNING, LIFECYCLE_IDLE) != LIFECYCLE_IDLE)
         {
@@ -143,7 +141,6 @@ public partial class TopicConsumptionProcessor : IAtelier
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Consumer", ConsumerName);
 
         var stopResult = await StopAsync(ct).ConfigureAwait(false);
         if (!stopResult.IsSuccess)
@@ -436,7 +433,7 @@ public partial class TopicConsumptionProcessor : IAtelier
 
         Outcome result;
 
-        var eventContext = new CompositeContext(
+        var eventContext = new global::Atelier.Framework.Context.Context(
             Guid.NewGuid().ToString(),
             $"StreamEvent-{topic}-{streamEvent.Offset}",
             null);
@@ -444,7 +441,7 @@ public partial class TopicConsumptionProcessor : IAtelier
             streamEvent.Metadata?.TraceId,
             streamEvent.Metadata?.SpanId ?? streamEvent.Metadata?.ParentSpanId,
             streamEvent.Metadata?.CorrelationId);
-        _contextAccessor.SetCurrent(eventContext);
+        AmbientContext.SetCurrent(eventContext);
 
         using (_metrics.MeasureProcessingDuration(ConsumerName, topic))
         {
@@ -463,7 +460,7 @@ public partial class TopicConsumptionProcessor : IAtelier
             }
             finally
             {
-                _contextAccessor.SetCurrent(null!);
+                AmbientContext.SetCurrent(null!);
             }
         }
 

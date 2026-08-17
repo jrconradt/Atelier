@@ -249,7 +249,6 @@ public partial class StateMachineMonitoringService : IAtelier, IStateMachineMoni
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "StateMachine", instanceId);
 
         var instance = _registryService.GetInstance(instanceId);
         if (instance == null)

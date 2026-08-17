@@ -158,7 +158,7 @@ namespace Atelier.Framework.Messaging.Serializers
                 return Outcome<IContext>.Failure();
             }
 
-            var deserializedContext = new CompositeContext(
+            var deserializedContext = new global::Atelier.Framework.Context.Context(
                 envelope.ContextId,
                 envelope.Name,
                 null,
