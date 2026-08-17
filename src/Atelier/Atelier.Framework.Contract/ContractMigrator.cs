@@ -39,7 +39,6 @@ public partial class ContractMigrator : IContractMigrator, IAtelier
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Contract", sourceMetadata.Name);
 
         if (!ContractVersion.Equals(
             sourceVersion,
@@ -117,7 +116,6 @@ public partial class ContractMigrator : IContractMigrator, IAtelier
             return Outcome<TTarget?>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Contract", sourceMetadata.Name);
 
         if (!ContractVersion.Equals(
             targetVersion,
@@ -196,7 +194,6 @@ public partial class ContractMigrator : IContractMigrator, IAtelier
             return Outcome<object?>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Contract", sourceMetadata.Name);
 
         if (!ContractVersion.Equals(
             targetVersion,
@@ -306,7 +303,6 @@ public partial class ContractMigrator : IContractMigrator, IAtelier
         string sourceVersion,
         string targetVersion)
     {
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Contract", contractName);
 
         ArgumentNullException.ThrowIfNull(contractName);
         ArgumentNullException.ThrowIfNull(sourceVersion);

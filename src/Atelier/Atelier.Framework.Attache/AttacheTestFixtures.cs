@@ -81,10 +81,6 @@ internal static class AttacheTestFixtures
         {
             return requisitionService;
         }
-        if (parameterType == typeof(IContextAccessor))
-        {
-            return new VerifiedContextAccessor(HAPPY_CONSUMER);
-        }
         if (parameterType == typeof(HealthCheckService))
         {
             return new FixtureHealthCheckService();
@@ -107,26 +103,6 @@ internal static class AttacheTestFixtures
         }
     }
 
-    private sealed class VerifiedContextAccessor : IContextAccessor
-    {
-        private IContext _current;
-
-        public VerifiedContextAccessor(string userId)
-        {
-            var context = global::Atelier.Framework.Context.Context.CreateSystemContext("attache-test");
-            context.Authorization = AuthorizationContext.Create(
-                userId: userId,
-                isVerified: true);
-            _current = context;
-        }
-
-        public IContext Current => _current;
-
-        public void SetCurrent(IContext context)
-        {
-            _current = context;
-        }
-    }
 
     private sealed class ProvisioningRequisitionService : IRequisitionService
     {

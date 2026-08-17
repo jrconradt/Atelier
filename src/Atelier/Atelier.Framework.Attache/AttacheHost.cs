@@ -22,7 +22,6 @@ namespace Atelier.Framework.Attache;
 public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDisposable
 {
     [Requisite] protected readonly IRequisitionService _requisitionService = null!;
-    [Requisite] protected readonly IContextAccessor _contextAccessor = null!;
     [Requisite] protected readonly ICapabilityAuditChannel _auditChannel = null!;
     [Requisite] protected readonly HealthCheckService _healthCheckService = null!;
 
@@ -135,7 +134,6 @@ public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDis
             return Outcome<CapabilityGrant>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Consumer", request.ConsumerId ?? string.Empty);
 
         if (string.IsNullOrEmpty(request.ConsumerId))
         {
@@ -297,7 +295,6 @@ public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDis
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Ticket", ticketId);
 
         if (!_grantedTickets.TryRemove(ticketId, out var grant))
         {
@@ -405,7 +402,6 @@ public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDis
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Ticket", notice.TicketId);
 
         foreach (var handler in _noticeHandlers.Values)
         {
@@ -451,7 +447,7 @@ public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDis
 
     private AuditPrincipal CapturePrincipal()
     {
-        var authorization = _contextAccessor.Current?.Authorization;
+        var authorization = AmbientContext.Current?.Authorization;
         if (authorization is null)
         {
             return AuditPrincipal.Anonymous;
@@ -473,7 +469,7 @@ public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDis
             ["ConsumerId"] = request.ConsumerId
         };
 
-        var authorization = _contextAccessor.Current?.Authorization;
+        var authorization = AmbientContext.Current?.Authorization;
         if (authorization is not null)
         {
             if (!string.IsNullOrEmpty(authorization.UserId))

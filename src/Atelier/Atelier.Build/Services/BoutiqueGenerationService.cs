@@ -35,12 +35,6 @@ public class BoutiqueGenerationService : IBoutiqueGenerationService
 
         var resolved = BoutiqueResolver.Resolve(schema, dependencyGraph, compiledAssembliesDirectory, _verbose);
 
-        var contextAccessorPath = await GenerateContextAccessorAsync(
-            schema,
-            outputDirectory,
-            context,
-            cancellationToken).ConfigureAwait(false);
-
         var stubPaths = await GenerateStubServicesAsync(
             schema,
             outputDirectory,
@@ -52,6 +46,7 @@ public class BoutiqueGenerationService : IBoutiqueGenerationService
             dependencyGraph,
             resolved,
             outputDirectory,
+            compiledAssembliesDirectory,
             context,
             cancellationToken).ConfigureAwait(false);
 
@@ -89,7 +84,6 @@ public class BoutiqueGenerationService : IBoutiqueGenerationService
             ProjectPath = projectPath,
             AssemblyLoaderPath = assemblyLoaderPath,
             DockerfilePath = dockerfilePath,
-            ContextAccessorPath = contextAccessorPath,
             StubServicePaths = stubPaths
         };
     }
@@ -133,16 +127,6 @@ public class BoutiqueGenerationService : IBoutiqueGenerationService
         return path;
     }
 
-    private async Task<string> GenerateContextAccessorAsync(
-        BoutiqueYamlSchema schema,
-        string outputDirectory,
-        Pipeline.BuildContext context,
-        CancellationToken cancellationToken)
-    {
-        var generator = new DefaultContextAccessorGenerator(context);
-        return await generator.GenerateAsync(schema, outputDirectory).ConfigureAwait(false);
-    }
-
     private async Task<List<string>> GenerateStubServicesAsync(
         BoutiqueYamlSchema schema,
         string outputDirectory,
@@ -158,11 +142,12 @@ public class BoutiqueGenerationService : IBoutiqueGenerationService
         ProductDependencyGraph dependencyGraph,
         ResolvedBoutique resolved,
         string outputDirectory,
+        string compiledAssembliesDirectory,
         Pipeline.BuildContext context,
         CancellationToken cancellationToken)
     {
         var generator = new ProgramGenerator(context);
-        return await generator.GenerateAsync(schema, dependencyGraph, resolved, outputDirectory).ConfigureAwait(false);
+        return await generator.GenerateAsync(schema, dependencyGraph, resolved, outputDirectory, compiledAssembliesDirectory).ConfigureAwait(false);
     }
 
     private async Task<string> GenerateProjectFileAsync(

@@ -34,7 +34,8 @@ public class ProgramGenerator
         BoutiqueYamlSchema schema,
         ProductDependencyGraph dependencyGraph,
         ResolvedBoutique resolved,
-        string outputDirectory)
+        string outputDirectory,
+        string compiledAssembliesDirectory)
     {
         var boutiqueName = Naming.ToBoutiqueAssemblyIdentifier(schema.Name);
 
@@ -55,7 +56,7 @@ public class ProgramGenerator
             InfrastructureSetup = schema.Infrastructure?.SignalR?.Enabled == true
                 ? (Compositor)new T.SignalRSetup()
                 : EMPTY,
-            AutoDiscovery = new T.AutoDiscovery(),
+            AutoDiscovery = RenderAtelierRegistrations(dependencyGraph, compiledAssembliesDirectory),
             FallbackServiceRegistrations = RenderFallbackServices(schema),
             ExplicitServiceRegistrations = RenderExplicitServices(schema),
             Capabilities = RenderCapabilities(schema),
@@ -215,6 +216,47 @@ public class ProgramGenerator
             : new T.OfferingProviderNull();
 
         return new T.FallbackServices { OfferingProvider = offeringProvider };
+    }
+
+    private static IComposable RenderAtelierRegistrations(
+        ProductDependencyGraph dependencyGraph,
+        string compiledAssembliesDirectory)
+    {
+        var registrations = InfrastructureRegistrationScanner.Scan(dependencyGraph, compiledAssembliesDirectory);
+        var items = new List<Compositor>();
+        foreach (var reg in registrations)
+        {
+            if (!IsValidTypeName(reg.Implementation))
+            {
+                continue;
+            }
+
+            if (reg.HasInterface
+                && IsValidTypeName(reg.ServiceType))
+            {
+                items.Add(new T.ServiceWithInterface
+                {
+                    Lifetime = reg.Lifetime,
+                    Interface = reg.ServiceType,
+                    Implementation = reg.Implementation,
+                });
+            }
+            else
+            {
+                items.Add(new T.ServiceImplOnly
+                {
+                    Lifetime = reg.Lifetime,
+                    Implementation = reg.Implementation,
+                });
+            }
+
+            if (reg.IsHostedService)
+            {
+                items.Add(new T.HostedService { Implementation = reg.ServiceType });
+            }
+        }
+
+        return Sequence.Lines(items);
     }
 
     private static IComposable RenderExplicitServices(BoutiqueYamlSchema schema)

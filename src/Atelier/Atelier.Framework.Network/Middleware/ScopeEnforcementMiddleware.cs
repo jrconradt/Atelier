@@ -13,7 +13,6 @@ namespace Atelier.Framework.Network.Middleware;
 [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class ScopeEnforcementMiddleware : IAtelier
 {
-    [Requisite] private readonly IContextAccessor _contextAccessor = null!;
 
     private readonly StrongBox<RequestDelegate?> _next = new(null);
 
@@ -42,7 +41,7 @@ public partial class ScopeEnforcementMiddleware : IAtelier
             return;
         }
 
-        var authorization = _contextAccessor.Current?.Authorization;
+        var authorization = AmbientContext.Current?.Authorization;
 
         var requiredScopes = ScopeRequirementResolver.ResolveRequiredScopes(operation.Operation);
         if (!ScopeAuthorizationEvaluator.IsAuthorized(authorization, requiredScopes))

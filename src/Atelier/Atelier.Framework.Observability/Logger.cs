@@ -21,17 +21,13 @@ namespace Atelier.Framework.Observability
 
         private static readonly IReadOnlyDictionary<string, object> EmptyValues = new Dictionary<string, object>();
 
-        private readonly IContextAccessor _contextAccessor;
         private readonly State _state;
         private int _minimumLevel = (int)LogLevel.Information;
 
         public Logger(
-            IContextAccessor contextAccessor,
             ILoggingStrategy loggingStrategy)
         {
-            ArgumentNullException.ThrowIfNull(contextAccessor);
             ArgumentNullException.ThrowIfNull(loggingStrategy);
-            _contextAccessor = contextAccessor;
             _state = new State
             {
                 LoggingStrategy = loggingStrategy,
@@ -39,18 +35,16 @@ namespace Atelier.Framework.Observability
         }
 
         private Logger(
-            IContextAccessor contextAccessor,
             State state,
             int minimumLevel)
         {
-            _contextAccessor = contextAccessor;
             _state = state;
             _minimumLevel = minimumLevel;
         }
 
         private Logger With(State state)
         {
-            return new Logger(_contextAccessor, state, Volatile.Read(ref _minimumLevel));
+            return new Logger(state, Volatile.Read(ref _minimumLevel));
         }
 
         private static Dictionary<string, object> CopyValues(IReadOnlyDictionary<string, object> values)
@@ -101,7 +95,7 @@ namespace Atelier.Framework.Observability
                 return;
             }
 
-            var currentContext = _contextAccessor.Current;
+            var currentContext = AmbientContext.Current;
 
             var values = CopyValues(_state.Values);
 

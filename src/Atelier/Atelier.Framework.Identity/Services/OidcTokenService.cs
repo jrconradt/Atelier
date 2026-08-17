@@ -25,7 +25,6 @@ public partial class OidcTokenService : IOidcTokenService, IAtelier
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", providerName ?? "default");
 
         try
         {
@@ -79,7 +78,6 @@ public partial class OidcTokenService : IOidcTokenService, IAtelier
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", providerName ?? "default");
 
         try
         {
@@ -115,7 +113,6 @@ public partial class OidcTokenService : IOidcTokenService, IAtelier
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(refreshToken);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", providerName ?? "default");
 
         try
         {
@@ -151,7 +148,6 @@ public partial class OidcTokenService : IOidcTokenService, IAtelier
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", providerName ?? "default");
 
         try
         {
@@ -187,7 +183,6 @@ public partial class OidcTokenService : IOidcTokenService, IAtelier
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", providerName ?? "default");
 
         try
         {
@@ -223,7 +218,6 @@ public partial class OidcTokenService : IOidcTokenService, IAtelier
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", providerName ?? "default");
 
         try
         {

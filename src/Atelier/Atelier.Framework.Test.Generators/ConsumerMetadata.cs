@@ -42,16 +42,13 @@ internal sealed class ConsumerMetadata
 
         public required bool GeneratorAddsLogger { get; init; }
 
-        public required bool GeneratorAddsContextAccessor { get; init; }
-
         public required bool HasUserDeclaredConstructor { get; init; }
 
         public required bool IsProduct { get; init; }
 
         public int ExpectedCtorArity =>
             RequisiteFields.Count
-            + (GeneratorAddsLogger ? 1 : 0)
-            + (GeneratorAddsContextAccessor ? 1 : 0);
+            + (GeneratorAddsLogger ? 1 : 0);
 
         public bool GeneratorEmitsConstructor =>
         ExpectedCtorArity > 0 && !HasUserDeclaredConstructor;
@@ -106,12 +103,6 @@ internal static class ConsumerAnalyzer
 
         var generatorAddsLogger = implementsIAtelier;
 
-        var contextAccessorType = compilation.GetTypeByMetadataName("Atelier.Framework.Context.IContextAccessor");
-        var generatorAddsContextAccessor = implementsIAtelier
-            && contextAccessorType is not null
-            && FindExistingContextAccessorMember(classSymbol, contextAccessorType) is null
-            && !ContextAccessorPropertyExistsInChain(classSymbol);
-
         var hasUserCtor = classSymbol.Constructors.Any(c =>
             !c.IsImplicitlyDeclared &&
             c.DeclaredAccessibility == Accessibility.Public &&
@@ -130,7 +121,6 @@ internal static class ConsumerAnalyzer
             RequisiteFields = requisites,
             Operations = operations,
             GeneratorAddsLogger = generatorAddsLogger,
-            GeneratorAddsContextAccessor = generatorAddsContextAccessor,
             HasUserDeclaredConstructor = hasUserCtor,
             IsProduct = isProduct,
         };
@@ -166,79 +156,6 @@ internal static class ConsumerAnalyzer
             current = current.BaseType;
         }
         return false;
-    }
-
-    private static bool ContextAccessorPropertyExistsInChain(INamedTypeSymbol classSymbol)
-    {
-        var current = classSymbol;
-        while (current is not null && current.SpecialType != SpecialType.System_Object)
-        {
-            if (HasSourceDeclaredContextAccessor(current))
-            {
-                return true;
-            }
-
-            if (!ReferenceEquals(current, classSymbol)
-                && ImplementsIAtelier(current)
-                && IsPartialClass(current))
-            {
-                return true;
-            }
-            current = current.BaseType;
-        }
-        return false;
-    }
-
-    private static bool HasSourceDeclaredContextAccessor(INamedTypeSymbol classSymbol)
-    {
-        foreach (var member in classSymbol.GetMembers("ContextAccessor"))
-        {
-            if (member is IFieldSymbol || member is IPropertySymbol)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static string? FindExistingContextAccessorMember(
-        INamedTypeSymbol classSymbol,
-        INamedTypeSymbol contextAccessorType)
-    {
-        var current = classSymbol;
-        while (current is not null && current.SpecialType != SpecialType.System_Object)
-        {
-            var isDeclaringType = ReferenceEquals(current, classSymbol);
-            foreach (var member in current.GetMembers())
-            {
-                if (member.Name == "ContextAccessor")
-                {
-                    continue;
-                }
-                if (member is IFieldSymbol field
-                    && SymbolEqualityComparer.Default.Equals(field.Type, contextAccessorType)
-                    && (isDeclaringType || IsAccessibleFromDerived(field)))
-                {
-                    return field.Name;
-                }
-                if (member is IPropertySymbol property
-                    && SymbolEqualityComparer.Default.Equals(property.Type, contextAccessorType)
-                    && (isDeclaringType || IsAccessibleFromDerived(property)))
-                {
-                    return property.Name;
-                }
-            }
-            current = current.BaseType;
-        }
-        return null;
-    }
-
-    private static bool IsAccessibleFromDerived(ISymbol member)
-    {
-        return member.DeclaredAccessibility is Accessibility.Public
-            or Accessibility.Protected
-            or Accessibility.ProtectedOrInternal
-            or Accessibility.Internal;
     }
 
     private static bool IsPartialClass(INamedTypeSymbol classSymbol)

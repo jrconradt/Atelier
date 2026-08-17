@@ -20,7 +20,6 @@ public class MessagingBench
     public MessagingBench()
     {
         _registry = new HandlerRegistry(_factory,
-                                        new IntegrationProbeContextAccessor(),
                                         null);
     }
 

@@ -159,10 +159,6 @@ public sealed class BoutiqueGenerationRunner
         string compiledAssembliesDir,
         List<string> artifacts)
     {
-        var contextAccessorPath = await GenerateDefaultContextAccessorAsync(schema, outputDir).ConfigureAwait(false);
-        artifacts.Add(contextAccessorPath);
-        _presenter.GeneratedArtifact(Path.GetFileName(contextAccessorPath));
-
         var stubPaths = await GenerateStubServicesAsync(schema, outputDir).ConfigureAwait(false);
         artifacts.AddRange(stubPaths);
         foreach (var stubPath in stubPaths)
@@ -170,7 +166,7 @@ public sealed class BoutiqueGenerationRunner
             _presenter.GeneratedArtifact(Path.GetFileName(stubPath));
         }
 
-        var programPath = await GenerateProgramAsync(schema, dependencyGraph, resolved, outputDir).ConfigureAwait(false);
+        var programPath = await GenerateProgramAsync(schema, dependencyGraph, resolved, outputDir, compiledAssembliesDir).ConfigureAwait(false);
         artifacts.Add(programPath);
         _presenter.GeneratedProgram();
 
@@ -318,10 +314,11 @@ public sealed class BoutiqueGenerationRunner
         BoutiqueYamlSchema schema,
         ProductDependencyGraph dependencyGraph,
         ResolvedBoutique resolved,
-        string outputDirectory)
+        string outputDirectory,
+        string compiledAssembliesDirectory)
     {
         var generator = new ProgramGenerator(_context);
-        return await generator.GenerateAsync(schema, dependencyGraph, resolved, outputDirectory).ConfigureAwait(false);
+        return await generator.GenerateAsync(schema, dependencyGraph, resolved, outputDirectory, compiledAssembliesDirectory).ConfigureAwait(false);
     }
 
     private async Task<string> GenerateProjectFileAsync(
@@ -341,14 +338,6 @@ public sealed class BoutiqueGenerationRunner
     {
         var generator = new PerBoutiqueAssemblyLoaderGenerator(_context);
         return await generator.GenerateAsync(schema, dependencyGraph, outputDirectory, compiledAssembliesDir).ConfigureAwait(false);
-    }
-
-    private async Task<string> GenerateDefaultContextAccessorAsync(
-        BoutiqueYamlSchema schema,
-        string outputDirectory)
-    {
-        var generator = new DefaultContextAccessorGenerator(_context);
-        return await generator.GenerateAsync(schema, outputDirectory).ConfigureAwait(false);
     }
 
     private async Task<List<string>> GenerateStubServicesAsync(

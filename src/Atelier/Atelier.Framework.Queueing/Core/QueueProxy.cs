@@ -7,13 +7,11 @@ public readonly struct QueueProxy
 {
     private readonly IQueueRegistry _registry;
     private readonly string _topic;
-    private readonly IContextAccessor? _contextAccessor;
 
-    internal QueueProxy(IQueueRegistry registry, string topic, IContextAccessor? contextAccessor = null)
+    internal QueueProxy(IQueueRegistry registry, string topic)
     {
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         _topic = topic ?? throw new ArgumentNullException(nameof(topic));
-        _contextAccessor = contextAccessor;
     }
 
     public string Topic => _topic;
@@ -22,9 +20,8 @@ public readonly struct QueueProxy
     {
         var resolved = options ?? new QueueMessageOptions();
 
-        var current = _contextAccessor?.Current;
-        if (current == null
-            || string.IsNullOrEmpty(current.TraceId))
+        var current = AmbientContext.Current;
+        if (string.IsNullOrEmpty(current.TraceId))
         {
             return resolved;
         }

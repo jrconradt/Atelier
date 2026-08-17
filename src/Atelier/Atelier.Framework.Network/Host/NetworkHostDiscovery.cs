@@ -37,7 +37,6 @@ namespace Atelier.Framework.Network
                 return Outcome.Failure();
             }
 
-            using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Host", record.InstanceId);
 
             if (string.IsNullOrWhiteSpace(record.ServiceName))
             {
@@ -69,7 +68,6 @@ namespace Atelier.Framework.Network
                 return Outcome.Failure();
             }
 
-            using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Host", instanceId);
 
             if (_announcements.TryGetValue(instanceId, out var record))
             {
@@ -88,7 +86,6 @@ namespace Atelier.Framework.Network
                 return Outcome.Failure();
             }
 
-            using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Host", instanceId);
 
             if (_announcements.TryRemove(instanceId, out var record))
             {
@@ -128,7 +125,6 @@ namespace Atelier.Framework.Network
                 return Outcome<HostAnnouncementRecord?>.Failure();
             }
 
-            using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Host", instanceId);
 
             _announcements.TryGetValue(instanceId, out var record);
             return Outcome<HostAnnouncementRecord?>.Success(record);

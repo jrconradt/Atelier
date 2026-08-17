@@ -66,7 +66,6 @@ public partial class RequisitionService : IAtelier, IRequisitionService
             return Outcome<ProvisionTicket>.Success(existing.Ticket);
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Requirement", requirement.RequirementId);
 
         Observe(LogLevel.Information, values: [("RequirementId", requirement.RequirementId), ("RequiredType", requirement.RequiredType.Name), ("Scope", requirement.Scope.ToString())]);
 
@@ -143,7 +142,6 @@ public partial class RequisitionService : IAtelier, IRequisitionService
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Requirement", requirementId);
 
         Observe(LogLevel.Information, values: [("RequirementId", requirementId)]);
 

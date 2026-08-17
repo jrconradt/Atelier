@@ -92,7 +92,6 @@ public partial class EventStreamOffsetStore : IAtelier, IEventStreamOffsetStore
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "ConsumerGroup", consumerGroup);
 
         var key = (consumerGroup, topic);
         var committed = _offsets.AddOrUpdate(key, offset, (_, existing) => Math.Max(existing, offset));
@@ -139,7 +138,6 @@ public partial class EventStreamOffsetStore : IAtelier, IEventStreamOffsetStore
             return Outcome<int>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "ConsumerGroup", consumerGroup);
 
         var regressed = new List<string>();
         var committedCount = 0;
@@ -266,7 +264,6 @@ public partial class EventStreamOffsetStore : IAtelier, IEventStreamOffsetStore
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "ConsumerGroup", consumerGroup);
 
         var removed = _offsets.TryRemove((consumerGroup, topic), out _);
 
@@ -300,7 +297,6 @@ public partial class EventStreamOffsetStore : IAtelier, IEventStreamOffsetStore
             return Outcome<int>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "ConsumerGroup", consumerGroup);
 
         var deleted = 0;
 

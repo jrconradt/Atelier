@@ -51,7 +51,6 @@ public partial class Boutique : IAtelier, IBoutique
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Boutique", BoutiqueId);
 
         if (_state != BoutiqueState.Created
             && _state != BoutiqueState.Stopped)
@@ -105,7 +104,6 @@ public partial class Boutique : IAtelier, IBoutique
 
     public async Task<Outcome> StopAsync(CancellationToken cancellationToken = default)
     {
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Boutique", BoutiqueId);
 
         if (_state != BoutiqueState.Running)
         {
@@ -151,7 +149,6 @@ public partial class Boutique : IAtelier, IBoutique
     {
         ArgumentNullException.ThrowIfNull(manifest);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Boutique", BoutiqueId);
 
         Type? productType = manifest.ProductType;
 
@@ -227,7 +224,6 @@ public partial class Boutique : IAtelier, IBoutique
         string productId,
         CancellationToken cancellationToken = default)
     {
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Product", productId);
 
         if (!_products.TryGetValue(productId, out var product))
         {

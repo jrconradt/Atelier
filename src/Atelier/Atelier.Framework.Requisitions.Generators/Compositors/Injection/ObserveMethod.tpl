@@ -9,11 +9,6 @@ public virtual void Observe(
         return;
     }
     var builder = Logger.WithLevel(level);
-    var __contextId = ContextAccessor?.Current?.ContextId;
-    if (__contextId is not null)
-    {
-        builder = builder.WithValue("ContextId", __contextId);
-    }
     if (message is not null)
     {
         builder = builder.WithMessage(message);

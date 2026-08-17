@@ -14,7 +14,6 @@ namespace Atelier.Framework.Network.Middleware;
 [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class ContextExtractionMiddleware : IAtelier
 {
-    [Requisite] private readonly IContextAccessor _contextAccessor = null!;
 
     private readonly StrongBox<RequestDelegate?> _next = new(null);
     private readonly StrongBox<IIdentityVerifier?> _verifier = new(null);
@@ -52,7 +51,7 @@ public partial class ContextExtractionMiddleware : IAtelier
         if (httpContext.Request.Headers.TryGetValue(Transport.ContextHeaderInjector.TRACEPARENT_HEADER_NAME, out var traceParentHeader)
             && TracingContext.TryParseTraceParent(traceParentHeader.ToString(), out var wireTraceId, out var wireParentSpanId))
         {
-            extractedContext ??= new CompositeContext(
+            extractedContext ??= new global::Atelier.Framework.Context.Context(
                 Guid.NewGuid().ToString(),
                 "HTTP",
                 null,
@@ -80,7 +79,7 @@ public partial class ContextExtractionMiddleware : IAtelier
         var verifiedAuthorization = await VerifyBearerTokenAsync(httpContext).ConfigureAwait(false);
         if (verifiedAuthorization != null)
         {
-            var verifiedContext = new CompositeContext(
+            var verifiedContext = new global::Atelier.Framework.Context.Context(
                 Guid.NewGuid().ToString(),
                 "HTTP",
                 null,
@@ -110,7 +109,7 @@ public partial class ContextExtractionMiddleware : IAtelier
 
             Observe(LogLevel.Debug, values: [("Operation", nameof(InvokeAsync)), ("UserIdRedacted", WireContextCodec.RedactIdentifier(ContextExtensions.GetUserId(extractedContext)))]);
 
-            _contextAccessor.SetCurrent(extractedContext);
+            AmbientContext.SetCurrent(extractedContext);
         }
         else
         {
@@ -123,7 +122,7 @@ public partial class ContextExtractionMiddleware : IAtelier
         }
         finally
         {
-            _contextAccessor.SetCurrent(null!);
+            AmbientContext.SetCurrent(null!);
         }
     }
 

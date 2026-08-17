@@ -117,7 +117,6 @@ public partial class QueueManager : IAtelier, IQueueManager, IDisposable
     {
         ArgumentNullException.ThrowIfNull(worker);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Worker", worker.WorkerName);
 
         if (!_workers.TryAdd(worker.WorkerName, worker))
         {
@@ -155,7 +154,6 @@ public partial class QueueManager : IAtelier, IQueueManager, IDisposable
     {
         ArgumentNullException.ThrowIfNull(workerName);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Worker", workerName);
 
         if (!_workers.TryRemove(workerName, out var worker))
         {
@@ -185,7 +183,6 @@ public partial class QueueManager : IAtelier, IQueueManager, IDisposable
             return Outcome<IQueue>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Queue", queueName);
 
         if (_queues.TryGetValue(queueName, out var existingQueue))
         {
@@ -209,7 +206,6 @@ public partial class QueueManager : IAtelier, IQueueManager, IDisposable
             return Task.FromResult(Outcome<IQueue>.Failure());
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Queue", queueName);
 
         var channel = Channel.CreateBounded<QueueMessage>(
             configuration?.MaxCapacity ?? 1000);
@@ -235,7 +231,6 @@ public partial class QueueManager : IAtelier, IQueueManager, IDisposable
     {
         ArgumentNullException.ThrowIfNull(queueName);
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Queue", queueName);
 
         if (!_queues.TryRemove(queueName, out var queue))
         {

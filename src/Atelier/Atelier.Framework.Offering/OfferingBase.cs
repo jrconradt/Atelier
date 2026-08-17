@@ -10,13 +10,10 @@ namespace Atelier.Framework.Offering;
 
 public abstract partial class OfferingBase : IAtelier, IOffering
 {
-    [Requisite] protected readonly IContextAccessor ContextAccessor = null!;
 
-    protected IContext Context => ContextAccessor.Current
+    protected IContext Context => AmbientContext.Current
         ?? throw new InvalidOperationException(
             "No context available. Ensure a valid context is available before accessing the Context property.");
-
-    [Requisite] public IOfferingProvider OfferingProvider = null!;
 
     private int _running;
 
@@ -46,43 +43,4 @@ public abstract partial class OfferingBase : IAtelier, IOffering
 
     protected abstract void OnStart();
     protected abstract void OnStop();
-
-    protected TOffering GetRequiredOffering<TOffering>() where TOffering : class
-    {
-        var offering = OfferingProvider.GetOffering<TOffering>();
-        if (offering == null)
-        {
-            throw new InvalidOperationException($"Required offering {typeof(TOffering).Name} not found in offering provider");
-        }
-        return offering;
-    }
-
-    protected TOffering? GetOffering<TOffering>() where TOffering : class
-    {
-        return OfferingProvider.GetOffering<TOffering>();
-    }
-
-    protected IEnumerable<TOffering> GetOfferings<TOffering>() where TOffering : class
-    {
-        return OfferingProvider.GetOfferings<TOffering>();
-    }
-
-    protected void ValidateDependencies()
-    {
-        var requiredOfferings = GetRequiredOfferings();
-        foreach (var offeringType in requiredOfferings)
-        {
-            var offering = OfferingProvider.GetOffering(offeringType);
-            if (offering == null)
-            {
-                throw new InvalidOperationException(
-                    $"Required offering {offeringType.Name} not found in offering provider");
-            }
-        }
-    }
-
-    protected virtual Type[] GetRequiredOfferings()
-    {
-        return Array.Empty<Type>();
-    }
 }

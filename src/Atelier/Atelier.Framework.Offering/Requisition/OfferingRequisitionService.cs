@@ -20,7 +20,6 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
     [Requisite] protected readonly IOfferingManager _offeringManager = null!;
     [Requisite] protected readonly IOfferingProvider _offeringProvider = null!;
     [Requisite] protected readonly IOfferingResourceMonitor _resourceMonitor = null!;
-    [Requisite] protected readonly IContextAccessor _contextAccessor = null!;
     [Requisite] protected readonly Authorization.IRequisitionAuthorizer _authorizer = null!;
     private const string AdministratorRole = "RequisitionAdministrator";
     private const int MaxRequisitions = 10_000;
@@ -86,7 +85,6 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
             return Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Requisition", requisitionId);
 
         if (!_requisitions.TryGetValue(
             requisitionId,
@@ -98,7 +96,7 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
 
         if (!CallerOwnsRequisition(tracker))
         {
-            Observe(LogLevel.Warning, values: [("Reason", "Caller is not authorized to release requisition"), ("RequisitionId", requisitionId), ("RequesterId", tracker.RequesterId), ("CallerId", _contextAccessor.GetCurrentUserId() ?? string.Empty)]);
+            Observe(LogLevel.Warning, values: [("Reason", "Caller is not authorized to release requisition"), ("RequisitionId", requisitionId), ("RequesterId", tracker.RequesterId), ("CallerId", AmbientContext.CurrentUserId ?? string.Empty)]);
             return Outcome.Failure();
         }
 
@@ -135,7 +133,6 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
             return Outcome<RequisitionInfo>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Requisition", requisitionId);
 
         if (!_requisitions.TryGetValue(
             requisitionId,
@@ -184,7 +181,7 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
             return Outcome<List<RequisitionInfo>>.Failure();
         }
 
-        var callerId = _contextAccessor.GetCurrentUserId();
+        var callerId = AmbientContext.CurrentUserId;
         if (!CallerIsAdministrator($"requester:{requesterId}")
             && !string.Equals(callerId, requesterId, StringComparison.Ordinal))
         {
@@ -217,7 +214,7 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
         ArgumentNullException.ThrowIfNull(request);
 
         var requisitionId = Guid.NewGuid().ToString();
-        var requesterPrincipalId = _contextAccessor.GetCurrentUserId() ?? string.Empty;
+        var requesterPrincipalId = AmbientContext.CurrentUserId ?? string.Empty;
 
         if (request.AllowSharedInstance)
         {
@@ -313,7 +310,7 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
             InstanceId = instanceId,
             RequesterId = requesterPrincipalId,
             RequesterType = request.RequesterType,
-            RequesterTenantId = _contextAccessor.GetCurrentTenantId() ?? string.Empty,
+            RequesterTenantId = AmbientContext.CurrentTenantId ?? string.Empty,
             OfferingType = request.OfferingType,
             PlacedZone = targetZone,
             IsShared = request.AllowSharedInstance,
@@ -333,7 +330,7 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(requesterPrincipalId);
 
-        var callerTenantId = _contextAccessor.GetCurrentTenantId() ?? string.Empty;
+        var callerTenantId = AmbientContext.CurrentTenantId ?? string.Empty;
         if (string.IsNullOrEmpty(callerTenantId))
         {
             return null;
@@ -379,7 +376,7 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
             return true;
         }
 
-        var callerId = _contextAccessor.GetCurrentUserId();
+        var callerId = AmbientContext.CurrentUserId;
         if (string.IsNullOrEmpty(callerId))
         {
             return false;

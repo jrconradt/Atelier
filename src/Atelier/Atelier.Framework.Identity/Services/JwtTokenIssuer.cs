@@ -37,7 +37,6 @@ public partial class JwtTokenIssuer : IJwtTokenIssuer, IAtelier
             return Outcome<string>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Subject", subject);
 
         if (string.IsNullOrWhiteSpace(_options.SigningKey))
         {

@@ -54,7 +54,6 @@ public partial class BoutiqueDiscoveryService : IAtelier, IBoutiqueDiscoveryServ
             return Task.FromResult(Outcome<AvailableBoutique>.Failure());
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Boutique", boutiqueId);
 
         if (!_boutiques.TryGetValue(boutiqueId, out var boutique))
         {
@@ -98,7 +97,6 @@ public partial class BoutiqueDiscoveryService : IAtelier, IBoutiqueDiscoveryServ
             return Task.FromResult(Outcome.Failure());
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Boutique", boutiqueId);
 
         if (!_boutiques.TryRemove(boutiqueId, out _))
         {
@@ -133,7 +131,6 @@ public partial class BoutiqueDiscoveryService : IAtelier, IBoutiqueDiscoveryServ
             return Task.FromResult(Outcome.Failure());
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Boutique", boutiqueId);
 
         if (!_boutiques.TryGetValue(boutiqueId, out var boutique))
         {

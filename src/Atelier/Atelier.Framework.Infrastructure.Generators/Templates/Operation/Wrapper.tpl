@@ -13,18 +13,6 @@ public {{ asyncKeyword }}{{ returnType }} {{ wrapperName }}{{ typeParams }}({{ p
     }
     catch { }
 
-    var __accessor = this.ContextAccessor;
-    var __previousContext = __accessor?.Current;
-    if (__accessor is not null)
-    {
-        var __operationContext = new global::Atelier.Framework.Context.CompositeContext(__previousContext);
-        if (__previousContext is global::Atelier.Framework.Context.Context __parentContext)
-        {
-            __parentContext.PropagateInheritableState(__operationContext);
-        }
-        __accessor.SetCurrent(__operationContext);
-    }
-
     try
     {
         {{ returnKeyword }}{{ awaitKeyword }}{{ methodName }}{{ typeArgs }}({{ argumentList }});
@@ -44,13 +32,5 @@ public {{ asyncKeyword }}{{ returnType }} {{ wrapperName }}{{ typeParams }}({{ p
         catch { }
 
         {{ failureReturn }}
-    }
-    finally
-    {
-        if (__accessor is not null
-            && __previousContext is not null)
-        {
-            __accessor.SetCurrent(__previousContext);
-        }
     }
 }

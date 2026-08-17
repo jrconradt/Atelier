@@ -361,7 +361,6 @@ public partial class ResiliencePipelineFactory : IAtelier
             return Atelier.Framework.Outcomes.Outcome<T>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "ResilienceOperation", operationName);
 
         try
         {
@@ -448,7 +447,6 @@ public partial class ResiliencePipelineFactory : IAtelier
             return Atelier.Framework.Outcomes.Outcome.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "ResilienceOperation", operationName);
 
         try
         {

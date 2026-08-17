@@ -126,7 +126,7 @@ namespace Atelier.Framework.Context.Extensions
 
         public static IContext FromMessageHeaders(MessageHeaders headers)
         {
-            var context = new CompositeContext(
+            var context = new global::Atelier.Framework.Context.Context(
                 headers.ContextId ?? Guid.NewGuid().ToString(),
                 headers.ContextName ?? "MessageContext",
                 null

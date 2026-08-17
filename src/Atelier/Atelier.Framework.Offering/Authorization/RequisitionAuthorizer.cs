@@ -17,13 +17,12 @@ public interface IRequisitionAuthorizer
 [NetworkZone(typeof(Atelier.Framework.Primitives.Security))]
 public partial class RequisitionAuthorizer : IAtelier, IRequisitionAuthorizer
 {
-    [Requisite] protected readonly IContextAccessor _contextAccessor = null!;
 
     public bool IsAuthorized(string permission, string resource)
     {
         ArgumentNullException.ThrowIfNull(permission);
         ArgumentNullException.ThrowIfNull(resource);
-        var context = _contextAccessor.GetCurrentContext();
+        var context = AmbientContext.Current;
         var granted = context.IsAuthorized(permission);
         Record("permission", permission, resource, context.GetUserId(), granted);
         return granted;
@@ -33,7 +32,7 @@ public partial class RequisitionAuthorizer : IAtelier, IRequisitionAuthorizer
     {
         ArgumentNullException.ThrowIfNull(role);
         ArgumentNullException.ThrowIfNull(resource);
-        var context = _contextAccessor.GetCurrentContext();
+        var context = AmbientContext.Current;
         var granted = context.IsAuthorizedForRole(role);
         Record("role", role, resource, context.GetUserId(), granted);
         return granted;

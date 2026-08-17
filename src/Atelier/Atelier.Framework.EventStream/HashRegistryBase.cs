@@ -24,7 +24,6 @@ public abstract partial class HashRegistryBase : IAtelier, IHashRegistry
             return Outcome<string>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Hash", hash);
 
         if (blob == null || blob.Length == 0)
         {
@@ -75,7 +74,6 @@ public abstract partial class HashRegistryBase : IAtelier, IHashRegistry
             return Task.FromResult(Outcome<byte[]?>.Failure());
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Hash", hash);
 
         if (_store.TryTouch(hash, out var blob))
         {
@@ -159,7 +157,6 @@ public abstract partial class HashRegistryBase : IAtelier, IHashRegistry
             return Outcome<int>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Hash", hash);
 
         var result = _store.Release(hash);
 

@@ -100,7 +100,7 @@ public static class WireContextCodec
             return null;
         }
 
-        var context = new CompositeContext(
+        var context = new global::Atelier.Framework.Context.Context(
             Guid.NewGuid().ToString(),
             "wire",
             null,
@@ -163,7 +163,7 @@ public static class WireContextCodec
         string? correlationId,
         string? userId)
     {
-        var context = new CompositeContext(
+        var context = new global::Atelier.Framework.Context.Context(
             Guid.NewGuid().ToString(),
             transport,
             null,

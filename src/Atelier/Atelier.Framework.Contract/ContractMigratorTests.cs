@@ -37,7 +37,6 @@ public static class ContractMigratorTests
         registry.Register<ContractV3>();
 
         var migrator = new ContractMigrator(registry,
-                                            null,
                                             null);
 
         var hopOne = migrator.RegisterMigration<ContractV1, ContractV2>(
@@ -94,7 +93,6 @@ public static class ContractMigratorTests
         registry.Register<ContractV2>();
 
         var migrator = new ContractMigrator(registry,
-                                            null,
                                             null);
 
         var first = migrator.RegisterMigration<ContractV1, ContractV2>(
@@ -125,7 +123,6 @@ public static class ContractMigratorTests
         registry.Register<ContractV3>();
 
         var migrator = new ContractMigrator(registry,
-                                            null,
                                             null);
 
         var result = migrator.Migrate(

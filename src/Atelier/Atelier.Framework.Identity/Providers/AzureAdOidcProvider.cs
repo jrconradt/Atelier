@@ -15,7 +15,6 @@ public partial class AzureAdOidcProvider : GenericOidcProvider, IAtelier
         string accessToken,
         CancellationToken cancellationToken = default)
     {
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", ProviderName);
 
         try
         {
@@ -71,7 +70,6 @@ public partial class AzureAdOidcProvider : GenericOidcProvider, IAtelier
         string? codeChallengeMethod = null,
         CancellationToken cancellationToken = default)
     {
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "OidcProvider", ProviderName);
 
         try
         {

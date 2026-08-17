@@ -21,7 +21,7 @@ public static class WireContextCodecTests
         authorization.AddClaim("dept", "eng");
         authorization.AddRole("admin");
 
-        var context = new CompositeContext(
+        var context = new global::Atelier.Framework.Context.Context(
             Guid.NewGuid().ToString(),
             "test",
             null,
@@ -156,7 +156,7 @@ public static class WireContextCodecTests
             authorization.AddRole($"role-{i}");
         }
 
-        var context = new CompositeContext(
+        var context = new global::Atelier.Framework.Context.Context(
             Guid.NewGuid().ToString(),
             "test",
             null,

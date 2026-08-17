@@ -11,18 +11,17 @@ namespace Atelier.Framework.Queueing.Core;
 public partial class Queues : IAtelier
 {
     [Requisite] protected readonly IQueueRegistry _registry = null!;
-    [Requisite] protected readonly IContextAccessor _contextAccessor = null!;
 
-    public QueueProxy BackgroundTasks => new(_registry, "system.background", _contextAccessor);
+    public QueueProxy BackgroundTasks => new(_registry, "system.background");
 
-    public QueueProxy TelemetryEvents => new(_registry, "system.telemetry", _contextAccessor);
+    public QueueProxy TelemetryEvents => new(_registry, "system.telemetry");
 
-    public QueueProxy HealthEvents => new(_registry, "system.health", _contextAccessor);
+    public QueueProxy HealthEvents => new(_registry, "system.health");
 
     public QueueProxy Topic(string topic)
     {
         ArgumentNullException.ThrowIfNull(topic);
-        return new(_registry, topic, _contextAccessor);
+        return new(_registry, topic);
     }
 
     public static IEnumerable<string> GetWellKnownTopics()

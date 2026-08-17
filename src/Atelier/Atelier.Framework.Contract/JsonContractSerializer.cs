@@ -91,7 +91,6 @@ public partial class JsonContractSerializer : IContractSerializer, IAtelier
         var metadata = _registry.Resolve<T>();
         if (metadata == null)
         {
-            using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Contract", typeof(T).FullName ?? typeof(T).Name);
             Observe(
                 LogLevel.Warning,
                 null,
@@ -130,7 +129,6 @@ public partial class JsonContractSerializer : IContractSerializer, IAtelier
 
         if (metadata == null)
         {
-            using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Contract", serialized.ContractName);
             Observe(
                 LogLevel.Warning,
                 null,
@@ -157,7 +155,6 @@ public partial class JsonContractSerializer : IContractSerializer, IAtelier
             return Outcome<object?>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Contract", serialized.ContractName);
 
         if (!IsJsonFormat(serialized.SerializationFormat))
         {
@@ -303,7 +300,6 @@ public partial class JsonContractSerializer : IContractSerializer, IAtelier
         [Operation("SerializeToBuffer")]
     public Outcome<ReadOnlyMemory<byte>> SerializeToBuffer<T>(T contract) where T : class
     {
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Contract", typeof(T).FullName ?? typeof(T).Name);
 
         if (contract is null)
         {
@@ -364,7 +360,6 @@ public partial class JsonContractSerializer : IContractSerializer, IAtelier
             return Outcome<ReadOnlyMemory<byte>>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Contract", contractType.FullName ?? contractType.Name);
 
         try
         {
@@ -404,7 +399,6 @@ public partial class JsonContractSerializer : IContractSerializer, IAtelier
             return Outcome<ReadOnlyMemory<byte>>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Contract", typeof(T).FullName ?? typeof(T).Name);
 
         if (contract is null)
         {
@@ -471,7 +465,6 @@ public partial class JsonContractSerializer : IContractSerializer, IAtelier
             return Outcome<ReadOnlyMemory<byte>>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Contract", contractType.FullName ?? contractType.Name);
 
         try
         {

@@ -33,7 +33,6 @@ public partial class QueueRegistry : IAtelier, IQueueRegistry
             return Outcome<IQueue>.Failure();
         }
 
-        using var __entity = global::Atelier.Framework.Context.EntityContext.Enter(ContextAccessor, "Topic", topic);
 
         if (_queues.TryGetValue(topic, out var existingQueue))
         {

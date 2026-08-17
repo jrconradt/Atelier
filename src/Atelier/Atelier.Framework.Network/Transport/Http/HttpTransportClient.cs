@@ -12,14 +12,12 @@ namespace Atelier.Framework.Network.Transport.Http
 
         private readonly HttpClient _httpClient;
         private readonly string _baseUrl;
-        private readonly IContextAccessor? _contextAccessor;
         private readonly ResiliencePipeline _pipeline;
         private bool _disposed;
 
         public HttpTransportClient(HttpClient httpClient,
                                    string baseUrl,
-                                   ResiliencePipelineFactory resilience,
-                                   IContextAccessor? contextAccessor = null)
+                                   ResiliencePipelineFactory resilience)
         {
             ArgumentNullException.ThrowIfNull(httpClient);
             ArgumentNullException.ThrowIfNull(baseUrl);
@@ -31,7 +29,6 @@ namespace Atelier.Framework.Network.Transport.Http
                 _httpClient.Timeout = DefaultTimeout;
             }
             _baseUrl = baseUrl.TrimEnd('/');
-            _contextAccessor = contextAccessor;
             _pipeline = resilience.HttpPipeline;
         }
 
@@ -74,7 +71,7 @@ namespace Atelier.Framework.Network.Transport.Http
                 throw new ArgumentException("Message must be a TransportMessage", nameof(message));
             }
 
-            ContextHeaderInjector.Stamp(transportMessage.Headers, _contextAccessor);
+            ContextHeaderInjector.Stamp(transportMessage.Headers);
 
             var dto = TransportMessageDto.FromTransportMessage(transportMessage);
 
@@ -86,7 +83,7 @@ namespace Atelier.Framework.Network.Transport.Http
                     {
                         Content = JsonContent.Create(dto, options: TransportJson.Options)
                     };
-                    ContextHeaderInjector.Apply(request, _contextAccessor);
+                    ContextHeaderInjector.Apply(request);
 
                     var response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
 
@@ -155,7 +152,7 @@ namespace Atelier.Framework.Network.Transport.Http
                 async token =>
                 {
                     using var request = new HttpRequestMessage(HttpMethod.Get, $"{_baseUrl}/transport/messages");
-                    ContextHeaderInjector.Apply(request, _contextAccessor);
+                    ContextHeaderInjector.Apply(request);
 
                     var response = await _httpClient.SendAsync(request, token).ConfigureAwait(false);
 

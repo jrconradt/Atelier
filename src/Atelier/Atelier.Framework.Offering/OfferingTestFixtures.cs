@@ -14,15 +14,6 @@ public static class OfferingTestFixtures
 {
     private const string HAPPY_IDENTITY = "atelier-happy";
 
-    [Fixture(typeof(IContextAccessor))]
-    public static IContextAccessor CallerContext()
-    {
-        var accessor = new LifecycleProbeContextAccessor();
-        accessor.SetCurrent(global::Atelier.Framework.Context.Context.Empty.WithAuthorization(
-            AuthorizationContext.Create(userId: HAPPY_IDENTITY, tenantId: HAPPY_IDENTITY)));
-        return accessor;
-    }
-
     [Fixture(typeof(CreateOfferingRequest))]
     public static CreateOfferingRequest OfferingRequest()
     {

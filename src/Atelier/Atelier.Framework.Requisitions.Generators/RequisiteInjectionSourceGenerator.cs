@@ -74,15 +74,13 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
         }
 
         var loggerType = ctx.SemanticModel.Compilation.GetTypeByMetadataName("Atelier.Framework.Observability.ILogger");
-        var contextAccessorType = ctx.SemanticModel.Compilation.GetTypeByMetadataName("Atelier.Framework.Context.IContextAccessor");
 
-        return EmitFor(classSymbol, loggerType, contextAccessorType);
+        return EmitFor(classSymbol, loggerType);
     }
 
     private static RequisiteInjectionResult? EmitFor(
         INamedTypeSymbol classSymbol,
-        INamedTypeSymbol? loggerType,
-        INamedTypeSymbol? contextAccessorType)
+        INamedTypeSymbol? loggerType)
     {
         var requisiteMembers = GetRequisiteMembers(classSymbol);
 
@@ -92,24 +90,7 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
             && loggerType is not null
             && !LoggerWillExistInChain(classSymbol);
 
-        var existingAccessorMember = contextAccessorType is not null
-            ? FindExistingContextAccessorMember(classSymbol, contextAccessorType)
-            : null;
-
-        var contextAccessorPropertyExistsInChain = ContextAccessorPropertyExistsInChain(classSymbol);
-
-        var emitContextAccessorField = implementsIAtelier
-            && contextAccessorType is not null
-            && existingAccessorMember is null
-            && !contextAccessorPropertyExistsInChain;
-
-        var emitContextAccessorProperty = implementsIAtelier
-            && contextAccessorType is not null
-            && existingAccessorMember is not null
-            && !contextAccessorPropertyExistsInChain;
-
         var needsLoggerCtorParam = implementsIAtelier && loggerType is not null;
-        var needsContextAccessorCtorParam = emitContextAccessorField;
         var needsObserve = implementsIAtelier
             && !ObserveWillExistInChain(classSymbol);
 
@@ -123,19 +104,6 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
                 IsRequired = false,
                 IsRuntime = false,
                 IsLogger = true,
-            });
-        }
-
-        if (needsContextAccessorCtorParam)
-        {
-            requisiteMembers.Add(new RequisiteMember
-            {
-                Name = "ContextAccessor",
-                Type = contextAccessorType!,
-                IsField = true,
-                IsRequired = false,
-                IsRuntime = false,
-                IsContextAccessor = true,
             });
         }
 
@@ -153,12 +121,8 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
             classSymbol,
             requisiteMembers,
             emitLoggerField: emitLoggerField,
-            emitContextAccessorField: emitContextAccessorField,
-            emitContextAccessorProperty: emitContextAccessorProperty,
-            existingAccessorMemberName: existingAccessorMember,
             emitObserveMethod: needsObserve,
-            loggerType: loggerType,
-            contextAccessorType: contextAccessorType);
+            loggerType: loggerType);
 
         if (string.IsNullOrEmpty(injectionCode))
         {
@@ -189,86 +153,6 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
             current = current.BaseType;
         }
         return false;
-    }
-
-    private static bool ContextAccessorPropertyExistsInChain(INamedTypeSymbol classSymbol)
-    {
-        var current = classSymbol;
-        while (current is not null && current.SpecialType != SpecialType.System_Object)
-        {
-            if (HasSourceDeclaredContextAccessor(current))
-            {
-                return true;
-            }
-
-            if (!ReferenceEquals(current, classSymbol)
-                && ImplementsIAtelier(current)
-                && IsPartialClass(current))
-            {
-                return true;
-            }
-            current = current.BaseType;
-        }
-        return false;
-    }
-
-    private static bool HasSourceDeclaredContextAccessor(INamedTypeSymbol classSymbol)
-    {
-        foreach (var member in classSymbol.GetMembers("ContextAccessor"))
-        {
-            if (member is IFieldSymbol || member is IPropertySymbol)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static string? FindExistingContextAccessorMember(
-        INamedTypeSymbol classSymbol,
-        INamedTypeSymbol contextAccessorType)
-    {
-        var current = classSymbol;
-        while (current is not null && current.SpecialType != SpecialType.System_Object)
-        {
-            var isDeclaringType = ReferenceEquals(current, classSymbol);
-            foreach (var member in current.GetMembers())
-            {
-                if (member.Name == "ContextAccessor")
-                {
-                    continue;
-                }
-                if (member is IFieldSymbol field
-                    && IsContextAccessorType(field.Type, contextAccessorType)
-                    && (isDeclaringType || IsAccessibleFromDerived(field)))
-                {
-                    return field.Name;
-                }
-                if (member is IPropertySymbol property
-                    && IsContextAccessorType(property.Type, contextAccessorType)
-                    && (isDeclaringType || IsAccessibleFromDerived(property)))
-                {
-                    return property.Name;
-                }
-            }
-            current = current.BaseType;
-        }
-        return null;
-    }
-
-    private static bool IsContextAccessorType(
-        ITypeSymbol candidate,
-        INamedTypeSymbol contextAccessorType)
-    {
-        return SymbolEqualityComparer.Default.Equals(candidate, contextAccessorType);
-    }
-
-    private static bool IsAccessibleFromDerived(ISymbol member)
-    {
-        return member.DeclaredAccessibility is Accessibility.Public
-            or Accessibility.Protected
-            or Accessibility.ProtectedOrInternal
-            or Accessibility.Internal;
     }
 
     private static bool ObserveWillExistInChain(INamedTypeSymbol classSymbol)
@@ -312,12 +196,8 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
         INamedTypeSymbol classSymbol,
         List<RequisiteMember> requisiteMembers,
         bool emitLoggerField,
-        bool emitContextAccessorField,
-        bool emitContextAccessorProperty,
-        string? existingAccessorMemberName,
         bool emitObserveMethod,
-        INamedTypeSymbol? loggerType,
-        INamedTypeSymbol? contextAccessorType)
+        INamedTypeSymbol? loggerType)
     {
         var className = classSymbol.Name;
         var namespaceName = classSymbol.ContainingNamespace.ToDisplayString();
@@ -330,8 +210,6 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
 
         if (!emitConstructor
             && !emitLoggerField
-            && !emitContextAccessorField
-            && !emitContextAccessorProperty
             && !emitObserveMethod)
         {
             return string.Empty;
@@ -340,19 +218,6 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
         var typeParameters = BuildTypeParameters(classSymbol);
 
         var sectionItems = new List<Compositor>();
-
-        if (emitContextAccessorField)
-        {
-            sectionItems.Add(new I.ContextAccessorField());
-        }
-
-        if (emitContextAccessorProperty)
-        {
-            sectionItems.Add(new I.ContextAccessorProperty
-            {
-                SourceMember = existingAccessorMemberName!,
-            });
-        }
 
         if (emitLoggerField)
         {
@@ -370,8 +235,7 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
                 classSymbol,
                 className,
                 orderedMembers,
-                loggerType,
-                contextAccessorType));
+                loggerType));
         }
 
         var sections = Sequence.BlankLines(sectionItems);
@@ -391,7 +255,6 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
             {
                 "global::System",
                 "global::System.Collections.Generic",
-                "global::System.Reflection",
             },
             Body = body.Render(),
         }.Render();
@@ -401,10 +264,9 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
         INamedTypeSymbol classSymbol,
         string className,
         List<RequisiteMember> orderedMembers,
-        INamedTypeSymbol? loggerType,
-        INamedTypeSymbol? contextAccessorType)
+        INamedTypeSymbol? loggerType)
     {
-        var baseParamNames = GetBaseChainPassThroughNames(classSymbol, loggerType, contextAccessorType);
+        var baseParamNames = GetBaseChainPassThroughNames(classSymbol, loggerType);
 
         var ownParamNames = new HashSet<string>(
             orderedMembers.Select(m => GeneratorNaming.ToParameterName(m.Name)),
@@ -448,12 +310,11 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
         };
     }
 
-    private static HashSet<string> GetBaseChainPassThroughNames(
+    private static List<string> GetBaseChainPassThroughNames(
         INamedTypeSymbol classSymbol,
-        INamedTypeSymbol? loggerType,
-        INamedTypeSymbol? contextAccessorType)
+        INamedTypeSymbol? loggerType)
     {
-        var empty = new HashSet<string>(StringComparer.Ordinal);
+        var empty = new List<string>();
 
         var baseType = classSymbol.BaseType;
         if (baseType is null || baseType.SpecialType == SpecialType.System_Object)
@@ -461,22 +322,59 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
             return empty;
         }
 
-        if (!ImplementsIAtelier(baseType)
-            || !IsPartialClass(baseType)
-            || HasExistingConstructor(baseType))
+        if (!ImplementsIAtelier(baseType))
         {
             return empty;
         }
 
-        return new HashSet<string>(
-            ComputeBaseCtorParamNames(baseType, loggerType, contextAccessorType),
-            StringComparer.Ordinal);
+        var expected = ComputeBaseCtorParams(baseType, loggerType);
+        if (expected.Count == 0)
+        {
+            return empty;
+        }
+
+        var publicParamCtors = baseType.InstanceConstructors
+            .Where(c => !c.IsImplicitlyDeclared
+                && c.DeclaredAccessibility == Accessibility.Public
+                && c.Parameters.Length > 0)
+            .ToList();
+
+        if (publicParamCtors.Any(c => MatchesExpectedSignature(c, expected)))
+        {
+            return expected.Select(p => p.Name).ToList();
+        }
+
+        if (publicParamCtors.Count == 0 && IsPartialClass(baseType))
+        {
+            return expected.Select(p => p.Name).ToList();
+        }
+
+        return empty;
     }
 
-    private static List<string> ComputeBaseCtorParamNames(
+    private static bool MatchesExpectedSignature(
+        IMethodSymbol constructor,
+        List<(string Name, ITypeSymbol Type)> expected)
+    {
+        if (constructor.Parameters.Length != expected.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < expected.Count; i++)
+        {
+            if (!SymbolEqualityComparer.Default.Equals(constructor.Parameters[i].Type, expected[i].Type))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static List<(string Name, ITypeSymbol Type)> ComputeBaseCtorParams(
         INamedTypeSymbol baseType,
-        INamedTypeSymbol? loggerType,
-        INamedTypeSymbol? contextAccessorType)
+        INamedTypeSymbol? loggerType)
     {
         var members = GetRequisiteMembers(baseType);
         var implementsIAtelier = ImplementsIAtelier(baseType);
@@ -486,21 +384,11 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
             members.Add(new RequisiteMember
             {
                 Name = "Logger",
+                Type = loggerType,
             });
         }
 
-        if (implementsIAtelier
-            && contextAccessorType is not null
-            && FindExistingContextAccessorMember(baseType, contextAccessorType) is null
-            && !ContextAccessorPropertyExistsInChain(baseType))
-        {
-            members.Add(new RequisiteMember
-            {
-                Name = "ContextAccessor",
-            });
-        }
-
-        return members.Select(m => GeneratorNaming.ToParameterName(m.Name)).ToList();
+        return members.Select(m => (GeneratorNaming.ToParameterName(m.Name), m.Type)).ToList();
     }
 
     private static Compositor BuildParameter(RequisiteMember member)
@@ -515,7 +403,7 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
         {
             ParamType = typeDisplay,
             ParamName = paramName,
-            DefaultClause = member.IsContextAccessor ? " = null" : string.Empty,
+            DefaultClause = string.Empty,
         };
     }
 
@@ -539,22 +427,15 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
                 };
         }
 
-        var declaringType = member.DeclaringType ?? classSymbol;
-        var declaringTypeName = declaringType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-        var reflectionMemberName = member.IsField
-            ? member.Name
-            : $"<{member.Name}>k__BackingField";
         return useNullCheck
             ? new A.NullCheckedAssignment
             {
-                DeclaringTypeName = declaringTypeName,
-                MemberName = reflectionMemberName,
+                MemberName = member.Name,
                 ParamName = paramName,
             }
             : new A.PlainAssignment
             {
-                DeclaringTypeName = declaringTypeName,
-                MemberName = reflectionMemberName,
+                MemberName = member.Name,
                 ParamName = paramName,
             };
     }
@@ -741,7 +622,6 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
         public bool IsRequired { get; set; }
         public bool IsRuntime { get; set; }
         public bool IsLogger { get; set; }
-        public bool IsContextAccessor { get; set; }
     }
 }
 

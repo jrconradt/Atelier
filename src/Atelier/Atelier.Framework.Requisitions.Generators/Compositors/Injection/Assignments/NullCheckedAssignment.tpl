@@ -1,1 +1,1 @@
-typeof({{ declaringTypeName }}).GetField("{{ memberName }}", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)?.SetValue(this, {{ paramName }} ?? throw new ArgumentNullException(nameof({{ paramName }})));
+{{ memberName }} = {{ paramName }} ?? throw new ArgumentNullException(nameof({{ paramName }}));

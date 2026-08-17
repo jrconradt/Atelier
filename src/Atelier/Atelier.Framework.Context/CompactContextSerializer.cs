@@ -182,7 +182,7 @@ namespace Atelier.Framework.Context
                     ? Uri.UnescapeDataString(n)
                     : "deserialized";
 
-                var deserializedContext = new CompositeContext(
+                var deserializedContext = new Context(
                     contextId,
                     name,
                     null,
