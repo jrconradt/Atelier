@@ -98,8 +98,8 @@ build boutiques → `docker-compose down -v` → `docker-compose build` →
 ## Boutiques and `smash.yml`
 
 A boutique is a buildable unit described by a `smash.yml` file at its directory
-root. smash discovers boutiques by locating these files. The benchmark and
-example projects under `src/Atelier/` each ship one.
+root. smash discovers boutiques by locating these files. The benchmarks and
+`examples/example-bench` under `src/Atelier/` each ship one.
 
 Minimal boutique:
 
@@ -151,7 +151,7 @@ for the build and test workflow.
 
 `Atelier.Build` ships non-Roslyn generators under `Generation/` that emit
 Dockerfiles, `docker-compose.yml`, `Program.cs` host scaffolding, and mermaid
-diagrams. The `docker-compose.yml` at the repo root is a smash output —
+diagrams. `src/Atelier/docker-compose.yml` (next to the solution) is a smash output —
 regenerate it via a boutique-generating build rather than editing it by hand.
 
 ## Command reference

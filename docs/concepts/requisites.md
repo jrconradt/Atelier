@@ -1,6 +1,6 @@
 # Requisites
 
-A **Requisite** is a dependency that Atelier injects at compile time. Mark a field with `[Requisite]`; the `RequisiteInjectionSourceGenerator` emits a constructor — in a generated partial — that fills it. There is no runtime container reflection over your type.
+A **Requisite** is a dependency that Atelier injects at compile time. Mark a field with `[Requisite]`; the `RequisiteInjectionSourceGenerator` emits a constructor — in a generated partial — that fills it. Registration is still runtime: `[Infrastructure]` types are found by assembly scanning and built by the DI container through that generated constructor.
 
 ## Declaring a dependency
 
@@ -41,7 +41,7 @@ public sealed class GreetingService
 | `Scoped` | One instance per scope (e.g. per request). |
 | `Transient` | A new instance per resolution. |
 
-`Atelier.Framework.Requisitions.Generators` also emits factories for these lifetimes (`FactorySourceGenerator`) and registration wiring, so the host can construct types with their requisites resolved.
+`FactorySourceGenerator` (`Atelier.Framework.Requisitions.Generators`) emits factories for types marked with the separate `[Transient]`, `[Scoped]`, `[Singleton]`, `[Pooled]`, or `[ValueObject]` attributes; it does not read `[Infrastructure]`.
 
 ## Validation
 

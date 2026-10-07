@@ -1,6 +1,8 @@
 # Event stream
 
-The event stream is a topic-based, offset-tracked consumption model. A consumer implements `IEventStreamConsumer`, declares the topics it reads, and the framework drives a consume loop that reads events in offset order, dispatches each to the consumer, and commits progress to a durable offset store.
+The event stream is a topic-based, offset-tracked consumption model. A consumer implements `IEventStreamConsumer`, declares the topics it reads, and `TopicConsumptionProcessor` implements a consume loop that reads events in offset order, dispatches each to the consumer, and commits progress to a durable offset store.
+
+The loop is not yet runnable from the framework: no `IEventStream` or `IEventStreamManager` implementation ships, and `AddEventStreaming` does not register or start `TopicConsumptionProcessor`.
 
 ## Consumers
 

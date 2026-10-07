@@ -69,7 +69,7 @@ Suppress a rule the same way as any Roslyn diagnostic — `#pragma warning disab
 | ATELIER0740 | Error | Secret-bearing contract member must be marked [JsonIgnore] |
 | ATELIER0741 | Error | Authorization claim or scope is not a catalog constant |
 | ATELIER0750 | Error | Mutating API operation has no write-tier scope |
-| ATELIER0751 | Error | Operation name is lexically ambiguous between read and mutation |
+| ATELIER0751 | Error | Operation on a [ScopeResource] type does not declare its authorization effect |
 | ATELIER0752 | Error | [ScopeResource] target does not expose both READ and WRITE scope constants |
 
 ## Lifetime and state

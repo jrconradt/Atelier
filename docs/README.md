@@ -34,7 +34,7 @@ These subsystems ship in the framework but do not yet have concept pages here. U
 | Resilience (retry, circuit-breaker, timeout) | `Atelier.Framework.Resilience` |
 | Performance (budgets, instrumentation, Prometheus export) | `Atelier.Framework.Performance` |
 | Queueing | `Atelier.Framework.Queueing` |
-| State machine (snapshot, migrator, coordinator) | `Atelier.Framework.StateMachine` |
+| State machine (snapshot, migrator, orchestrator) | `Atelier.Framework.StateMachine` |
 | Identity (principal, claims, JWT/OIDC) | `Atelier.Framework.Identity` |
 | Contract versioning and migration | `Atelier.Framework.Contract` |
 | Strategy primitives | `Atelier.Framework.Strategy` |
