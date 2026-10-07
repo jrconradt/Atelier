@@ -31,8 +31,8 @@ public sealed class OrderProjectionConsumer : IEventStreamConsumer
 Delivery is **at-least-once**. The consume loop runs the side effect first, then marks the event processed, then commits the offset:
 
 1. `ProcessEventAsync` is awaited for the event at `currentOffset`.
-2. On success the event is recorded in the in-run dedup set and `currentOffset` advances by exactly one.
-3. The committed offset is persisted to the offset store once every `ConsumerCommitInterval` events.
+2. On success the event is recorded in the in-run dedup set and `currentOffset` moves to the event's offset plus one.
+3. The committed offset is persisted to the offset store every `ConsumerCommitInterval` events (duplicates and poison-skipped events count), at the end of each read batch, and before a retry deferral.
 
 Because the side effect commits before the offset, a crash or cancellation between the side effect and the offset commit re-reads and re-dispatches every event from the last committed offset forward on restart. The in-run dedup set is held per processor instance and does not survive a restart, so it does not protect against post-restart replay.
 
@@ -48,7 +48,7 @@ Because the side effect commits before the offset, a crash or cancellation betwe
 
 ### Commits must reflect contiguously-processed offsets
 
-The store records a high-water mark; it has no notion of which offsets between the previous commit and the new one were actually delivered. A caller that commits an offset ahead of what it processed — committing `1000` after processing through `10` — locks in `1000`, and on restart the consume loop resumes at `1000` and never delivers `11`–`999`. With at-least-once delivery the committed offset must reflect the highest **contiguously-processed** offset: the framework consume loop satisfies this by advancing `currentOffset` by exactly one per processed event and committing that value, so callers driving the store directly must preserve the same contiguity.
+The store records a high-water mark; it has no notion of which offsets between the previous commit and the new one were actually delivered. A caller that commits an offset ahead of what it processed — committing `1000` after processing through `10` — locks in `1000`, and on restart the consume loop resumes at `1000` and never delivers `11`–`999`. With at-least-once delivery the committed offset must reflect the highest **contiguously-processed** offset: the consume loop satisfies this by setting `currentOffset` to each processed event's offset plus one and committing that value, so callers driving the store directly must preserve the same contiguity.
 
 ## See also
 

@@ -98,7 +98,7 @@ dotnet build src/Atelier/Atelier.slnx
 
 ## Test
 
-Atelier ships a custom test harness rather than `dotnet test`, run through the `smash` build tool:
+Atelier ships a custom test harness, run through the `smash` build tool; without a filter, `smash test` also runs the xUnit projects via `dotnet test`:
 
 ```bash
 dotnet run --project src/Atelier/Atelier.Build -- test

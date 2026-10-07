@@ -144,7 +144,8 @@ smash test [filter]
 
 Runs the generated test harness in-process: it enumerates the compiled framework
 assemblies, discovers `[GeneratedTest]` fixtures, executes them, and prints a
-`Total / Pass / Fail / NeedsFixture` summary. See the [docs index](../README.md)
+`Total / Pass / Fail / NeedsFixture` summary. With no filter it also runs the
+xUnit test projects via `dotnet test`. See the [docs index](../README.md)
 for the build and test workflow.
 
 ## Generated artifacts
@@ -178,5 +179,6 @@ through System.CommandLine.
 | `watch` | Watch a subsystem and rebuild on file changes |
 | `unsmash` | Clean build artifacts and generated files |
 
-Run `smash --help` for the live list, or `smash <command> --help` for a single
+`smash --help` lists only the analysis commands; the `smash`, `allsmash`, `test`,
+and `kill` verbs are not included. Use `smash <command> --help` for a single
 command's options.

@@ -18,7 +18,7 @@ public sealed class GetUserHandler : IRequestHandler<GetUserRequest, UserDto>
 }
 ```
 
-Both `TRequest` and `TResponse` are reference types, and the result is always `Outcome<TResponse>` — failures flow as `Outcome.Failure(...)` rather than thrown exceptions.
+Both `TRequest` and `TResponse` are reference types, and the result is always `Outcome<TResponse>` — failures flow as `Outcome<TResponse>.Failure()` rather than thrown exceptions.
 
 ## Dispatch
 
@@ -32,7 +32,7 @@ public Task<Outcome<TResponse>> HandleAsync<TRequest, TResponse>(
     where TResponse : class;
 ```
 
-`HandlerRegistry` and `HandlerFactory` resolve the concrete `IRequestHandler<,>` and construct it with its requisites filled.
+`HandlerRegistry` and `HandlerFactory` resolve the concrete `IRequestHandler<,>`; `HandlerFactory` looks it up as an offering through `IOfferingProvider` rather than constructing it.
 
 ## Envelopes and context
 

@@ -40,7 +40,7 @@ public partial class GreetingOffering : OfferingBase
 
 ## What sits behind Observe
 
-`Atelier.Framework.Observability` carries the strategies and formatters the generated plumbing dispatches to — console, structured, file, Elasticsearch, and composite logging strategies; JSON, compact, and plain-text formatters; sensitive-value redaction; and `LoggingContext` for ambient correlation. Components do not pick these directly; they `Observe`, and the configured strategy decides the sink.
+`Atelier.Framework.Observability` carries the strategies and formatters the generated plumbing dispatches to — console, structured, file, Elasticsearch, and composite logging strategies; JSON, compact, and plain-text formatters; sensitive-value redaction; and `LoggingContext`, the per-entry record (context, message, values, level, timestamp) handed to a strategy. Components do not pick these directly; they `Observe`, and the configured strategy decides the sink.
 
 ## See also
 

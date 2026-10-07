@@ -29,7 +29,7 @@ public partial class GreetingProduct : ProductBase
 
 `ProductBase` provides the public lifecycle surface:
 
-- **`StartAsync(CancellationToken)` / `StopAsync(CancellationToken)`** — return `Task<Outcome>`; they run `ConfigureOfferings`, resolve each offering through the `OfferingProvider`, and invoke `OnStartAsync` / `OnStopAsync`.
+- **`StartAsync(CancellationToken)` / `StopAsync(CancellationToken)`** — return `Task<Outcome>`. `StartAsync` runs `ConfigureOfferings` once, resolves each offering through the `OfferingProvider`, and invokes `OnStartAsync`; `StopAsync` invokes `OnStopAsync` and stops the offerings already resolved.
 - **`ConfigureOfferings(IOfferingConfiguration)`** — register the offerings the product owns with `AddOffering<TOffering>()`.
 - **`ConfigureServices` / `ConfigureEndpoints` / `ConfigureFacilities`** — optional overrides for extra DI registrations, endpoint mappings, and facilities.
 
@@ -52,7 +52,7 @@ var greeting = await greeter.GreetAsync("world", CancellationToken.None).Configu
 await product.StopAsync().ConfigureAwait(false);
 ```
 
-In a deployed application, `smash` (the `Atelier.Build` tool) generates this `Program.cs` host from the discovered Product.
+In a deployed application, `smash` (the `Atelier.Build` tool) generates this `Program.cs` host from the products listed in the boutique's `smash.yml`.
 
 ## See also
 
