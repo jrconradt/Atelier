@@ -108,7 +108,7 @@ artifacts are generated — regenerate via `smash`, do not hand-edit them.
 | ID | Severity | Meaning |
 |---|---|---|
 | `ATELIER0300` | Warning | Service is missing a `[NetworkZone]`. |
-| `ATELIER0310` | Error | A `[Requisite]` dependency is on a type in a different zone. |
+| `ATELIER0310` | Error | A `[Requisite]` dependency crosses zones without the source zone's `AllowedOutbound` and the target zone's `AllowedInbound` both permitting it. |
 | `ATELIER0320` | Warning | Service communication is unencrypted. |
 | `ATELIER0330` | Warning | A service depends on another without declaring the dependency. |
 

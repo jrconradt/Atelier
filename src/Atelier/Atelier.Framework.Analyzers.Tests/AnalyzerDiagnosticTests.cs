@@ -673,4 +673,93 @@ public sealed class AnalyzerDiagnosticTests
 
         await AnalyzerVerify.SilentAsync<ScopeResourceCompletenessAnalyzer>(source);
     }
+
+    [Fact]
+    public async Task Atelier0310_SilentWhenZonePolicyAllowsCrossing()
+    {
+        const string source = """
+            using Atelier.Framework.Attributes;
+            using Atelier.Framework.Primitives;
+            using Atelier.Framework.Requisitions;
+
+            namespace Sample;
+
+            [NetworkZone(typeof(Data))]
+            [Infrastructure(InfrastructureLifetime.Singleton)]
+            public sealed class Dependency
+            {
+            }
+
+            [NetworkZone(typeof(Application))]
+            [Infrastructure(InfrastructureLifetime.Singleton)]
+            public sealed class Caller
+            {
+                [Requisite] private readonly Dependency _dependency = null!;
+            }
+            """;
+
+        await AnalyzerVerify.SilentAsync<NetworkPolicyAnalyzer>(source);
+    }
+
+    [Fact]
+    public async Task Atelier0310_FiresWhenSourceZoneDisallowsOutbound()
+    {
+        const string source = """
+            using Atelier.Framework.Attributes;
+            using Atelier.Framework.Primitives;
+            using Atelier.Framework.Requisitions;
+
+            namespace Sample;
+
+            [NetworkZone(typeof(Security))]
+            [Infrastructure(InfrastructureLifetime.Singleton)]
+            public sealed class Dependency
+            {
+            }
+
+            [NetworkZone(typeof(Application))]
+            [Infrastructure(InfrastructureLifetime.Singleton)]
+            public sealed class Caller
+            {
+                [Requisite] private readonly Dependency _dependency = null!;
+            }
+            """;
+
+        var expected = new DiagnosticResult("ATELIER0310", Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .WithSpan(17, 45, 17, 56)
+            .WithArguments("Caller", "Application", "Dependency", "Security", "Application, Data", "Application, Management");
+
+        await AnalyzerVerify.FiresAsync<NetworkPolicyAnalyzer>(source, expected);
+    }
+
+    [Fact]
+    public async Task Atelier0310_FiresWhenTargetZoneDisallowsInbound()
+    {
+        const string source = """
+            using Atelier.Framework.Attributes;
+            using Atelier.Framework.Primitives;
+            using Atelier.Framework.Requisitions;
+
+            namespace Sample;
+
+            [NetworkZone(typeof(Data))]
+            [Infrastructure(InfrastructureLifetime.Singleton)]
+            public sealed class Dependency
+            {
+            }
+
+            [NetworkZone(typeof(Atelier.Framework.Primitives.Internal))]
+            [Infrastructure(InfrastructureLifetime.Singleton)]
+            public sealed class Caller
+            {
+                [Requisite] private readonly Dependency _dependency = null!;
+            }
+            """;
+
+        var expected = new DiagnosticResult("ATELIER0310", Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .WithSpan(17, 45, 17, 56)
+            .WithArguments("Caller", "Internal", "Dependency", "Data", "Application, Internal, Data", "Application");
+
+        await AnalyzerVerify.FiresAsync<NetworkPolicyAnalyzer>(source, expected);
+    }
 }

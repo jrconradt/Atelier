@@ -24,11 +24,11 @@ public sealed class NetworkPolicyAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor NetworkIsolationRule = new DiagnosticDescriptor(
         "ATELIER0310",
         "Network Policy Violation",
-        "Service '{0}' in zone '{1}' cannot communicate with service '{2}' in zone '{3}'. Allowed outbound zones: {4}.",
+        "Service '{0}' in zone '{1}' cannot communicate with service '{2}' in zone '{3}'. Zone '{1}' allows outbound to: {4}. Zone '{3}' allows inbound from: {5}.",
         CATEGORY,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
-        description: "Services must respect network zone boundaries defined by [NetworkZone] attributes.",
+        description: "A [Requisite] dependency across zones must be allowed by the source zone's [ZonePolicy] AllowedOutbound and the target zone's [ZonePolicy] AllowedInbound.",
         customTags: new[] { WellKnownDiagnosticTags.Compiler });
 
     private static readonly DiagnosticDescriptor UnencryptedCommunicationRule = new DiagnosticDescriptor(
@@ -98,7 +98,7 @@ public sealed class NetworkPolicyAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        var allowedOutbound = ReadAllowedOutboundZones(networkZoneAttribute);
+        var allowedOutbound = ReadZonePolicyZones(sourceZone, "AllowedOutbound");
 
         foreach (var member in classSymbol.GetMembers())
         {
@@ -128,95 +128,85 @@ public sealed class NetworkPolicyAnalyzer : DiagnosticAnalyzer
 
             var targetZone = ReadZone(dependencyZoneAttribute);
             if (targetZone == null
-                || targetZone == sourceZone
-                || allowedOutbound.Contains(targetZone))
+                || SymbolEqualityComparer.Default.Equals(targetZone, sourceZone))
+            {
+                continue;
+            }
+
+            var allowedInbound = ReadZonePolicyZones(targetZone, "AllowedInbound");
+            if (ContainsZone(allowedOutbound, targetZone)
+                && ContainsZone(allowedInbound, sourceZone))
             {
                 continue;
             }
 
             var location = member.Locations.FirstOrDefault() ?? classDeclaration.Identifier.GetLocation();
-            var allowedText = allowedOutbound.Count == 0
-                ? "(none)"
-                : string.Join(", ", allowedOutbound);
 
             var diagnostic = Diagnostic.Create(
                 NetworkIsolationRule,
                 location,
                 classSymbol.Name,
-                sourceZone,
+                sourceZone.Name,
                 namedDependency.Name,
-                targetZone,
-                allowedText);
+                targetZone.Name,
+                FormatZones(allowedOutbound),
+                FormatZones(allowedInbound));
             context.ReportDiagnostic(diagnostic);
         }
     }
 
-    private static string? ReadZone(AttributeData networkZoneAttribute)
+    private static INamedTypeSymbol? ReadZone(AttributeData networkZoneAttribute)
     {
         if (networkZoneAttribute.ConstructorArguments.Length == 0)
         {
             return null;
         }
 
-        return ZoneName(networkZoneAttribute.ConstructorArguments[0]);
+        return networkZoneAttribute.ConstructorArguments[0].Value as INamedTypeSymbol;
     }
 
-    private static HashSet<string> ReadAllowedOutboundZones(AttributeData networkZoneAttribute)
+    private static List<INamedTypeSymbol> ReadZonePolicyZones(INamedTypeSymbol zone, string propertyName)
     {
-        var result = new HashSet<string>(StringComparer.Ordinal);
+        var result = new List<INamedTypeSymbol>();
 
-        TypedConstant outbound = default;
-        var found = false;
-        foreach (var named in networkZoneAttribute.NamedArguments)
-        {
-            if (named.Key == "AllowedOutboundZones")
-            {
-                outbound = named.Value;
-                found = true;
-                break;
-            }
-        }
-
-        if (!found
-            && networkZoneAttribute.ConstructorArguments.Length >= 3)
-        {
-            outbound = networkZoneAttribute.ConstructorArguments[2];
-            found = true;
-        }
-
-        if (!found
-            || outbound.Kind != TypedConstantKind.Array
-            || outbound.IsNull)
+        var zonePolicy = zone.GetAttributes()
+            .FirstOrDefault(a => a.AttributeClass?.Name == "ZonePolicyAttribute");
+        if (zonePolicy == null)
         {
             return result;
         }
 
-        foreach (var element in outbound.Values)
+        foreach (var named in zonePolicy.NamedArguments)
         {
-            var name = ZoneName(element);
-            if (name != null)
+            if (named.Key != propertyName
+                || named.Value.Kind != TypedConstantKind.Array
+                || named.Value.IsNull)
             {
-                result.Add(name);
+                continue;
+            }
+
+            foreach (var element in named.Value.Values)
+            {
+                if (element.Value is INamedTypeSymbol zoneType)
+                {
+                    result.Add(zoneType);
+                }
             }
         }
 
         return result;
     }
 
-    private static string? ZoneName(TypedConstant zoneConstant)
+    private static bool ContainsZone(List<INamedTypeSymbol> zones, INamedTypeSymbol zone)
     {
-        if (zoneConstant.Value == null
-            || zoneConstant.Type is not INamedTypeSymbol enumType)
-        {
-            return null;
-        }
+        return zones.Any(z => SymbolEqualityComparer.Default.Equals(z, zone));
+    }
 
-        var name = enumType.GetMembers()
-            .OfType<IFieldSymbol>()
-            .FirstOrDefault(f => f.HasConstantValue && Equals(f.ConstantValue, zoneConstant.Value))
-            ?.Name;
-
-        return string.IsNullOrEmpty(name) ? zoneConstant.Value.ToString() : name;
+    private static string FormatZones(List<INamedTypeSymbol> zones)
+    {
+        return zones.Count == 0
+            ? "(none)"
+            : string.Join(", ", zones.Select(z => z.Name));
     }
 
     private static bool HasRequisiteAttribute(ISymbol symbol)
