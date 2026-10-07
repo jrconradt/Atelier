@@ -1,6 +1,6 @@
 # Facilities, Attache, and Gateways
 
-A **Facility** is a concrete infrastructure capability — a cache, a database, a message broker — exposed to offerings through a flat, `Outcome`-typed contract. **Attache** is the per-instance runtime that brokers capability requests against facilities, and a **Gateway** is the source-generated bridge that lets one domain call another.
+A **Facility** is a concrete infrastructure capability — a cache, a database, a message broker — exposed to offerings through a flat, `Outcome`-typed contract. **Attache** is the per-instance runtime that brokers capability requests against facilities, and a **Gateway** is a source-generated implementation of an interface that sits in front of another.
 
 ## The facility contract
 
@@ -60,7 +60,7 @@ Attache resolves a request to a facility, provisions resources, and returns a `C
 
 ## Gateways
 
-A **Gateway** crosses a domain boundary. Mark an interface with `[DomainGateway]`, naming the source and target domains:
+Mark an interface with `[DomainGateway]`, naming the source and target domains:
 
 ```csharp
 [DomainGateway("Ordering", "Billing")]
@@ -69,10 +69,10 @@ public interface IBillingGateway
 }
 ```
 
-`GatewaySourceGenerator` emits the bridge wiring. Both domains are required: `ATELIER0701` is an error when a gateway does not specify source and target domains.
+`GatewaySourceGenerator` emits an implementation class whose methods delegate to an optional strategy type or to a `{Method}CoreAsync` method. Both domains are required (`ATELIER0701` is an error when either is missing), but they do not appear in the generated code.
 
 ## See also
 
-- [Network zones](network.md) — facilities and gateways are zone-governed.
+- [Network zones](network.md) — zone declarations and the network policy they compile to.
 - [Outcomes](outcomes.md) — every facility method is `Outcome`-typed.
 - [Diagnostics](../reference/diagnostics.md) — `ATELIER0700` / `ATELIER0701` / `ATELIER0720`.

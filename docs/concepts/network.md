@@ -42,7 +42,8 @@ public sealed class Security : INetworkZone
 
 `AllowedInbound` and `AllowedOutbound` default to empty, `RequiresMutualTls` and
 `Isolates` to `false`. A zone with `Isolates = true` (such as `Security` and
-`Data`) is given its own isolated network rather than the default bridge.
+`Data`) is given its own network in the generated `docker-compose.yml`, in
+addition to the default `atelier-network` bridge that every service joins.
 
 ## Assigning a zone
 
@@ -95,14 +96,10 @@ spec:
     []
 ```
 
-The same pass emits the isolated zones (`Isolates = true`) as dedicated networks
-in the generated `docker-compose.yml`. The rendering surface lives in
-`Atelier.Framework.Network`: `Templates/Network` holds the Kubernetes
-`NetworkPolicy`, service-mesh `ConfigMap`, docker-compose-network, and mermaid
-topology templates, and `Compositors/Network/Variants` holds the Istio
-`PeerAuthentication` mesh policy (strict and open) and mutual-TLS docker network
-variants. These artifacts are generated — regenerate via `smash`, do not
-hand-edit them.
+The same pass adds a network for each isolated zone (`Isolates = true`) to the
+generated `docker-compose.yml`. `RequiresMutualTls` is emitted only as the
+`io.atelier.requires-mtls` annotation; nothing generated enforces it. These
+artifacts are generated — regenerate via `smash`, do not hand-edit them.
 
 ## Compile-time diagnostics
 
@@ -111,7 +108,7 @@ hand-edit them.
 | ID | Severity | Meaning |
 |---|---|---|
 | `ATELIER0300` | Warning | Service is missing a `[NetworkZone]`. |
-| `ATELIER0310` | Error | A declared dependency crosses a zone boundary the policy forbids. |
+| `ATELIER0310` | Error | A `[Requisite]` dependency is on a type in a different zone. |
 | `ATELIER0320` | Warning | Service communication is unencrypted. |
 | `ATELIER0330` | Warning | A service depends on another without declaring the dependency. |
 
