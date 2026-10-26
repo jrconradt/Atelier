@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <NoWarn>$(NoWarn);ATELIER0603</NoWarn>
     </PropertyGroup>
     <ItemGroup>

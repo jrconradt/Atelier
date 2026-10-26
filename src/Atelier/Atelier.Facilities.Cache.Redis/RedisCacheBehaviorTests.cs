@@ -51,7 +51,7 @@ public static class RedisCacheBehaviorTests
         {
             throw new InvalidOperationException("Get never reached the connection");
         }
-        if (connection.LastKey != "sessions:user:42")
+        if (connection.LastKey != "sessions:user%3A42")
         {
             throw new InvalidOperationException($"composite key '{connection.LastKey}' is not namespace-prefixed correctly");
         }
@@ -259,7 +259,7 @@ public static class RedisCacheBehaviorTests
         {
             throw new InvalidOperationException("Remove failed unexpectedly");
         }
-        if (connection.LastKey is null || connection.LastKey != "sessions:user:42")
+        if (connection.LastKey is null || connection.LastKey != "sessions:user%3A42")
         {
             throw new InvalidOperationException($"Remove did not construct the correct key: '{connection.LastKey}'");
         }
