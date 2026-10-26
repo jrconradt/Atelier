@@ -49,5 +49,6 @@
   <Project Path="benchmarks/requisitions-bench/Atelier.Bench.Requisitions/Atelier.Bench.Requisitions.csproj" />
   <Project Path="benchmarks/statemachine-bench/Atelier.Bench.StateMachine/Atelier.Bench.StateMachine.csproj" />
   <Project Path="examples/example-bench/Atelier.Example.Bench/Atelier.Example.Bench.csproj" />
+  <Project Path="examples/example-host/Atelier.Example.Host/Atelier.Example.Host.csproj" />
   <Project Path="examples/example-showcase/Atelier.Example.Showcase/Atelier.Example.Showcase.csproj" />
 </Solution>

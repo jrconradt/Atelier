@@ -1,0 +1,1 @@
+{{ endpointsType }}.{{ mapMethod }}(endpoints);

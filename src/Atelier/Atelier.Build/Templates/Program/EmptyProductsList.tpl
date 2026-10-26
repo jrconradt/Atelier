@@ -1,1 +1,0 @@
-Products = new List<ProductManifest>()

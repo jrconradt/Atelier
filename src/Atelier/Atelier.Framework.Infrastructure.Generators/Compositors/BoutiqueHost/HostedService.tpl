@@ -1,0 +1,1 @@
+services.AddHostedService(sp => ({{ implementation }})sp.GetRequiredService<{{ serviceType }}>());
