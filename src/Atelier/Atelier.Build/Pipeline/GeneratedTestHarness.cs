@@ -132,10 +132,12 @@ public sealed class GeneratedTestHarness
 
     private List<Assembly> LoadFrameworkAssemblies()
     {
-        var seen = new HashSet<string>();
         var dllPaths = new List<string>();
         var resolverMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+        // Every bin/ under the solution holds a copy of its dependencies, and bin/ dirs of
+        // deleted or stale projects linger on disk; take the newest copy of each assembly
+        // rather than whichever the filesystem happens to enumerate first.
         foreach (var dll in EnumerateBuildOutputDlls(_context.SolutionRoot))
         {
             if (!IsBuildOutput(dll))
@@ -143,26 +145,20 @@ public sealed class GeneratedTestHarness
                 continue;
             }
 
-            var fileName = Path.GetFileName(dll);
             var simpleName = Path.GetFileNameWithoutExtension(dll);
-            if (!resolverMap.ContainsKey(simpleName))
+            if (!resolverMap.TryGetValue(simpleName, out var existing)
+                || File.GetLastWriteTimeUtc(dll) > File.GetLastWriteTimeUtc(existing))
             {
                 resolverMap[simpleName] = dll;
             }
+        }
 
-            if (!fileName.StartsWith("Atelier.Framework.", StringComparison.Ordinal))
+        foreach (var (simpleName, dll) in resolverMap.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+        {
+            if (IsHarnessTarget(simpleName))
             {
-                continue;
+                dllPaths.Add(dll);
             }
-            if (fileName.EndsWith(".Generators.dll", StringComparison.Ordinal))
-            {
-                continue;
-            }
-            if (!seen.Add(fileName))
-            {
-                continue;
-            }
-            dllPaths.Add(dll);
         }
 
         AssemblyLoadContext.Default.Resolving += (ctx, name) =>
@@ -215,6 +211,14 @@ public sealed class GeneratedTestHarness
                 }
             }
         }
+    }
+
+    private static bool IsHarnessTarget(string simpleName)
+    {
+        var isAtelierLibrary = simpleName.StartsWith("Atelier.Framework.", StringComparison.Ordinal)
+            || simpleName.StartsWith("Atelier.Facilities.", StringComparison.Ordinal);
+        return isAtelierLibrary
+            && !simpleName.EndsWith(".Generators", StringComparison.Ordinal);
     }
 
     private static bool IsBuildOutput(string path)

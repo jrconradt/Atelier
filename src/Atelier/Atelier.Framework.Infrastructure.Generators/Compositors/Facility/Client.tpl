@@ -11,30 +11,26 @@ namespace {{ namespaceName }};
 public class {{ clientName }} : {{ interfaceName }}
 {
     private readonly HttpClient _httpClient;
-    private readonly IContextAccessor _contextAccessor;
 
-    public {{ clientName }}(HttpClient httpClient, IContextAccessor contextAccessor)
+    public {{ clientName }}(HttpClient httpClient)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _contextAccessor = contextAccessor ?? throw new ArgumentNullException(nameof(contextAccessor));
     }
 
     private void ApplyAuthorization(HttpRequestMessage request)
     {
-        if (_contextAccessor.Current != null)
+        var context = AmbientContext.Current;
+        var contextHeader = global::Atelier.Framework.Network.WireContextCodec.Encode(context);
+        if (!string.IsNullOrEmpty(contextHeader))
         {
-            var contextHeader = global::Atelier.Framework.Network.WireContextCodec.Encode(_contextAccessor.Current);
-            if (!string.IsNullOrEmpty(contextHeader))
-            {
-                request.Headers.TryAddWithoutValidation(
-                    global::Atelier.Framework.Network.WireContextCodec.CANONICAL_HEADER_NAME,
-                    contextHeader);
-            }
+            request.Headers.TryAddWithoutValidation(
+                global::Atelier.Framework.Network.WireContextCodec.CANONICAL_HEADER_NAME,
+                contextHeader);
+        }
 
-            if (_contextAccessor.Current.TryGetValue("Authorization", out var authHeader))
-            {
-                request.Headers.TryAddWithoutValidation("Authorization", authHeader);
-            }
+        if (context.TryGetValue("Authorization", out var authHeader))
+        {
+            request.Headers.TryAddWithoutValidation("Authorization", authHeader);
         }
     }
 
