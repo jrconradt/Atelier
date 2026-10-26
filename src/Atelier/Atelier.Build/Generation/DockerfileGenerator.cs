@@ -1,4 +1,3 @@
-using Atelier.Build.Analysis;
 using Atelier.Build.Discovery;
 using Atelier.Build.Pipeline;
 using Spectre.Console;
@@ -41,7 +40,6 @@ public class DockerfileGenerator
 
     public async Task<string> GenerateAsync(
         BoutiqueYamlSchema schema,
-        ProductDependencyGraph dependencyGraph,
         ResolvedBoutique resolved,
         string outputDirectory)
     {

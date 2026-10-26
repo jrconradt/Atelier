@@ -25,6 +25,8 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
     private const string BOUTIQUE_PRODUCT_ATTRIBUTE = "Atelier.Framework.Attributes.BoutiqueProductAttribute";
     private const string INFRASTRUCTURE_ATTRIBUTE = "Atelier.Framework.Attributes.InfrastructureAttribute";
     private const string API_ATTRIBUTE = "Atelier.Framework.Attributes.ApiAttribute";
+    private const string NETWORK_ZONE_ATTRIBUTE = "Atelier.Framework.Attributes.NetworkZoneAttribute";
+    private const string ZONE_POLICY_ATTRIBUTE = "Atelier.Framework.Primitives.ZonePolicyAttribute";
     private const string PRODUCT_BASE = "Atelier.Framework.Offering.Product.ProductBase";
     private const string HOSTED_SERVICE = "Microsoft.Extensions.Hosting.IHostedService";
     private const string ATELIER_ASSEMBLY_PREFIX = "Atelier.";
@@ -92,7 +94,7 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
 
         var diagnostics = new List<BoutiqueHostDiagnostic>();
         var products = new List<ProductModel>();
-        var productAssemblies = new List<IAssemblySymbol>();
+        var productTypes = new List<INamedTypeSymbol>();
 
         foreach (var attribute in compilation.Assembly.GetAttributes()
                      .Where(a => a.AttributeClass?.ToDisplayString() == BOUTIQUE_PRODUCT_ATTRIBUTE))
@@ -118,10 +120,11 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
                 productType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                 productType.ToDisplayString(),
                 autoStart));
-            productAssemblies.Add(productType.ContainingAssembly);
+            productTypes.Add(productType);
         }
 
-        var participating = CollectParticipatingAssemblies(compilation, productAssemblies);
+        var productClosure = CollectProductClosure(productTypes.Select(t => t.ContainingAssembly));
+        var participating = CollectParticipatingAssemblies(compilation, productClosure);
 
         var registrations = new List<RegistrationModel>();
         var apiEndpoints = new List<ApiEndpointModel>();
@@ -147,6 +150,10 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             }
         }
 
+        var zonePolicies = CollectZonePolicies(productClosure, productTypes);
+        var requisiteAssemblies = CollectRequisiteAssemblies(compilation);
+        var artifacts = RenderArtifacts(id, name, version, products, requisiteAssemblies, zonePolicies);
+
         return new BoutiqueHostModel(
             ToNamespace(compilation.AssemblyName),
             id,
@@ -154,6 +161,7 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             description,
             version,
             new EquatableArray<ProductModel>(products.ToImmutableArray()),
+            new EquatableArray<ArtifactModel>(artifacts.ToImmutableArray()),
             new EquatableArray<RegistrationModel>(registrations
                 .GroupBy(r => r.ServiceType + "|" + r.Implementation, StringComparer.Ordinal)
                 .Select(g => g.First())
@@ -167,7 +175,7 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
 
     private static List<IAssemblySymbol> CollectParticipatingAssemblies(
         Compilation compilation,
-        IEnumerable<IAssemblySymbol> productAssemblies)
+        IEnumerable<IAssemblySymbol> productClosure)
     {
         var referenced = compilation.SourceModule.ReferencedAssemblySymbols
             .GroupBy(a => a.Identity.Name, StringComparer.Ordinal)
@@ -186,19 +194,32 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             }
         }
 
-        // A product brings in every Atelier assembly reachable from its own, the same
-        // closure smash's ProductDependencyAnalyzer used to compute over compiled DLLs.
+        foreach (var assembly in productClosure)
+        {
+            participating[assembly.Identity.Name] = assembly;
+        }
+
+        return participating
+            .OrderBy(kvp => kvp.Key, StringComparer.Ordinal)
+            .Select(kvp => kvp.Value)
+            .ToList();
+    }
+
+    // A product brings in every Atelier assembly reachable from its own, the same
+    // closure smash's ProductDependencyAnalyzer used to compute over compiled DLLs.
+    private static List<IAssemblySymbol> CollectProductClosure(IEnumerable<IAssemblySymbol> productAssemblies)
+    {
+        var closure = new Dictionary<string, IAssemblySymbol>(StringComparer.Ordinal);
         var queue = new Queue<IAssemblySymbol>(productAssemblies);
-        var visited = new HashSet<string>(StringComparer.Ordinal);
         while (queue.Count > 0)
         {
             var assembly = queue.Dequeue();
-            if (!visited.Add(assembly.Identity.Name))
+            if (closure.ContainsKey(assembly.Identity.Name))
             {
                 continue;
             }
 
-            participating[assembly.Identity.Name] = assembly;
+            closure[assembly.Identity.Name] = assembly;
 
             foreach (var dependency in assembly.Modules.SelectMany(m => m.ReferencedAssemblySymbols))
             {
@@ -209,10 +230,115 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             }
         }
 
-        return participating
+        return closure
             .OrderBy(kvp => kvp.Key, StringComparer.Ordinal)
             .Select(kvp => kvp.Value)
             .ToList();
+    }
+
+    private static List<string> CollectRequisiteAssemblies(Compilation compilation)
+    {
+        var names = new SortedSet<string>(StringComparer.Ordinal) { compilation.Assembly.Identity.Name };
+        var queue = new Queue<IAssemblySymbol>(compilation.SourceModule.ReferencedAssemblySymbols);
+        while (queue.Count > 0)
+        {
+            var assembly = queue.Dequeue();
+            if (!assembly.Identity.Name.StartsWith(ATELIER_ASSEMBLY_PREFIX, StringComparison.Ordinal)
+                || !names.Add(assembly.Identity.Name))
+            {
+                continue;
+            }
+
+            foreach (var dependency in assembly.Modules.SelectMany(m => m.ReferencedAssemblySymbols))
+            {
+                queue.Enqueue(dependency);
+            }
+        }
+
+        return names.ToList();
+    }
+
+    private static List<ZonePolicyModel> CollectZonePolicies(
+        IEnumerable<IAssemblySymbol> productClosure,
+        IReadOnlyCollection<INamedTypeSymbol> productTypes)
+    {
+        var zoned = productClosure
+            .SelectMany(assembly => EnumerateTopLevelTypes(assembly.GlobalNamespace))
+            .Where(type => type.GetAttributes().Any(a => a.AttributeClass?.ToDisplayString() == INFRASTRUCTURE_ATTRIBUTE))
+            .Concat(productTypes);
+
+        var policies = new SortedDictionary<string, ZonePolicyModel>(StringComparer.Ordinal);
+        foreach (var type in zoned)
+        {
+            foreach (var zoneAttribute in type.GetAttributes()
+                         .Where(a => a.AttributeClass?.ToDisplayString() == NETWORK_ZONE_ATTRIBUTE))
+            {
+                if (zoneAttribute.ConstructorArguments.Length == 0
+                    || zoneAttribute.ConstructorArguments[0].Value is not INamedTypeSymbol zone)
+                {
+                    continue;
+                }
+
+                var policy = ReadZonePolicy(zone);
+                if (policy is not null)
+                {
+                    policies[policy.Zone] = policy;
+                }
+            }
+        }
+
+        return policies.Values.ToList();
+    }
+
+    private static ZonePolicyModel? ReadZonePolicy(INamedTypeSymbol zone)
+    {
+        var attribute = zone.GetAttributes()
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == ZONE_POLICY_ATTRIBUTE);
+        if (attribute is null)
+        {
+            return null;
+        }
+
+        var inbound = ImmutableArray<string>.Empty;
+        var outbound = ImmutableArray<string>.Empty;
+        var requiresMutualTls = false;
+        var isolates = false;
+        foreach (var named in attribute.NamedArguments)
+        {
+            switch (named.Key)
+            {
+                case "AllowedInbound":
+                    inbound = ZoneNames(named.Value);
+                    break;
+                case "AllowedOutbound":
+                    outbound = ZoneNames(named.Value);
+                    break;
+                case "RequiresMutualTls":
+                    requiresMutualTls = named.Value.Value is true;
+                    break;
+                case "Isolates":
+                    isolates = named.Value.Value is true;
+                    break;
+            }
+        }
+
+        return new ZonePolicyModel(
+            zone.Name.ToLowerInvariant(),
+            new EquatableArray<string>(inbound),
+            new EquatableArray<string>(outbound),
+            requiresMutualTls,
+            isolates);
+    }
+
+    private static ImmutableArray<string> ZoneNames(TypedConstant value)
+    {
+        return value.Kind == TypedConstantKind.Array
+            ? value.Values
+                .Select(v => v.Value)
+                .OfType<INamedTypeSymbol>()
+                .Select(zone => zone.Name.ToLowerInvariant())
+                .ToImmutableArray()
+            : ImmutableArray<string>.Empty;
     }
 
     private static IEnumerable<INamedTypeSymbol> EnumerateTopLevelTypes(INamespaceSymbol ns)
@@ -356,6 +482,114 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         return value is null ? "null" : SymbolDisplay.FormatLiteral(value, quote: true);
     }
 
+    private static List<ArtifactModel> RenderArtifacts(
+        string id,
+        string name,
+        string version,
+        IReadOnlyList<ProductModel> products,
+        IReadOnlyList<string> requisiteAssemblies,
+        IReadOnlyList<ZonePolicyModel> zonePolicies)
+    {
+        var artifacts = new List<ArtifactModel>
+        {
+            new ArtifactModel("requisite-manifest.json", RenderManifest(id, name, version, products, requisiteAssemblies)),
+            new ArtifactModel("network-zones.json", RenderNetworkZones(zonePolicies)),
+        };
+
+        if (zonePolicies.Count > 0)
+        {
+            artifacts.Add(new ArtifactModel("network-policies.yaml", string.Join("---\n", zonePolicies.Select(RenderPolicy))));
+        }
+
+        return artifacts;
+    }
+
+    private static string RenderManifest(
+        string id,
+        string name,
+        string version,
+        IReadOnlyList<ProductModel> products,
+        IReadOnlyList<string> requisiteAssemblies)
+    {
+        var json = new StringBuilder();
+        json.Append("{\n");
+        json.Append("  \"boutique\": ").Append(JsonString(id)).Append(",\n");
+        json.Append("  \"name\": ").Append(JsonString(name)).Append(",\n");
+        json.Append("  \"version\": ").Append(JsonString(version)).Append(",\n");
+        json.Append("  \"products\": ").Append(JsonArray(products.Select(p => p.DisplayName))).Append(",\n");
+        json.Append("  \"requisiteAssemblies\": ").Append(JsonArray(requisiteAssemblies)).Append("\n");
+        json.Append("}\n");
+        return json.ToString();
+    }
+
+    private static string RenderNetworkZones(IReadOnlyList<ZonePolicyModel> zonePolicies)
+    {
+        var isolated = zonePolicies.Where(p => p.Isolates).Select(p => p.Zone);
+        return "{\n  \"isolatedNetworks\": " + JsonArray(isolated) + "\n}\n";
+    }
+
+    private static string RenderPolicy(ZonePolicyModel policy)
+    {
+        var yaml = new BH.NetworkPolicy
+        {
+            Name = policy.Zone + "-zone-policy",
+            Zone = policy.Zone,
+            Mtls = policy.RequiresMutualTls ? "true" : "false",
+            Ingress = RenderPeers("    - from:", policy.AllowedInbound.Items),
+            Egress = RenderPeers("    - to:", policy.AllowedOutbound.Items),
+        }.Render();
+
+        var lines = yaml
+            .Split('\n')
+            .Where(line => line.Trim().Length > 0);
+
+        return string.Join("\n", lines) + "\n";
+    }
+
+    private static string RenderPeers(string ruleLine, ImmutableArray<string> zones)
+    {
+        if (zones.Length == 0)
+        {
+            return "    []";
+        }
+
+        var peers = zones.Select(zone => new BH.ZonePeer { Zone = zone }.Render().TrimEnd('\n'));
+        return ruleLine + "\n" + string.Join("\n", peers);
+    }
+
+    private static string JsonArray(IEnumerable<string> values)
+    {
+        return "[" + string.Join(", ", values.Select(JsonString)) + "]";
+    }
+
+    private static string JsonString(string value)
+    {
+        var escaped = new StringBuilder("\"");
+        foreach (var c in value)
+        {
+            switch (c)
+            {
+                case '"': escaped.Append("\\\""); break;
+                case '\\': escaped.Append("\\\\"); break;
+                case '\n': escaped.Append("\\n"); break;
+                case '\r': escaped.Append("\\r"); break;
+                case '\t': escaped.Append("\\t"); break;
+                default:
+                    if (c < ' ')
+                    {
+                        escaped.Append("\\u").Append(((int)c).ToString("x4"));
+                    }
+                    else
+                    {
+                        escaped.Append(c);
+                    }
+                    break;
+            }
+        }
+
+        return escaped.Append('"').ToString();
+    }
+
     private static string RenderSource(BoutiqueHostModel model)
     {
         return new BH.EntryPoint
@@ -375,6 +609,13 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
                 .ToList(),
             Registrations = model.Registrations.Items
                 .SelectMany(RenderRegistration)
+                .ToList(),
+            Artifacts = model.Artifacts.Items
+                .Select(a => (Compositor)new BH.ArtifactEntry
+                {
+                    FileName = Literal(a.FileName),
+                    Content = Literal(a.Content),
+                })
                 .ToList(),
             ApiEndpoints = model.ApiEndpoints.Items
                 .Select(e => (Compositor)new BH.ApiEndpointMap
@@ -424,6 +665,7 @@ internal sealed record BoutiqueHostModel(
     string? Description,
     string Version,
     EquatableArray<ProductModel> Products,
+    EquatableArray<ArtifactModel> Artifacts,
     EquatableArray<RegistrationModel> Registrations,
     EquatableArray<ApiEndpointModel> ApiEndpoints,
     EquatableArray<BoutiqueHostDiagnostic> Diagnostics);
@@ -438,6 +680,15 @@ internal sealed record RegistrationModel(
     bool IsHostedService);
 
 internal sealed record ApiEndpointModel(string EndpointsType, string MapMethod);
+
+internal sealed record ArtifactModel(string FileName, string Content);
+
+internal sealed record ZonePolicyModel(
+    string Zone,
+    EquatableArray<string> AllowedInbound,
+    EquatableArray<string> AllowedOutbound,
+    bool RequiresMutualTls,
+    bool Isolates);
 
 internal sealed record BoutiqueHostDiagnostic(
     DiagnosticDescriptor Descriptor,

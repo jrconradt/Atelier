@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Atelier.Build.Discovery;
+using Atelier.Build.Generation;
 using Atelier.Build.Pipeline;
 using Atelier.Build.Services.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -108,13 +109,6 @@ public class BuildOrchestrationService : IBuildOrchestrationService
                     cancellationToken).ConfigureAwait(false);
 
                 _logger.LogInformation("Built boutique: {Name}", definition.Name);
-
-                var requiredAssemblies = await _dependencyAnalysisService.AnalyzeRequisitesAsync(
-                    manifest.OutputAssembly,
-                    sharedOutputDir,
-                    cancellationToken).ConfigureAwait(false);
-
-                manifest = manifest with { RequisiteAssemblies = requiredAssemblies.ToNameList() };
 
                 boutiques.Add(manifest);
                 artifacts.Add(manifest.OutputAssembly);
@@ -242,15 +236,9 @@ public class BuildOrchestrationService : IBuildOrchestrationService
                     continue;
                 }
 
-                var dependencyGraph = await _dependencyAnalysisService.AnalyzeProductDependenciesAsync(
-                    schema.Products?.Where(p => !string.IsNullOrEmpty(p.Assembly))
-                        .Select(p => (p.Type, p.Assembly!)) ?? [],
-                    compiledAssembliesDir,
-                    cancellationToken).ConfigureAwait(false);
-
                 var generated = await _generationService.GenerateBoutiqueContainerAsync(
                     schema,
-                    dependencyGraph,
+                    HostArtifacts.ReadNetworkZoning(boutiqueDir),
                     boutiqueDir,
                     solutionRoot,
                     compiledAssembliesDir,

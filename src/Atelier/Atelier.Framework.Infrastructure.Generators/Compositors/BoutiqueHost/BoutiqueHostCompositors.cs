@@ -13,6 +13,27 @@ public sealed class EntryPoint : Compositor
     public IEnumerable<Compositor> Products { get; set; } = new List<Compositor>();
     public IEnumerable<Compositor> Registrations { get; set; } = new List<Compositor>();
     public IEnumerable<Compositor> ApiEndpoints { get; set; } = new List<Compositor>();
+    public IEnumerable<Compositor> Artifacts { get; set; } = new List<Compositor>();
+}
+
+public sealed class ArtifactEntry : Compositor
+{
+    public string FileName { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
+}
+
+public sealed class NetworkPolicy : Compositor
+{
+    public string Name { get; set; } = string.Empty;
+    public string Zone { get; set; } = string.Empty;
+    public string Mtls { get; set; } = string.Empty;
+    public string Ingress { get; set; } = string.Empty;
+    public string Egress { get; set; } = string.Empty;
+}
+
+public sealed class ZonePeer : Compositor
+{
+    public string Zone { get; set; } = string.Empty;
 }
 
 public sealed class ServiceWithInterface : Compositor

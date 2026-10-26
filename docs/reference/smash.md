@@ -155,15 +155,27 @@ smash never writes C#. A boutique's host is an ordinary checked-in project
 `[assembly: Boutique(...)]` and one `[assembly: BoutiqueProduct(typeof(...))]`
 per product. `BoutiqueHostSourceGenerator` reads those attributes and the
 assemblies the host references and emits the entry point; smash builds the
-project with `dotnet build` like any other. Deployment settings — ports,
+project with `dotnet build` like any other.
+
+Everything else derived from code is computed by the same generator and carried
+by the built host: `requisite-manifest.json` (the host's `Atelier.*` assembly
+closure and products), `network-zones.json` (isolated zones), and
+`network-policies.yaml` (one Kubernetes `NetworkPolicy` per zone in the product
+closure). smash runs `dotnet Host.dll --atelier-artifacts <dir>` to write them
+into `src/Atelier/boutiques/<name>/`, then aggregates them: compose isolated
+networks, the solution-root `network-policies.yaml`, and
+`Atelier.Build/.artifacts/requisite-manifest.json`. A full build therefore
+builds boutiques before generating their containers. Deployment settings — ports,
 capabilities, health paths, resource limits — are runtime configuration under
 `Atelier:Boutique` (and ASP.NET Core's own `Kestrel` section), not generated code.
 
 ## Generated artifacts
 
 `Atelier.Build` ships non-Roslyn generators under `Generation/` that emit
-Dockerfiles and `docker-compose.yml` for boutiques that declare a `host`, plus
-Kubernetes network policies and mermaid diagrams. These outputs land in
+Dockerfiles and `docker-compose.yml` for boutiques that declare a `host`, and
+the mermaid service-interaction diagram from the `smash.yml` dependency graph.
+It reads no code: network policies and the requisite manifest come from the
+hosts, as above. These outputs land in
 `src/Atelier/boutiques/` and `src/Atelier/docker-compose.yml` and are not
 tracked; regenerate them via a boutique-generating build rather than editing
 them by hand. Image builds use the repository root as their context.

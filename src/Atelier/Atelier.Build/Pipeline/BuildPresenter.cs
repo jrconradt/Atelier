@@ -61,10 +61,9 @@ public sealed class BuildPresenter
         AnsiConsole.MarkupLine("[yellow]Phase 2:[/] Building solution...");
     }
 
-    public void BuiltBoutique(string name, int requisiteCount)
+    public void BuiltBoutique(string name)
     {
         AnsiConsole.MarkupLine($"[green]  ✓[/] Built {name}");
-        AnsiConsole.MarkupLine($"[dim]    → {requisiteCount} requisite assemblies[/]");
     }
 
     public void GeneratingArtifacts()
@@ -285,7 +284,7 @@ public sealed class BuildPresenter
     public void AssembliesNotCompiledWarning()
     {
         AnsiConsole.MarkupLine("[yellow]  Warning: Assemblies not compiled yet. Run 'smash' first.[/]");
-        AnsiConsole.MarkupLine("[dim]  Generating boutique projects with limited dependency analysis...[/]");
+        AnsiConsole.MarkupLine("[dim]  Generating containers without host-derived network zones...[/]");
     }
 
     public void GeneratingBoutiqueProjects()
@@ -316,10 +315,6 @@ public sealed class BuildPresenter
         AnsiConsole.MarkupLine($"[green]    ✓[/] {fileName} (Standalone)");
     }
 
-    public void BoutiqueDependencyStats(int assemblyCount, int typeCount)
-    {
-        AnsiConsole.MarkupLine($"[dim]      {assemblyCount} assemblies, {typeCount} types[/]");
-    }
 
     public void BoutiqueGenerationError(string message, Exception ex, bool verbose)
     {

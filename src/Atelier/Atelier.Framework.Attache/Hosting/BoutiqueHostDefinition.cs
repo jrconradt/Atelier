@@ -17,6 +17,7 @@ public sealed class BoutiqueHostDefinition
         string? description,
         string version,
         IReadOnlyList<ProductManifest> products,
+        IReadOnlyList<BoutiqueArtifact> artifacts,
         Action<IServiceCollection> registerServices,
         Action<IEndpointRouteBuilder> mapApiEndpoints,
         Action<IServiceCollection> configureServices,
@@ -27,6 +28,7 @@ public sealed class BoutiqueHostDefinition
         Description = description;
         Version = version;
         Products = products;
+        Artifacts = artifacts;
         RegisterServices = registerServices;
         MapApiEndpoints = mapApiEndpoints;
         ConfigureServices = configureServices;
@@ -38,6 +40,7 @@ public sealed class BoutiqueHostDefinition
     internal string? Description { get; }
     internal string Version { get; }
     internal IReadOnlyList<ProductManifest> Products { get; }
+    internal IReadOnlyList<BoutiqueArtifact> Artifacts { get; }
     internal Action<IServiceCollection> RegisterServices { get; }
     internal Action<IEndpointRouteBuilder> MapApiEndpoints { get; }
     internal Action<IServiceCollection> ConfigureServices { get; }

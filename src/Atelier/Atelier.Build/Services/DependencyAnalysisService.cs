@@ -1,4 +1,3 @@
-using Atelier.Build.Analysis;
 using Atelier.Build.Discovery;
 using Atelier.Build.Services.Abstractions;
 using Microsoft.Extensions.Logging;
@@ -17,48 +16,6 @@ public class DependencyAnalysisService : IDependencyAnalysisService
     {
         _verbose = verbose;
         _logger = logger ?? NullLogger<DependencyAnalysisService>.Instance;
-    }
-
-    public Task<RequisiteAssemblies> AnalyzeRequisitesAsync(
-        string assemblyPath,
-        string outputDirectory,
-        CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        _logger.LogInformation("Analyzing requisites for {AssemblyPath}", assemblyPath);
-
-        var context = CreateBuildContext();
-        var analyzer = new RequisiteAnalyzer(context);
-
-        var requisiteAssemblies = analyzer.AnalyzeRequiredAssemblies(outputDirectory, assemblyPath);
-
-        _logger.LogDebug("Found {Count} requisite assemblies", requisiteAssemblies.Count);
-
-        return Task.FromResult(requisiteAssemblies);
-    }
-
-    public Task<ProductDependencyGraph> AnalyzeProductDependenciesAsync(
-        IEnumerable<(string ProductType, string AssemblyName)> products,
-        string compiledAssembliesDirectory,
-        CancellationToken cancellationToken = default)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-
-        _logger.LogInformation("Analyzing product dependencies");
-
-        var context = CreateBuildContext();
-        using var analyzer = new ProductDependencyAnalyzer(context);
-
-        var dependencyGraph = analyzer.AnalyzeProducts(products, compiledAssembliesDirectory);
-
-        _logger.LogInformation(
-            "Analyzed {ProductCount} products: {AssemblyCount} assemblies, {TypeCount} types",
-            products.Count(),
-            dependencyGraph.TotalAssemblyCount,
-            dependencyGraph.TypeCount);
-
-        return Task.FromResult(dependencyGraph);
     }
 
     public Task<DependencyGraph> BuildDependencyGraphAsync(

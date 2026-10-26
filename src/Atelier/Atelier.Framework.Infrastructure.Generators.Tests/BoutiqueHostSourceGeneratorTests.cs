@@ -52,6 +52,8 @@ public sealed class BoutiqueHostSourceGeneratorTests
     private const string ProductSource = """
         using Atelier.Framework.Attributes;
 
+        using Atelier.Framework.Primitives;
+
         namespace Atelier.Sample.Products;
 
         public class OrdersProduct : Atelier.Framework.Offering.Product.ProductBase { }
@@ -60,6 +62,16 @@ public sealed class BoutiqueHostSourceGeneratorTests
 
         [Infrastructure]
         public class OrderLedger { }
+
+        [ZonePolicy(AllowedInbound = new[] { typeof(Edge) }, RequiresMutualTls = true, Isolates = true)]
+        public sealed class Vault { }
+
+        [ZonePolicy(AllowedOutbound = new[] { typeof(Vault) })]
+        public sealed class Edge { }
+
+        [Infrastructure]
+        [NetworkZone(typeof(Vault))]
+        public class Safe { }
         """;
 
     private const string UnrelatedSource = """
@@ -183,6 +195,45 @@ public sealed class BoutiqueHostSourceGeneratorTests
             .ToList();
         Assert.NotEmpty(outputs);
         Assert.All(outputs, output => Assert.Equal(IncrementalStepRunReason.Cached, output.Reason));
+    }
+
+    [Fact]
+    public void EmbedsRequisiteManifest_WithTheAtelierAssemblyClosure()
+    {
+        var (generated, _) = Run("""[assembly: Atelier.Framework.Attributes.Boutique("orders")]""");
+
+        Assert.Contains("new global::Atelier.Framework.Attache.Hosting.BoutiqueArtifact(\"requisite-manifest.json\"", generated);
+        Assert.Contains(@"\""boutique\"": \""orders\""", generated);
+        var requisites = System.Text.RegularExpressions.Regex.Match(generated!, @"\\""requisiteAssemblies\\"": \[([^\]]*)\]").Groups[1].Value;
+        Assert.Equal(
+            @"\""Atelier.Framework.Attributes\"", \""Atelier.Framework.Offering\"", \""Atelier.Framework.Outcomes\"", \""Atelier.Framework.Primitives\"", \""Atelier.Sample.Host\"", \""Atelier.Sample.Products\"", \""Atelier.Sample.Unrelated\""",
+            requisites);
+    }
+
+    [Fact]
+    public void WithoutProducts_EmitsNoZonesOrPolicies()
+    {
+        var (generated, _) = Run("""[assembly: Atelier.Framework.Attributes.Boutique("orders")]""");
+
+        Assert.Contains(@"\""isolatedNetworks\"": []", generated);
+        Assert.DoesNotContain("network-policies.yaml", generated);
+    }
+
+    [Fact]
+    public void ProductClosureZones_RenderNetworkPolicies_AndIsolatedNetworks()
+    {
+        var (generated, _) = Run("""
+            [assembly: Atelier.Framework.Attributes.Boutique("orders")]
+            [assembly: Atelier.Framework.Attributes.BoutiqueProduct(typeof(Atelier.Sample.Products.OrdersProduct))]
+            """);
+
+        Assert.Contains(@"\""isolatedNetworks\"": [\""vault\""]", generated);
+        Assert.Contains("\"network-policies.yaml\"", generated);
+        Assert.Contains("name: vault-zone-policy", generated);
+        Assert.Contains(@"io.atelier.requires-mtls: \""true\""", generated);
+        Assert.Contains(@"    - from:\n        - podSelector:\n            matchLabels:\n              io.atelier.zone: \""edge\""", generated);
+        Assert.Contains(@"  egress:\n    []", generated);
+        Assert.DoesNotContain("edge-zone-policy", generated);
     }
 
     private static (string? Generated, IReadOnlyList<Diagnostic> Diagnostics) Run(string hostSource)

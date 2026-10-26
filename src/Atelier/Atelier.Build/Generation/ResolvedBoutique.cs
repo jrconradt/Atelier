@@ -1,4 +1,3 @@
-using Atelier.Build.Analysis;
 
 namespace Atelier.Build.Generation;
 
@@ -93,7 +92,6 @@ public class ResolvedTlsEndpointConfig
 public class ResolvedNetworkZoning
 {
     public IReadOnlyList<string> IsolatedNetworks { get; init; } = [];
-    public IReadOnlyList<ZonePolicyInfo> ZonePolicies { get; init; } = [];
 }
 
 public class ResolvedInfrastructureDependencies

@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Atelier.Build.Analysis;
 using Atelier.Build.Discovery;
 using Atelier.Build.Generation;
 using Atelier.Build.Utils;
@@ -8,7 +7,8 @@ namespace Atelier.Build.Pipeline;
 
 public sealed record GeneratedBoutiques(
     List<BoutiqueYamlSchema> Schemas,
-    List<ResolvedBoutique> Resolved);
+    List<ResolvedBoutique> Resolved,
+    List<string> ArtifactDirectories);
 
 public sealed class BoutiqueGenerationRunner
 {
@@ -62,7 +62,7 @@ public sealed class BoutiqueGenerationRunner
         await GenerateOrchestrationComposeAsync(generated.Schemas, generated.Resolved, artifacts).ConfigureAwait(false);
 
         var networkPolicyPath = await new NetworkPolicyGenerator(_context)
-            .GenerateAsync(generated.Resolved)
+            .GenerateAsync(generated.ArtifactDirectories)
             .ConfigureAwait(false);
         if (networkPolicyPath != null)
         {
@@ -111,6 +111,7 @@ public sealed class BoutiqueGenerationRunner
 
         var allSchemas = new List<BoutiqueYamlSchema>();
         var allResolved = new List<ResolvedBoutique>();
+        var artifactDirectories = new List<string>();
 
         var hostPortOffsets = boutiqueDefinitions
             .OrderBy(definition => definition.Name, StringComparer.Ordinal)
@@ -135,8 +136,16 @@ public sealed class BoutiqueGenerationRunner
                 var schema = ConvertToSchema(definition, hostPortOffsets[definition.Name]);
                 allSchemas.Add(schema);
 
-                var dependencyGraph = AnalyzeBoutiqueDependencies(schema, compiledAssembliesDir);
-                var resolved = BoutiqueResolver.Resolve(schema, dependencyGraph, compiledAssembliesDir, _context.Verbose);
+                if (!_context.DryRun)
+                {
+                    await HostArtifacts.ExtractAsync(
+                        _context,
+                        HostArtifacts.HostAssemblyPath(definition.HostProjectPath, compiledAssembliesDir),
+                        outputDir).ConfigureAwait(false);
+                    artifactDirectories.Add(outputDir);
+                }
+
+                var resolved = BoutiqueResolver.Resolve(schema, HostArtifacts.ReadNetworkZoning(outputDir), _context.Verbose);
                 allResolved.Add(resolved);
 
                 if (_context.DryRun)
@@ -145,7 +154,7 @@ public sealed class BoutiqueGenerationRunner
                     continue;
                 }
 
-                await GenerateSingleBoutiqueAsync(schema, dependencyGraph, resolved, outputDir, artifacts).ConfigureAwait(false);
+                await GenerateSingleBoutiqueAsync(schema, resolved, outputDir, artifacts).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -153,17 +162,16 @@ public sealed class BoutiqueGenerationRunner
             }
         }
 
-        return new GeneratedBoutiques(allSchemas, allResolved);
+        return new GeneratedBoutiques(allSchemas, allResolved, artifactDirectories);
     }
 
     private async Task GenerateSingleBoutiqueAsync(
         BoutiqueYamlSchema schema,
-        ProductDependencyGraph dependencyGraph,
         ResolvedBoutique resolved,
         string outputDir,
         List<string> artifacts)
     {
-        var dockerfilePath = await GenerateDockerfileAsync(schema, dependencyGraph, resolved, outputDir).ConfigureAwait(false);
+        var dockerfilePath = await GenerateDockerfileAsync(schema, resolved, outputDir).ConfigureAwait(false);
         artifacts.Add(dockerfilePath);
         _presenter.GeneratedArtifact(Path.GetFileName(dockerfilePath));
 
@@ -172,8 +180,6 @@ public sealed class BoutiqueGenerationRunner
         await boutiqueComposeGenerator.GenerateAsync([schema], [resolved], boutiqueComposePath, relativePathToRoot: "../..").ConfigureAwait(false);
         artifacts.Add(boutiqueComposePath);
         _presenter.GeneratedStandaloneCompose(Path.GetFileName(boutiqueComposePath));
-
-        _presenter.BoutiqueDependencyStats(dependencyGraph.TotalAssemblyCount, dependencyGraph.TypeCount);
     }
 
     private async Task GenerateOrchestrationComposeAsync(
@@ -272,37 +278,13 @@ public sealed class BoutiqueGenerationRunner
         }
     }
 
-    private ProductDependencyGraph AnalyzeBoutiqueDependencies(BoutiqueYamlSchema schema, string compiledAssembliesDir)
-    {
-        var graph = new ProductDependencyGraph();
-
-        if (!Directory.Exists(compiledAssembliesDir))
-        {
-            return graph;
-        }
-
-        if (schema.Products == null || schema.Products.Count == 0)
-        {
-            return graph;
-        }
-
-        using var analyzer = new ProductDependencyAnalyzer(_context);
-
-        var products = schema.Products
-            .Where(p => !string.IsNullOrEmpty(p.Assembly))
-            .Select(p => (p.Type, p.Assembly!));
-
-        return analyzer.AnalyzeProducts(products, compiledAssembliesDir);
-    }
-
     private async Task<string> GenerateDockerfileAsync(
         BoutiqueYamlSchema schema,
-        ProductDependencyGraph dependencyGraph,
         ResolvedBoutique resolved,
         string outputDirectory)
     {
         var generator = new DockerfileGenerator(_context);
-        return await generator.GenerateAsync(schema, dependencyGraph, resolved, outputDirectory).ConfigureAwait(false);
+        return await generator.GenerateAsync(schema, resolved, outputDirectory).ConfigureAwait(false);
     }
 
     private static BoutiqueYamlSchema ConvertToSchema(BoutiqueDefinition definition, int hostPortOffset)

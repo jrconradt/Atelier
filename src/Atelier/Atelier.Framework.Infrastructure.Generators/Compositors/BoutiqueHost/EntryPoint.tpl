@@ -20,6 +20,10 @@ internal static partial class AtelierBoutiqueHost
                 {
                     {{ products }}
                 },
+                artifacts: new global::Atelier.Framework.Attache.Hosting.BoutiqueArtifact[]
+                {
+                    {{ artifacts }}
+                },
                 registerServices: RegisterServices,
                 mapApiEndpoints: MapApiEndpoints,
                 configureServices: services => ConfigureServices(services),

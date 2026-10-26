@@ -20,10 +20,17 @@ public static class BoutiqueHost
     private const string CORS_POLICY = "AllowAll";
     private const string LIVENESS_TAG = "liveness";
     private const string READINESS_TAG = "readiness";
+    private const string ARTIFACTS_SWITCH = "--atelier-artifacts";
 
     public static async Task RunAsync(string[] args, BoutiqueHostDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(definition);
+
+        if (args.Length == 2 && args[0] == ARTIFACTS_SWITCH)
+        {
+            await WriteArtifactsAsync(args[1], definition.Artifacts).ConfigureAwait(false);
+            return;
+        }
 
         var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +70,15 @@ public static class BoutiqueHost
         RegisterLifecycle(app, definition.Id, instanceId);
 
         await app.RunAsync().ConfigureAwait(false);
+    }
+
+    private static async Task WriteArtifactsAsync(string directory, IReadOnlyList<BoutiqueArtifact> artifacts)
+    {
+        Directory.CreateDirectory(directory);
+        foreach (var artifact in artifacts)
+        {
+            await File.WriteAllTextAsync(Path.Combine(directory, artifact.FileName), artifact.Content).ConfigureAwait(false);
+        }
     }
 
     private static void ConfigureKestrel(WebApplicationBuilder builder)

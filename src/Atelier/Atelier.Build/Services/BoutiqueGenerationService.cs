@@ -1,4 +1,3 @@
-using Atelier.Build.Analysis;
 using Atelier.Build.Discovery;
 using Atelier.Build.Generation;
 using Atelier.Build.Pipeline;
@@ -23,7 +22,7 @@ public class BoutiqueGenerationService : IBoutiqueGenerationService
 
     public async Task<GeneratedArtifacts> GenerateBoutiqueContainerAsync(
         BoutiqueYamlSchema schema,
-        ProductDependencyGraph dependencyGraph,
+        ResolvedNetworkZoning networkZoning,
         string outputDirectory,
         string solutionRoot,
         string compiledAssembliesDirectory,
@@ -33,11 +32,10 @@ public class BoutiqueGenerationService : IBoutiqueGenerationService
 
         var context = CreateBuildContext(solutionRoot);
 
-        var resolved = BoutiqueResolver.Resolve(schema, dependencyGraph, compiledAssembliesDirectory, _verbose);
+        var resolved = BoutiqueResolver.Resolve(schema, networkZoning, _verbose);
 
         var dockerfilePath = await GenerateDockerfileAsync(
             schema,
-            dependencyGraph,
             resolved,
             outputDirectory,
             context,
@@ -63,7 +61,7 @@ public class BoutiqueGenerationService : IBoutiqueGenerationService
 
         var schemaList = schemas.ToList();
         var resolvedList = schemaList
-            .Select(s => BoutiqueResolver.Resolve(s, new ProductDependencyGraph(), string.Empty, _verbose))
+            .Select(s => BoutiqueResolver.Resolve(s, new ResolvedNetworkZoning(), _verbose))
             .ToList();
 
         var path = await generator.GenerateAsync(schemaList, resolvedList, outputPath).ConfigureAwait(false);
@@ -92,14 +90,13 @@ public class BoutiqueGenerationService : IBoutiqueGenerationService
 
     private async Task<string> GenerateDockerfileAsync(
         BoutiqueYamlSchema schema,
-        ProductDependencyGraph dependencyGraph,
         ResolvedBoutique resolved,
         string outputDirectory,
         Pipeline.BuildContext context,
         CancellationToken cancellationToken)
     {
         var generator = new DockerfileGenerator(context);
-        return await generator.GenerateAsync(schema, dependencyGraph, resolved, outputDirectory).ConfigureAwait(false);
+        return await generator.GenerateAsync(schema, resolved, outputDirectory).ConfigureAwait(false);
     }
 
     private Pipeline.BuildContext CreateBuildContext(string workingDirectory)

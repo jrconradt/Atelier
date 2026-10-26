@@ -1,5 +1,5 @@
-using Atelier.Build.Analysis;
 using Atelier.Build.Discovery;
+using Atelier.Build.Generation;
 using Atelier.Build.Pipeline;
 
 namespace Atelier.Build.Services.Abstractions;
@@ -8,7 +8,7 @@ public interface IBoutiqueGenerationService
 {
         public Task<GeneratedArtifacts> GenerateBoutiqueContainerAsync(
         BoutiqueYamlSchema schema,
-        ProductDependencyGraph dependencyGraph,
+        ResolvedNetworkZoning networkZoning,
         string outputDirectory,
         string solutionRoot,
         string compiledAssembliesDirectory,

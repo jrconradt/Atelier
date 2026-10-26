@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Atelier.Build.Analysis;
 using Atelier.Build.Discovery;
 using Atelier.Build.Generation;
 using Spectre.Console;
@@ -45,6 +44,9 @@ public sealed class FullPipelineRunner
             return BuildResult.Success(artifacts, boutiques);
         }
 
+        var sharedOutputDir = Path.Combine(_context.BuildOutputDirectory, "assemblies");
+        await BuildBoutiquesAsync(buildOrder, artifacts, boutiques).ConfigureAwait(false);
+
         var generationRunner = new BoutiqueGenerationRunner(_context, _presenter);
         var generationResult = await generationRunner.ExecuteAsync(artifacts).ConfigureAwait(false);
         if (!generationResult.IsSuccess)
@@ -52,8 +54,7 @@ public sealed class FullPipelineRunner
             return generationResult;
         }
 
-        var sharedOutputDir = Path.Combine(_context.BuildOutputDirectory, "assemblies");
-        await BuildBoutiquesAsync(buildOrder, sharedOutputDir, artifacts, boutiques).ConfigureAwait(false);
+        AttachRequisiteAssemblies(buildOrder, boutiques);
 
         if (_context.RunTests)
         {
@@ -105,7 +106,6 @@ public sealed class FullPipelineRunner
 
     private async Task BuildBoutiquesAsync(
         IReadOnlyList<BoutiqueDefinition> buildOrder,
-        string sharedOutputDir,
         List<string> artifacts,
         List<BoutiqueManifest> boutiques)
     {
@@ -115,12 +115,7 @@ public sealed class FullPipelineRunner
         {
             var manifest = await BuildBoutiqueAsync(definition).ConfigureAwait(false);
 
-            var analyzer = new RequisiteAnalyzer(_context);
-            var requiredAssemblies = analyzer.AnalyzeRequiredAssemblies(sharedOutputDir, manifest.OutputAssembly);
-
-            manifest = manifest with { RequisiteAssemblies = requiredAssemblies.ToNameList() };
-
-            _presenter.BuiltBoutique(definition.Name, requiredAssemblies.Count);
+            _presenter.BuiltBoutique(definition.Name);
 
             boutiques.Add(manifest);
             artifacts.Add(manifest.OutputAssembly);
@@ -152,6 +147,22 @@ public sealed class FullPipelineRunner
             var diagramPath = await GenerateDiagramAsync(boutiques).ConfigureAwait(false);
             artifacts.Add(diagramPath);
             _presenter.MermaidDiagram(Path.GetFileName(diagramPath));
+        }
+    }
+
+    private void AttachRequisiteAssemblies(IReadOnlyList<BoutiqueDefinition> buildOrder, List<BoutiqueManifest> boutiques)
+    {
+        var outputPathResolver = new OutputPathResolver();
+        for (var i = 0; i < boutiques.Count; i++)
+        {
+            var definition = buildOrder.FirstOrDefault(d => d.Name == boutiques[i].Name);
+            if (definition?.HostProjectPath is null)
+            {
+                continue;
+            }
+
+            var artifactsDirectory = outputPathResolver.ResolveBoutiqueOutputDirectory(definition, _context.BoutiquesDirectory);
+            boutiques[i] = boutiques[i] with { RequisiteAssemblies = HostArtifacts.ReadRequisiteAssemblies(artifactsDirectory) };
         }
     }
 

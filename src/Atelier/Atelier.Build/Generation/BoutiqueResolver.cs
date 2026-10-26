@@ -1,4 +1,3 @@
-using Atelier.Build.Analysis;
 using Atelier.Build.Discovery;
 using Atelier.Build.Utils;
 
@@ -13,8 +12,7 @@ public static class BoutiqueResolver
 
     public static ResolvedBoutique Resolve(
         BoutiqueYamlSchema schema,
-        ProductDependencyGraph dependencyGraph,
-        string compiledAssembliesDir,
+        ResolvedNetworkZoning networkZoning,
         bool verbose)
     {
         var ports = ResolvePorts(schema);
@@ -32,7 +30,12 @@ public static class BoutiqueResolver
             SecurityContext = ResolveSecurityContext(schema),
             ImageConfig = ResolveImageConfig(schema),
             Tls = ResolveTls(schema),
-            NetworkZoning = ResolveNetworkZoning(dependencyGraph),
+            NetworkZoning = new ResolvedNetworkZoning
+            {
+                IsolatedNetworks = networkZoning.IsolatedNetworks
+                    .OrderBy(network => network, StringComparer.Ordinal)
+                    .ToList(),
+            },
             InfrastructureDeps = infraDeps,
             ResourceLimits = ResolveResourceLimits(schema),
         };
@@ -296,19 +299,6 @@ public static class BoutiqueResolver
         return new ResolvedTlsConfig
         {
             EndpointConfigs = configs,
-        };
-    }
-
-    private static ResolvedNetworkZoning ResolveNetworkZoning(ProductDependencyGraph dependencyGraph)
-    {
-        return new ResolvedNetworkZoning
-        {
-            IsolatedNetworks = dependencyGraph.IsolatedNetworks
-                .OrderBy(network => network, StringComparer.Ordinal)
-                .ToList(),
-            ZonePolicies = dependencyGraph.ZonePolicies
-                .OrderBy(policy => policy.Zone, StringComparer.Ordinal)
-                .ToList(),
         };
     }
 
