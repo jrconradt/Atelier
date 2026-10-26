@@ -1,3 +1,2 @@
 name: example-host
 solution: Atelier.Example.Host/Atelier.Example.Host.csproj
-host: Atelier.Example.Host/Atelier.Example.Host.csproj

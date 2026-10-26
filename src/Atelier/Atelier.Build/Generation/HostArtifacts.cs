@@ -1,14 +1,13 @@
 using System.Text.Json;
-using Atelier.Build.Pipeline;
-using Atelier.Build.Utils;
-using Spectre.Console;
 
 namespace Atelier.Build.Generation;
 
 /// <summary>
 /// The code-derived artifacts a boutique host carries. The host source generator
-/// computes them at compile time; smash only asks the built host to write them out
-/// (<c>dotnet Host.dll --atelier-artifacts dir</c>) and reads the files back as data.
+/// computes them at compile time and the host's AtelierWriteBoutiqueArtifacts build
+/// target writes them out. smash passes the destination as
+/// <c>-p:AtelierArtifactsDirectory</c> when it builds each boutique; a boutique is a
+/// host exactly when its build left these files there.
 /// </summary>
 public static class HostArtifacts
 {
@@ -16,34 +15,22 @@ public static class HostArtifacts
     public const string NETWORK_ZONES = "network-zones.json";
     public const string NETWORK_POLICIES = "network-policies.yaml";
 
-    private const string ARTIFACTS_SWITCH = "--atelier-artifacts";
-    private static readonly TimeSpan EXTRACT_TIMEOUT = TimeSpan.FromMinutes(1);
-
-    public static string HostAssemblyPath(string hostProjectPath, string compiledAssembliesDirectory)
+    public static void Clear(string artifactsDirectory)
     {
-        return Path.Combine(compiledAssembliesDirectory, Path.GetFileNameWithoutExtension(hostProjectPath) + ".dll");
+        if (!Directory.Exists(artifactsDirectory))
+        {
+            return;
+        }
+
+        foreach (var file in new[] { REQUISITE_MANIFEST, NETWORK_ZONES, NETWORK_POLICIES })
+        {
+            File.Delete(Path.Combine(artifactsDirectory, file));
+        }
     }
 
-    public static async Task<bool> ExtractAsync(BuildContext context, string hostAssemblyPath, string outputDirectory)
+    public static bool Exist(string artifactsDirectory)
     {
-        if (!File.Exists(hostAssemblyPath))
-        {
-            AnsiConsole.MarkupLine($"[yellow]    ⚠ Host not built, no code-derived artifacts: {Markup.Escape(hostAssemblyPath)}[/]");
-            return false;
-        }
-
-        var result = await new ProcessExecutor(context).ExecuteAsync(
-            "dotnet",
-            [hostAssemblyPath, ARTIFACTS_SWITCH, outputDirectory],
-            outputDirectory,
-            ProcessOptions.WithTimeout(EXTRACT_TIMEOUT)).ConfigureAwait(false);
-
-        if (!result.Success)
-        {
-            AnsiConsole.MarkupLine($"[yellow]    ⚠ Host artifact extraction failed ({result.ExitCode}): {Markup.Escape(result.StandardError)}[/]");
-        }
-
-        return result.Success;
+        return File.Exists(Path.Combine(artifactsDirectory, REQUISITE_MANIFEST));
     }
 
     public static ResolvedNetworkZoning ReadNetworkZoning(string artifactsDirectory)

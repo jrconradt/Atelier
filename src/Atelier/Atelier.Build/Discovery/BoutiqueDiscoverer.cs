@@ -180,16 +180,7 @@ public class BoutiqueDiscoverer
             Spectre.Console.AnsiConsole.MarkupLine($"[dim]  Subsystem: {subsystem?.Name ?? "none"}, Solution: {solutionPath}[/]");
         }
 
-        var hostProject = string.IsNullOrWhiteSpace(smashSchema.Host)
-            ? null
-            : Path.GetFullPath(Path.Combine(directory, smashSchema.Host));
-
         var outputDir = Path.Combine(_context.SolutionRoot, "boutiques", subsystemName.ToLowerInvariant());
-
-        if (_context.Verbose)
-        {
-            Spectre.Console.AnsiConsole.MarkupLine($"[dim]  {subsystemName}: host {Spectre.Console.Markup.Escape(hostProject ?? "none")}[/]");
-        }
 
         return new BoutiqueDefinition
         {
@@ -198,8 +189,7 @@ public class BoutiqueDiscoverer
             Description = subsystem?.Description ?? $"{subsystemName} Boutique Host",
             SourceDirectory = directory,
             OutputDirectory = outputDir,
-            ProjectPath = hostProject ?? Path.GetFullPath(solutionPath),
-            HostProjectPath = hostProject,
+            ProjectPath = Path.GetFullPath(solutionPath),
             SubsystemName = subsystemName,
             Dependencies = subsystem?.Dependencies ?? [],
             Products = minimal.Products ?? [],

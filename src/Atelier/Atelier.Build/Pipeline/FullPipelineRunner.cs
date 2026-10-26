@@ -156,7 +156,7 @@ public sealed class FullPipelineRunner
         for (var i = 0; i < boutiques.Count; i++)
         {
             var definition = buildOrder.FirstOrDefault(d => d.Name == boutiques[i].Name);
-            if (definition?.HostProjectPath is null)
+            if (definition is null)
             {
                 continue;
             }

@@ -43,9 +43,10 @@ public class DockerfileGenerator
         ResolvedBoutique resolved,
         string outputDirectory)
     {
-        if (string.IsNullOrEmpty(schema.HostProject))
+        if (string.IsNullOrEmpty(schema.HostProject)
+            || !schema.HostProject.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException($"Boutique '{schema.Name}' declares no host project; set 'host' in its smash.yml.");
+            throw new InvalidOperationException($"Boutique host '{schema.Name}' must name its host .csproj as the smash.yml 'solution'; got '{schema.HostProject}'.");
         }
 
         var hostProject = Path.GetRelativePath(_context.RepositoryRoot, schema.HostProject).Replace('\\', '/');

@@ -64,9 +64,10 @@ Zone declarations compile to Kubernetes infrastructure in the boutique host's
 build. `BoutiqueHostSourceGenerator` walks the `[Infrastructure]` services and
 declared products in each product's assembly closure, follows every
 `[NetworkZone]` to its zone marker's `[ZonePolicy]`, and renders one Kubernetes
-`NetworkPolicy` per zone into the host. smash runs the built host with
-`--atelier-artifacts` and writes the hosts' policies, de-duplicated, to
-`network-policies.yaml` at the solution root:
+`NetworkPolicy` per zone into the host, and the host's
+`AtelierWriteBoutiqueArtifacts` build target writes them out after `Build`.
+smash collects the hosts' policies, de-duplicated, into `network-policies.yaml`
+at the solution root:
 
 ```yaml
 apiVersion: networking.k8s.io/v1

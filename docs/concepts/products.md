@@ -52,7 +52,7 @@ var greeting = await greeter.GreetAsync("world", CancellationToken.None).Configu
 await product.StopAsync().ConfigureAwait(false);
 ```
 
-In a deployed application the host is a checked-in project with no `Program.cs`. It declares the boutique and its products as assembly attributes, and `BoutiqueHostSourceGenerator` emits the entry point at compile time — DI registrations for `[Infrastructure]` types, `[Api]` endpoint maps, and the product manifest — which `BoutiqueHost.RunAsync` runs:
+In a deployed application the host is a checked-in project with no `Program.cs` that sets `<AtelierBoutiqueHost>true</AtelierBoutiqueHost>`. It declares the boutique and its products as assembly attributes, and `BoutiqueHostSourceGenerator` emits the entry point at compile time — DI registrations for `[Infrastructure]` types, `[Api]` endpoint maps, and the product manifest — which `BoutiqueHost.RunAsync` runs:
 
 ```csharp
 [assembly: Boutique("orders", Name = "Orders")]

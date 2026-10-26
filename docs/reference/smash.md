@@ -116,7 +116,6 @@ Full field reference (`SmashYamlSchema`):
 |---|---|---|
 | `name` | string | Required. Boutique identifier used as a `smash <target>`. |
 | `solution` | string | Required. Path to the `.sln` or `.csproj` to build. |
-| `host` | string | Optional. Path to the boutique's checked-in host project. Boutiques with a host get a Dockerfile and compose entry; smash builds the host instead of `solution`. |
 | `description` | string | Optional human-readable description. |
 | `dependencies` | string[] | Other boutiques this one depends on. |
 | `build.configuration` | string | `Debug` or `Release` (default `Debug`). |
@@ -151,7 +150,8 @@ for the build and test workflow.
 ## Boutique hosts
 
 smash never writes C#. A boutique's host is an ordinary checked-in project
-(`Sdk="Microsoft.NET.Sdk.Web"`, no `Program.cs`) that declares
+(`Sdk="Microsoft.NET.Sdk.Web"`, `<AtelierBoutiqueHost>true</AtelierBoutiqueHost>`,
+no `Program.cs`) that declares
 `[assembly: Boutique(...)]` and one `[assembly: BoutiqueProduct(typeof(...))]`
 per product. `BoutiqueHostSourceGenerator` reads those attributes and the
 assemblies the host references and emits the entry point; smash builds the
@@ -161,8 +161,15 @@ Everything else derived from code is computed by the same generator and carried
 by the built host: `requisite-manifest.json` (the host's `Atelier.*` assembly
 closure and products), `network-zones.json` (isolated zones), and
 `network-policies.yaml` (one Kubernetes `NetworkPolicy` per zone in the product
-closure). smash runs `dotnet Host.dll --atelier-artifacts <dir>` to write them
-into `src/Atelier/boutiques/<name>/`, then aggregates them: compose isolated
+closure). A generator cannot write files, so the `AtelierWriteBoutiqueArtifacts`
+target in `src/Atelier/Directory.Build.targets` runs the freshly built host once
+in artifacts mode (`--atelier-artifacts`) after `Build`; a plain `dotnet build`
+leaves them in `bin/<config>/<tfm>/atelier/`. smash builds the host with
+`-p:AtelierArtifactsDirectory=src/Atelier/boutiques/<name>/` and aggregates them.
+The `<AtelierBoutiqueHost>` property is the only place a host is declared: smash
+builds every boutique this way, and a boutique whose build leaves these files is
+a host (its `smash.yml` `solution` must then be the host `.csproj`). The
+aggregated outputs are: compose isolated
 networks, the solution-root `network-policies.yaml`, and
 `Atelier.Build/.artifacts/requisite-manifest.json`. A full build therefore
 builds boutiques before generating their containers. Deployment settings — ports,
@@ -172,7 +179,7 @@ capabilities, health paths, resource limits — are runtime configuration under
 ## Generated artifacts
 
 `Atelier.Build` ships non-Roslyn generators under `Generation/` that emit
-Dockerfiles and `docker-compose.yml` for boutiques that declare a `host`, and
+Dockerfiles and `docker-compose.yml` for boutique hosts, and
 the mermaid service-interaction diagram from the `smash.yml` dependency graph.
 It reads no code: network policies and the requisite manifest come from the
 hosts, as above. These outputs land in

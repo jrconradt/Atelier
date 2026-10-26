@@ -120,13 +120,11 @@ public sealed class BoutiqueGenerationRunner
 
         foreach (var definition in boutiqueDefinitions)
         {
-            if (definition.HostProjectPath is null)
+            var outputDir = _outputPathResolver.ResolveBoutiqueOutputDirectory(definition, boutiquesDir);
+            if (!HostArtifacts.Exist(outputDir))
             {
                 continue;
             }
-
-            var outputDir = _outputPathResolver.ResolveBoutiqueOutputDirectory(definition, boutiquesDir);
-            Directory.CreateDirectory(outputDir);
 
             var boutiqueName = Path.GetFileName(outputDir);
             _presenter.ProcessingBoutique(boutiqueName);
@@ -136,14 +134,7 @@ public sealed class BoutiqueGenerationRunner
                 var schema = ConvertToSchema(definition, hostPortOffsets[definition.Name]);
                 allSchemas.Add(schema);
 
-                if (!_context.DryRun)
-                {
-                    await HostArtifacts.ExtractAsync(
-                        _context,
-                        HostArtifacts.HostAssemblyPath(definition.HostProjectPath, compiledAssembliesDir),
-                        outputDir).ConfigureAwait(false);
-                    artifactDirectories.Add(outputDir);
-                }
+                artifactDirectories.Add(outputDir);
 
                 var resolved = BoutiqueResolver.Resolve(schema, HostArtifacts.ReadNetworkZoning(outputDir), _context.Verbose);
                 allResolved.Add(resolved);
@@ -295,7 +286,7 @@ public sealed class BoutiqueGenerationRunner
             Version = definition.Version,
             Description = definition.Description,
             SubsystemName = definition.SubsystemName,
-            HostProject = definition.HostProjectPath,
+            HostProject = definition.ProjectPath,
             Dependencies = definition.Dependencies.ToList(),
             Products = definition.Products?.ToList(),
             Kestrel = BuildKestrelEndpoints(definition.Ports),
