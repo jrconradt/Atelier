@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <NoWarn>$(NoWarn);ATELIER0603</NoWarn>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Atelier.Facilities.Cache\Atelier.Facilities.Cache.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Facility\Atelier.Framework.Facility.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Offering\Atelier.Framework.Offering.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Host.Execution\Atelier.Framework.Host.Execution.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Infrastructure\Atelier.Framework.Infrastructure.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Outcomes\Atelier.Framework.Outcomes.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Requisitions\Atelier.Framework.Requisitions.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Observability\Atelier.Framework.Observability.csproj" />
+        <ProjectReference Include="..\Atelier.Framework.Resilience\Atelier.Framework.Resilience.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="StackExchange.Redis" />
+        <PackageReference Include="Polly.Core" />
+    </ItemGroup>
+</Project>
