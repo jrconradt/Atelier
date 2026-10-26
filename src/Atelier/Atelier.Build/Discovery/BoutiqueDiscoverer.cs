@@ -1,7 +1,4 @@
 using Atelier.Build.Pipeline;
-using Microsoft.Build.Construction;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -183,24 +180,15 @@ public class BoutiqueDiscoverer
             Spectre.Console.AnsiConsole.MarkupLine($"[dim]  Subsystem: {subsystem?.Name ?? "none"}, Solution: {solutionPath}[/]");
         }
 
-        var projectReferences = await DiscoverProjectReferencesFromSolutionAsync(solutionPath, directory).ConfigureAwait(false);
-
-        var (grpcServices, protoFiles) = await DiscoverGrpcServicesAndFilesAsync(directory).ConfigureAwait(false);
-
-        var additionalReferences = grpcServices
-            .Select(g => g.Assembly)
-            .Where(a => a != null)
-            .Cast<string>()
-            .Distinct();
-
-        var allReferences = projectReferences.Concat(additionalReferences).Distinct().ToList();
+        var hostProject = string.IsNullOrWhiteSpace(smashSchema.Host)
+            ? null
+            : Path.GetFullPath(Path.Combine(directory, smashSchema.Host));
 
         var outputDir = Path.Combine(_context.SolutionRoot, "boutiques", subsystemName.ToLowerInvariant());
-        var outputProject = Path.Combine(outputDir, $"Atelier.Host.{subsystemName}.csproj");
 
         if (_context.Verbose)
         {
-            Spectre.Console.AnsiConsole.MarkupLine($"[dim]  {subsystemName}: {allReferences.Count} project references[/]");
+            Spectre.Console.AnsiConsole.MarkupLine($"[dim]  {subsystemName}: host {Spectre.Console.Markup.Escape(hostProject ?? "none")}[/]");
         }
 
         return new BoutiqueDefinition
@@ -210,11 +198,10 @@ public class BoutiqueDiscoverer
             Description = subsystem?.Description ?? $"{subsystemName} Boutique Host",
             SourceDirectory = directory,
             OutputDirectory = outputDir,
-            ProjectPath = outputProject,
+            ProjectPath = hostProject ?? Path.GetFullPath(solutionPath),
+            HostProjectPath = hostProject,
             SubsystemName = subsystemName,
             Dependencies = subsystem?.Dependencies ?? [],
-            ProjectReferences = allReferences,
-            GrpcServices = grpcServices,
             Products = minimal.Products ?? [],
             Ports = new PortConfiguration
             {
@@ -233,8 +220,7 @@ public class BoutiqueDiscoverer
             Build = new BuildSettings
             {
                 Configuration = "Release",
-                TreatWarningsAsErrors = false,
-                Protos = protoFiles
+                TreatWarningsAsErrors = false
             },
             Docker = new DockerSettings
             {
@@ -265,157 +251,6 @@ public class BoutiqueDiscoverer
                 }
                 : null
         };
-    }
-
-        private Task<IReadOnlyList<string>> DiscoverProjectReferencesFromSolutionAsync(string solutionPath, string? boutiqueDirectory = null)
-    {
-        if (solutionPath.Contains('*') && boutiqueDirectory != null)
-        {
-            var slnFiles = Directory.GetFiles(boutiqueDirectory, "*.sln", SearchOption.TopDirectoryOnly);
-            if (slnFiles.Length == 0)
-            {
-                return Task.FromResult<IReadOnlyList<string>>([]);
-            }
-            solutionPath = slnFiles[0];
-        }
-
-        if (!File.Exists(solutionPath))
-        {
-            return Task.FromResult<IReadOnlyList<string>>([]);
-        }
-
-        if (solutionPath.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
-        {
-            return Task.FromResult<IReadOnlyList<string>>([Path.GetFullPath(solutionPath)]);
-        }
-
-        SolutionFile solution;
-        try
-        {
-            solution = SolutionFile.Parse(solutionPath);
-        }
-        catch (Exception ex)
-        {
-            if (_context.Verbose)
-            {
-                Spectre.Console.AnsiConsole.MarkupLine($"[red]    Failed to parse solution: {ex.Message}[/]");
-            }
-            return Task.FromResult<IReadOnlyList<string>>([]);
-        }
-
-        var projects = solution.ProjectsInOrder
-            .Where(p => p.ProjectType == SolutionProjectType.KnownToBeMSBuildFormat
-                     && p.AbsolutePath.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
-            .Where(p =>
-            {
-                var name = Path.GetFileNameWithoutExtension(p.AbsolutePath);
-                return !name.EndsWith(".Tests", StringComparison.OrdinalIgnoreCase)
-                    && !name.EndsWith(".Benchmarks", StringComparison.OrdinalIgnoreCase);
-            })
-            .Select(p => Path.GetFullPath(p.AbsolutePath))
-            .Where(File.Exists)
-            .ToList();
-
-        if (_context.Verbose)
-        {
-            Spectre.Console.AnsiConsole.MarkupLine($"[dim]  Solution: {projects.Count} projects discovered[/]");
-        }
-
-        return Task.FromResult<IReadOnlyList<string>>(projects);
-    }
-
-        private async Task<(IReadOnlyList<GrpcServiceDeclaration>, IReadOnlyList<string>)> DiscoverGrpcServicesAndFilesAsync(string directory)
-    {
-        var protoFiles = Directory.GetFiles(directory, "*.proto", SearchOption.AllDirectories)
-            .OrderBy(f => f, StringComparer.Ordinal)
-            .ToArray();
-        var services = new List<GrpcServiceDeclaration>();
-        var files = new List<string>();
-
-        foreach (var protoFile in protoFiles)
-        {
-            files.Add(protoFile);
-            var content = await File.ReadAllTextAsync(protoFile).ConfigureAwait(false);
-
-            foreach (var serviceName in ExtractProtoServiceNames(content))
-            {
-
-                var dir = Path.GetDirectoryName(protoFile)!;
-                if (Path.GetFileName(dir).Equals("Protos", StringComparison.OrdinalIgnoreCase) ||
-                    Path.GetFileName(dir).Equals("Grpc", StringComparison.OrdinalIgnoreCase))
-                {
-                    dir = Path.GetDirectoryName(dir)!;
-                }
-                var projectName = Path.GetFileName(dir);
-
-                var implementationName = $"{serviceName}Impl";
-                var servicesDir = Path.Combine(dir, "Services");
-
-                if (Directory.Exists(servicesDir))
-                {
-                    implementationName = await FindGrpcImplementationClassAsync(servicesDir, serviceName).ConfigureAwait(false)
-                                      ?? implementationName;
-                }
-
-                services.Add(new GrpcServiceDeclaration
-                {
-                    ServiceName = serviceName,
-                    Implementation = $"global::{projectName}.Services.{implementationName}",
-                    Assembly = projectName
-                });
-            }
-        }
-
-        return (services, files);
-    }
-
-    private static readonly System.Text.RegularExpressions.Regex PROTO_LINE_COMMENT =
-        new(@"//[^\n]*", System.Text.RegularExpressions.RegexOptions.Compiled);
-
-    private static readonly System.Text.RegularExpressions.Regex PROTO_BLOCK_COMMENT =
-        new(@"/\*.*?\*/", System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.Singleline);
-
-    private static readonly System.Text.RegularExpressions.Regex PROTO_SERVICE_DECL =
-        new(@"\bservice\s+([A-Za-z_]\w*)\s*\{", System.Text.RegularExpressions.RegexOptions.Compiled);
-
-        private static IEnumerable<string> ExtractProtoServiceNames(string content)
-    {
-        var stripped = PROTO_LINE_COMMENT.Replace(content, string.Empty);
-        stripped = PROTO_BLOCK_COMMENT.Replace(stripped, string.Empty);
-
-        foreach (System.Text.RegularExpressions.Match m in PROTO_SERVICE_DECL.Matches(stripped))
-        {
-            yield return m.Groups[1].Value;
-        }
-    }
-
-        private static async Task<string?> FindGrpcImplementationClassAsync(string servicesDir, string serviceName)
-    {
-        foreach (var csFile in Directory.GetFiles(servicesDir, "*.cs").OrderBy(f => f, StringComparer.Ordinal))
-        {
-            var content = await File.ReadAllTextAsync(csFile).ConfigureAwait(false);
-            var tree = CSharpSyntaxTree.ParseText(content);
-            var root = await tree.GetRootAsync().ConfigureAwait(false);
-
-            foreach (var cls in root.DescendantNodes().OfType<ClassDeclarationSyntax>())
-            {
-                if (cls.BaseList is null)
-                {
-                    continue;
-                }
-
-                foreach (var baseType in cls.BaseList.Types)
-                {
-                    var name = baseType.Type.ToString();
-                    if (name == $"{serviceName}.{serviceName}Base" || name == $"{serviceName}Base")
-                    {
-                        return cls.Identifier.Text;
-                    }
-                }
-            }
-        }
-
-        return null;
     }
 
         private async Task<BoutiqueDefinition?> ParseLegacyBoutiqueFileAsync(string filePath)

@@ -302,19 +302,13 @@ public sealed class BuildPresenter
     public void BoutiqueDryRun(string outputDir, string pascalName)
     {
         AnsiConsole.MarkupLine("[yellow]    Dry run - would generate:[/]");
-        AnsiConsole.MarkupLine($"[dim]      • {outputDir}/Program.g.cs[/]");
-        AnsiConsole.MarkupLine($"[dim]      • {outputDir}/Atelier.Host.{pascalName}.csproj[/]");
         AnsiConsole.MarkupLine($"[dim]      • {outputDir}/Dockerfile[/]");
+        AnsiConsole.MarkupLine($"[dim]      • {outputDir}/docker-compose.yml[/]");
     }
 
     public void GeneratedArtifact(string fileName)
     {
         AnsiConsole.MarkupLine($"[green]    ✓[/] {fileName}");
-    }
-
-    public void GeneratedProgram()
-    {
-        AnsiConsole.MarkupLine("[green]    ✓[/] Program.g.cs");
     }
 
     public void GeneratedStandaloneCompose(string fileName)

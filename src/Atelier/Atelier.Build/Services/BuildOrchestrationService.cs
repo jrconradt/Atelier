@@ -248,7 +248,7 @@ public class BuildOrchestrationService : IBuildOrchestrationService
                     compiledAssembliesDir,
                     cancellationToken).ConfigureAwait(false);
 
-                var generated = await _generationService.GenerateBoutiqueProjectAsync(
+                var generated = await _generationService.GenerateBoutiqueContainerAsync(
                     schema,
                     dependencyGraph,
                     boutiqueDir,

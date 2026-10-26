@@ -119,6 +119,11 @@ public sealed class BoutiqueGenerationRunner
 
         foreach (var definition in boutiqueDefinitions)
         {
+            if (definition.HostProjectPath is null)
+            {
+                continue;
+            }
+
             var outputDir = _outputPathResolver.ResolveBoutiqueOutputDirectory(definition, boutiquesDir);
             Directory.CreateDirectory(outputDir);
 
@@ -140,7 +145,7 @@ public sealed class BoutiqueGenerationRunner
                     continue;
                 }
 
-                await GenerateSingleBoutiqueAsync(schema, dependencyGraph, resolved, outputDir, compiledAssembliesDir, artifacts).ConfigureAwait(false);
+                await GenerateSingleBoutiqueAsync(schema, dependencyGraph, resolved, outputDir, artifacts).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -156,28 +161,8 @@ public sealed class BoutiqueGenerationRunner
         ProductDependencyGraph dependencyGraph,
         ResolvedBoutique resolved,
         string outputDir,
-        string compiledAssembliesDir,
         List<string> artifacts)
     {
-        var stubPaths = await GenerateStubServicesAsync(schema, outputDir).ConfigureAwait(false);
-        artifacts.AddRange(stubPaths);
-        foreach (var stubPath in stubPaths)
-        {
-            _presenter.GeneratedArtifact(Path.GetFileName(stubPath));
-        }
-
-        var programPath = await GenerateProgramAsync(schema, dependencyGraph, resolved, outputDir, compiledAssembliesDir).ConfigureAwait(false);
-        artifacts.Add(programPath);
-        _presenter.GeneratedProgram();
-
-        var projectPath = await GenerateProjectFileAsync(schema, dependencyGraph, outputDir).ConfigureAwait(false);
-        artifacts.Add(projectPath);
-        _presenter.GeneratedArtifact(Path.GetFileName(projectPath));
-
-        var loaderPath = await GenerateAssemblyLoaderForBoutiqueAsync(schema, dependencyGraph, outputDir, compiledAssembliesDir).ConfigureAwait(false);
-        artifacts.Add(loaderPath);
-        _presenter.GeneratedArtifact(Path.GetFileName(loaderPath));
-
         var dockerfilePath = await GenerateDockerfileAsync(schema, dependencyGraph, resolved, outputDir).ConfigureAwait(false);
         artifacts.Add(dockerfilePath);
         _presenter.GeneratedArtifact(Path.GetFileName(dockerfilePath));
@@ -310,44 +295,6 @@ public sealed class BoutiqueGenerationRunner
         return analyzer.AnalyzeProducts(products, compiledAssembliesDir);
     }
 
-    private async Task<string> GenerateProgramAsync(
-        BoutiqueYamlSchema schema,
-        ProductDependencyGraph dependencyGraph,
-        ResolvedBoutique resolved,
-        string outputDirectory,
-        string compiledAssembliesDirectory)
-    {
-        var generator = new ProgramGenerator(_context);
-        return await generator.GenerateAsync(schema, dependencyGraph, resolved, outputDirectory, compiledAssembliesDirectory).ConfigureAwait(false);
-    }
-
-    private async Task<string> GenerateProjectFileAsync(
-        BoutiqueYamlSchema schema,
-        ProductDependencyGraph dependencyGraph,
-        string outputDirectory)
-    {
-        var generator = new ProjectFileGenerator(_context);
-        return await generator.GenerateAsync(schema, dependencyGraph, outputDirectory, _context.SolutionRoot).ConfigureAwait(false);
-    }
-
-    private async Task<string> GenerateAssemblyLoaderForBoutiqueAsync(
-        BoutiqueYamlSchema schema,
-        ProductDependencyGraph dependencyGraph,
-        string outputDirectory,
-        string compiledAssembliesDir)
-    {
-        var generator = new PerBoutiqueAssemblyLoaderGenerator(_context);
-        return await generator.GenerateAsync(schema, dependencyGraph, outputDirectory, compiledAssembliesDir).ConfigureAwait(false);
-    }
-
-    private async Task<List<string>> GenerateStubServicesAsync(
-        BoutiqueYamlSchema schema,
-        string outputDirectory)
-    {
-        var generator = new StubServicesGenerator(_context);
-        return await generator.GenerateAsync(schema, outputDirectory).ConfigureAwait(false);
-    }
-
     private async Task<string> GenerateDockerfileAsync(
         BoutiqueYamlSchema schema,
         ProductDependencyGraph dependencyGraph,
@@ -366,14 +313,9 @@ public sealed class BoutiqueGenerationRunner
             Version = definition.Version,
             Description = definition.Description,
             SubsystemName = definition.SubsystemName,
+            HostProject = definition.HostProjectPath,
             Dependencies = definition.Dependencies.ToList(),
             Products = definition.Products?.ToList(),
-            ProjectReferences = definition.ProjectReferences.ToList(),
-            GrpcServices = definition.GrpcServices.Select(g => new GrpcServiceYaml
-            {
-                Implementation = g.Implementation,
-                Assembly = g.Assembly
-            }).ToList(),
             Kestrel = BuildKestrelEndpoints(definition.Ports),
             Infrastructure = new InfrastructureYaml
             {
@@ -393,8 +335,7 @@ public sealed class BoutiqueGenerationRunner
                 Configuration = definition.Build.Configuration,
                 TreatWarningsAsErrors = definition.Build.TreatWarningsAsErrors,
                 TargetFramework = "net10.0",
-                AllowUnsafeBlocks = true,
-                Protos = definition.Build.Protos?.ToList() ?? []
+                AllowUnsafeBlocks = true
             },
             Docker = new DockerYaml
             {

@@ -79,7 +79,7 @@ public class AttacheService : IAttacheService
             var boutiqueOutputDir = Path.Combine(solutionRoot, "boutiques", "dynamic", boutiqueId);
             Directory.CreateDirectory(boutiqueOutputDir);
 
-            var artifacts = await _generationService.GenerateBoutiqueProjectAsync(
+            var artifacts = await _generationService.GenerateBoutiqueContainerAsync(
                 schema,
                 dependencyGraph,
                 boutiqueOutputDir,

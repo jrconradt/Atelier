@@ -1,7 +1,7 @@
   {{ boutiqueName }}:
     build:
       context: {{ context }}
-      dockerfile: boutiques/{{ shortName }}/Dockerfile
+      dockerfile: {{ dockerfile }}
       args:
         BUILD_CONFIGURATION: Release
         SELF_CONTAINED: ${SELF_CONTAINED:-false}

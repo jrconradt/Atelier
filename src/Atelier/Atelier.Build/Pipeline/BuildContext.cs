@@ -72,6 +72,7 @@ public class BuildContext
     }
 
     public string SolutionRoot => _solutionRoot.Value;
+    public string RepositoryRoot => FindRepositoryRoot(SolutionRoot);
     public string BuildOutputDirectory => Path.Combine(SolutionRoot, "Atelier.Build", ".artifacts");
     public string DiagramOutputDirectory => Path.Combine(BuildOutputDirectory, "diagrams");
     public string LogDirectory => Path.Combine(BuildOutputDirectory, "logs");
@@ -83,6 +84,19 @@ public class BuildContext
     public string BuildStateFilePath => Path.Combine(BuildOutputDirectory, "build-state.json");
 
     private const int DOWNWARD_SEARCH_MAX_DEPTH = 4;
+
+    private static string FindRepositoryRoot(string solutionRoot)
+    {
+        for (var directory = new DirectoryInfo(solutionRoot); directory is not null; directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Directory.Packages.props")))
+            {
+                return directory.FullName;
+            }
+        }
+
+        return solutionRoot;
+    }
 
     private static string FindSolutionRoot(string startPath)
     {

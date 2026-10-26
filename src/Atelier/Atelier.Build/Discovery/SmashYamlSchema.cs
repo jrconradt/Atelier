@@ -13,6 +13,9 @@ public class SmashYamlSchema
         [YamlMember(Alias = "solution")]
     public string Solution { get; set; } = string.Empty;
 
+        [YamlMember(Alias = "host")]
+    public string? Host { get; set; }
+
         [YamlMember(Alias = "dependencies")]
     public List<string> Dependencies { get; set; } = [];
 

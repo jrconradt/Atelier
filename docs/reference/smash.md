@@ -116,6 +116,7 @@ Full field reference (`SmashYamlSchema`):
 |---|---|---|
 | `name` | string | Required. Boutique identifier used as a `smash <target>`. |
 | `solution` | string | Required. Path to the `.sln` or `.csproj` to build. |
+| `host` | string | Optional. Path to the boutique's checked-in host project. Boutiques with a host get a Dockerfile and compose entry; smash builds the host instead of `solution`. |
 | `description` | string | Optional human-readable description. |
 | `dependencies` | string[] | Other boutiques this one depends on. |
 | `build.configuration` | string | `Debug` or `Release` (default `Debug`). |
@@ -147,12 +148,25 @@ assemblies, discovers `[GeneratedTest]` fixtures, executes them, and prints a
 `Total / Pass / Fail / NeedsFixture` summary. See the [docs index](../README.md)
 for the build and test workflow.
 
+## Boutique hosts
+
+smash never writes C#. A boutique's host is an ordinary checked-in project
+(`Sdk="Microsoft.NET.Sdk.Web"`, no `Program.cs`) that declares
+`[assembly: Boutique(...)]` and one `[assembly: BoutiqueProduct(typeof(...))]`
+per product. `BoutiqueHostSourceGenerator` reads those attributes and the
+assemblies the host references and emits the entry point; smash builds the
+project with `dotnet build` like any other. Deployment settings — ports,
+capabilities, health paths, resource limits — are runtime configuration under
+`Atelier:Boutique` (and ASP.NET Core's own `Kestrel` section), not generated code.
+
 ## Generated artifacts
 
 `Atelier.Build` ships non-Roslyn generators under `Generation/` that emit
-Dockerfiles, `docker-compose.yml`, `Program.cs` host scaffolding, and mermaid
-diagrams. The `docker-compose.yml` at the repo root is a smash output —
-regenerate it via a boutique-generating build rather than editing it by hand.
+Dockerfiles and `docker-compose.yml` for boutiques that declare a `host`, plus
+Kubernetes network policies and mermaid diagrams. These outputs land in
+`src/Atelier/boutiques/` and `src/Atelier/docker-compose.yml` and are not
+tracked; regenerate them via a boutique-generating build rather than editing
+them by hand. Image builds use the repository root as their context.
 
 ## Command reference
 

@@ -94,8 +94,11 @@ public class DockerComposeGenerator
     {
         var byName = resolved.ToDictionary(r => r.Name, StringComparer.Ordinal);
 
+        var buildContext = Path.GetRelativePath(Path.GetDirectoryName(Path.GetFullPath(outputPath))!, _context.RepositoryRoot).Replace('\\', '/');
+        var boutiquesFromRepository = Path.GetRelativePath(_context.RepositoryRoot, _context.BoutiquesDirectory).Replace('\\', '/');
+
         var services = Sequence.Lines(boutiques.OrderBy(b => b.Name, StringComparer.Ordinal)
-            .Select(b => (Compositor)RenderBoutiqueService(b, byName[b.Name], relativePathToRoot)));
+            .Select(b => (Compositor)RenderBoutiqueService(b, byName[b.Name], relativePathToRoot, buildContext, boutiquesFromRepository)));
 
         var content = new T.Compose
         {
@@ -265,7 +268,9 @@ public class DockerComposeGenerator
     private static Compositor RenderBoutiqueService(
         BoutiqueYamlSchema boutique,
         ResolvedBoutique resolved,
-        string relativePathToRoot)
+        string relativePathToRoot,
+        string buildContext,
+        string boutiquesFromRepository)
     {
         var shortName = boutique.Name.Replace("atelier-", string.Empty).ToLowerInvariant();
 
@@ -299,8 +304,8 @@ public class DockerComposeGenerator
             BoutiqueLabel = EscapeQuotedScalar(boutique.Name.ToUpperInvariant()),
             Description = EscapeQuotedScalar(boutique.Description),
             BoutiqueName = SanitizeScalar(boutique.Name),
-            Context = relativePathToRoot,
-            ShortName = SanitizeScalar(shortName),
+            Context = buildContext,
+            Dockerfile = SanitizeScalar($"{boutiquesFromRepository}/{shortName}/Dockerfile"),
             ImageName = SanitizeScalar(boutique.Name.ToLowerInvariant()),
             ContainerName = SanitizeScalar(boutique.Name.ToLowerInvariant()),
             ImmutableTag = SanitizeDockerTag(boutique.Version),
