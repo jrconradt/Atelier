@@ -108,7 +108,7 @@ Suppress a rule the same way as any Roslyn diagnostic — `#pragma warning disab
 
 ## Generator diagnostics
 
-These identifiers are reported by source generators rather than the analyzer assembly, and fail the build. `ATELIER0700`/`ATELIER0701` come from `Atelier.Framework.Infrastructure.Generators`; `ATELIER0800`/`ATELIER0801` come from `Atelier.Framework.Network.Generators`. Each is defined as a `DiagnosticDescriptor` in its generator's source.
+These identifiers are reported by source generators rather than the analyzer assembly, and fail the build. `ATELIER0700`/`ATELIER0701` and `ATELIER0900` come from `Atelier.Framework.Infrastructure.Generators`; `ATELIER0800`/`ATELIER0801` come from `Atelier.Framework.Network.Generators`. Each is defined as a `DiagnosticDescriptor` in its generator's source.
 
 | ID | Severity | Title |
 |---|---|---|
@@ -116,3 +116,4 @@ These identifiers are reported by source generators rather than the analyzer ass
 | ATELIER0701 | Error | Domain gateway must specify source and target domains |
 | ATELIER0800 | Error | Transport interface method must return Task or ValueTask |
 | ATELIER0801 | Error | Transport interface method must declare at most one non-CancellationToken parameter |
+| ATELIER0900 | Error | Boutique product must derive from ProductBase |

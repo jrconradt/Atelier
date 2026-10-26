@@ -1,0 +1,23 @@
+<Project>
+    <!--
+      Boutique hosts carry code-derived artifacts that BoutiqueHostSourceGenerator computes at
+      compile time (requisite manifest, network zones, network policies). A generator cannot write
+      files, so after the host is built it is run once in artifacts mode to write them out.
+      Opt in with <AtelierBoutiqueHost>true</AtelierBoutiqueHost>; override the destination with
+      -p:AtelierArtifactsDirectory=<dir>.
+    -->
+    <PropertyGroup Condition="'$(AtelierBoutiqueHost)' == 'true'">
+        <AtelierArtifactsDirectory Condition="'$(AtelierArtifactsDirectory)' == ''">$(OutDir)atelier/</AtelierArtifactsDirectory>
+        <AtelierArtifactsDirectory>$([MSBuild]::EnsureTrailingSlash('$(AtelierArtifactsDirectory)'))</AtelierArtifactsDirectory>
+        <AtelierDotnetHost>$(DOTNET_HOST_PATH)</AtelierDotnetHost>
+        <AtelierDotnetHost Condition="'$(AtelierDotnetHost)' == ''">dotnet</AtelierDotnetHost>
+    </PropertyGroup>
+
+    <Target Name="AtelierWriteBoutiqueArtifacts"
+            AfterTargets="Build"
+            Condition="'$(AtelierBoutiqueHost)' == 'true' and '$(SelfContained)' != 'true'"
+            Inputs="$(TargetPath)"
+            Outputs="$(AtelierArtifactsDirectory)requisite-manifest.json">
+        <Exec Command="&quot;$(AtelierDotnetHost)&quot; &quot;$(TargetPath)&quot; --atelier-artifacts &quot;$(AtelierArtifactsDirectory.TrimEnd('/'))&quot;" />
+    </Target>
+</Project>

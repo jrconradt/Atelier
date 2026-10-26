@@ -1,1 +1,0 @@
-AssemblyLoader{{ boutiqueName }}.EnsureLoaded();

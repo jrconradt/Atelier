@@ -110,7 +110,7 @@ It discovers `[GeneratedTest]` fixtures from the compiled assemblies and reports
 
 Atelier leans on Roslyn source generators over hand-wired DI. `Atelier.Framework.*.Generators` emit constructor injection for `[Requisite]` fields, `Logger` + `Observe(...)` plumbing for `IAtelier` partial classes, product/offering wiring, contract glue, transport code, and generated tests. `Atelier.Framework.Analyzers` enforces the corresponding patterns at compile time (`ATELIER*` diagnostics).
 
-`Atelier.Build` ships non-Roslyn generators under `Generation/` that emit Dockerfiles, `docker-compose.yml`, `Program.cs` scaffolding, and mermaid diagrams. `smash` is the boutique build tool, packaged from `Atelier.Build` (`PackAsTool`, command `smash`):
+`Atelier.Build` ships non-Roslyn generators under `Generation/` that emit Dockerfiles, `docker-compose.yml`, and mermaid diagrams from configuration; it never writes C# and never reads code. Boutique hosts carry their code-derived artifacts (requisite manifest, network zones and policies), which the host generator computes at compile time. Boutique hosts are checked-in projects whose entry point `BoutiqueHostSourceGenerator` emits from `[assembly: Boutique]`. `smash` is the boutique build tool, packaged from `Atelier.Build` (`PackAsTool`, command `smash`):
 
 ```bash
 dotnet run --project src/Atelier/Atelier.Build -- --help

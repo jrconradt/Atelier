@@ -1,1 +1,0 @@
-LoadAssemblyByName("{{ name }}");

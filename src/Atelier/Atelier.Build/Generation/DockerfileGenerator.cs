@@ -1,4 +1,3 @@
-using Atelier.Build.Analysis;
 using Atelier.Build.Discovery;
 using Atelier.Build.Pipeline;
 using Spectre.Console;
@@ -41,22 +40,28 @@ public class DockerfileGenerator
 
     public async Task<string> GenerateAsync(
         BoutiqueYamlSchema schema,
-        ProductDependencyGraph dependencyGraph,
         ResolvedBoutique resolved,
         string outputDirectory)
     {
-        var boutiqueName = Atelier.Build.Utils.Naming.ToBoutiqueAssemblyIdentifier(schema.Name);
-
-        if (!IsValidTypeName(boutiqueName))
+        if (string.IsNullOrEmpty(schema.HostProject)
+            || !schema.HostProject.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
         {
-            AnsiConsole.MarkupLine($"[red]Error: refusing to generate Dockerfile for boutique with invalid name (yields invalid assembly identifier): {Markup.Escape(schema.Name)}[/]");
-            throw new InvalidOperationException($"Boutique name '{schema.Name}' yields an invalid assembly identifier '{boutiqueName}'.");
+            throw new InvalidOperationException($"Boutique host '{schema.Name}' must name its host .csproj as the smash.yml 'solution'; got '{schema.HostProject}'.");
+        }
+
+        var hostProject = Path.GetRelativePath(_context.RepositoryRoot, schema.HostProject).Replace('\\', '/');
+        var assemblyName = Path.GetFileNameWithoutExtension(schema.HostProject);
+
+        if (!IsValidTypeName(assemblyName))
+        {
+            AnsiConsole.MarkupLine($"[red]Error: refusing to generate Dockerfile for host project with invalid assembly name: {Markup.Escape(assemblyName)}[/]");
+            throw new InvalidOperationException($"Host project '{schema.HostProject}' yields an invalid assembly name '{assemblyName}'.");
         }
 
         var code = new T.Dockerfile
         {
-            BuildStage = RenderBuildStage(schema, resolved, boutiqueName),
-            RuntimeStage = RenderRuntimeStage(resolved, boutiqueName),
+            BuildStage = RenderBuildStage(resolved, hostProject),
+            RuntimeStage = RenderRuntimeStage(resolved, assemblyName),
         }.Render();
 
         var outputPath = Path.Combine(outputDirectory, "Dockerfile");
@@ -70,23 +75,16 @@ public class DockerfileGenerator
         return outputPath;
     }
 
-    private static Compositor RenderBuildStage(
-        BoutiqueYamlSchema schema,
-        ResolvedBoutique resolved,
-        string boutiqueName)
+    private static Compositor RenderBuildStage(ResolvedBoutique resolved, string hostProject)
     {
-        var boutiqueDir = Atelier.Build.Utils.Naming.ToBoutiqueDir(schema.Name);
-        var projectName = $"Atelier.Host.{boutiqueName}";
-
         return new T.DockerfileBuildStage
         {
             SdkImage = resolved.ImageConfig.SdkImage,
-            BoutiqueDir = boutiqueDir,
-            ProjectName = projectName,
+            HostProject = hostProject,
         };
     }
 
-    private static Compositor RenderRuntimeStage(ResolvedBoutique resolved, string boutiqueName)
+    private static Compositor RenderRuntimeStage(ResolvedBoutique resolved, string assemblyName)
     {
         var baseImage = resolved.ImageConfig.RuntimeImage;
         var uid = resolved.SecurityContext.Uid;
@@ -120,7 +118,7 @@ public class DockerfileGenerator
             StartupDelay = resolved.Health.ReadinessStartupDelaySeconds,
             HealthPort = resolved.Health.HealthcheckPort,
             HealthPath = SanitizeHealthPath(resolved.Health.ReadinessPath),
-            AssemblyName = $"Atelier.Host.{boutiqueName}",
+            AssemblyName = assemblyName,
         };
     }
 

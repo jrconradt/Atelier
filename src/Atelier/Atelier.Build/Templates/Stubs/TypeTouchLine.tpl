@@ -1,1 +1,0 @@
-_ = typeof(global::{{ typeName }});

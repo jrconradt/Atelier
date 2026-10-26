@@ -13,6 +13,7 @@ public sealed class ProcessResourceSampler : IAsyncDisposable
     private readonly Task _pump;
     private readonly CancellationTokenSource _shutdown = new();
     private ResourceSample _latest;
+    private int _disposed;
 
     public ProcessResourceSampler()
     {
@@ -92,6 +93,11 @@ public sealed class ProcessResourceSampler : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
         _shutdown.Cancel();
         _requests.Writer.TryComplete();
         await _pump.ConfigureAwait(false);

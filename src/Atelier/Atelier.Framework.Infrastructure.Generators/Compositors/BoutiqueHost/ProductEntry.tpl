@@ -1,0 +1,1 @@
+new global::Atelier.Framework.Attache.ProductManifest { ProductTypeName = {{ productTypeName }}, ProductType = typeof({{ productType }}), AutoStart = {{ autoStart }} },

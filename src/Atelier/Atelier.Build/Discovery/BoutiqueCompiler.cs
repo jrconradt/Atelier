@@ -1,3 +1,4 @@
+using Atelier.Build.Generation;
 using System.Diagnostics;
 using Atelier.Build.Pipeline;
 using Spectre.Console;
@@ -57,6 +58,10 @@ public class BoutiqueCompiler
             "-o",
             outputDir
         };
+
+        var artifactsDirectory = new OutputPathResolver().ResolveBoutiqueOutputDirectory(definition, _context.BoutiquesDirectory);
+        HostArtifacts.Clear(artifactsDirectory);
+        args.Add($"-p:AtelierArtifactsDirectory={artifactsDirectory}");
 
         if (definition.Build.TreatWarningsAsErrors)
         {

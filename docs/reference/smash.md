@@ -147,12 +147,45 @@ assemblies, discovers `[GeneratedTest]` fixtures, executes them, and prints a
 `Total / Pass / Fail / NeedsFixture` summary. See the [docs index](../README.md)
 for the build and test workflow.
 
+## Boutique hosts
+
+smash never writes C#. A boutique's host is an ordinary checked-in project
+(`Sdk="Microsoft.NET.Sdk.Web"`, `<AtelierBoutiqueHost>true</AtelierBoutiqueHost>`,
+no `Program.cs`) that declares
+`[assembly: Boutique(...)]` and one `[assembly: BoutiqueProduct(typeof(...))]`
+per product. `BoutiqueHostSourceGenerator` reads those attributes and the
+assemblies the host references and emits the entry point; smash builds the
+project with `dotnet build` like any other.
+
+Everything else derived from code is computed by the same generator and carried
+by the built host: `requisite-manifest.json` (the host's `Atelier.*` assembly
+closure and products), `network-zones.json` (isolated zones), and
+`network-policies.yaml` (one Kubernetes `NetworkPolicy` per zone in the product
+closure). A generator cannot write files, so the `AtelierWriteBoutiqueArtifacts`
+target in `src/Atelier/Directory.Build.targets` runs the freshly built host once
+in artifacts mode (`--atelier-artifacts`) after `Build`; a plain `dotnet build`
+leaves them in `bin/<config>/<tfm>/atelier/`. smash builds the host with
+`-p:AtelierArtifactsDirectory=src/Atelier/boutiques/<name>/` and aggregates them.
+The `<AtelierBoutiqueHost>` property is the only place a host is declared: smash
+builds every boutique this way, and a boutique whose build leaves these files is
+a host (its `smash.yml` `solution` must then be the host `.csproj`). The
+aggregated outputs are: compose isolated
+networks, the solution-root `network-policies.yaml`, and
+`Atelier.Build/.artifacts/requisite-manifest.json`. A full build therefore
+builds boutiques before generating their containers. Deployment settings — ports,
+capabilities, health paths, resource limits — are runtime configuration under
+`Atelier:Boutique` (and ASP.NET Core's own `Kestrel` section), not generated code.
+
 ## Generated artifacts
 
 `Atelier.Build` ships non-Roslyn generators under `Generation/` that emit
-Dockerfiles, `docker-compose.yml`, `Program.cs` host scaffolding, and mermaid
-diagrams. The `docker-compose.yml` at the repo root is a smash output —
-regenerate it via a boutique-generating build rather than editing it by hand.
+Dockerfiles and `docker-compose.yml` for boutique hosts, and
+the mermaid service-interaction diagram from the `smash.yml` dependency graph.
+It reads no code: network policies and the requisite manifest come from the
+hosts, as above. These outputs land in
+`src/Atelier/boutiques/` and `src/Atelier/docker-compose.yml` and are not
+tracked; regenerate them via a boutique-generating build rather than editing
+them by hand. Image builds use the repository root as their context.
 
 ## Command reference
 

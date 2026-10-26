@@ -1,0 +1,1 @@
+new global::Atelier.Framework.Attache.Hosting.BoutiqueArtifact({{ fileName }}, {{ content }}),

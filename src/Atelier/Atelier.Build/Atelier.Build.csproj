@@ -17,10 +17,8 @@
 
   <ItemGroup>
     <PackageReference Include="System.CommandLine" />
-    <PackageReference Include="System.Reflection.MetadataLoadContext" />
     <PackageReference Include="YamlDotNet" />
     <PackageReference Include="Spectre.Console" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Microsoft.Build" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.Build.Locator" />
   </ItemGroup>

@@ -60,12 +60,14 @@ public partial class RequisitionAuthorizer : IAtelier, IRequisitionAuthorizer
 
 ## Compiling to infrastructure
 
-The `smash` build tool's generation pass (`smash --generate-boutiques`) fans
-zone declarations out to Kubernetes infrastructure. `ProductDependencyAnalyzer`
-walks each service's `[NetworkZone]`, follows the zone marker to its
-`[ZonePolicy]`, and records a `ZonePolicyInfo`. `NetworkPolicyGenerator` renders
-one Kubernetes `NetworkPolicy` per zone and writes `network-policies.yaml` at
-the solution root:
+Zone declarations compile to Kubernetes infrastructure in the boutique host's
+build. `BoutiqueHostSourceGenerator` walks the `[Infrastructure]` services and
+declared products in each product's assembly closure, follows every
+`[NetworkZone]` to its zone marker's `[ZonePolicy]`, and renders one Kubernetes
+`NetworkPolicy` per zone into the host, and the host's
+`AtelierWriteBoutiqueArtifacts` build target writes them out after `Build`.
+smash collects the hosts' policies, de-duplicated, into `network-policies.yaml`
+at the solution root:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -95,8 +97,9 @@ spec:
     []
 ```
 
-The same pass emits the isolated zones (`Isolates = true`) as dedicated networks
-in the generated `docker-compose.yml`. The rendering surface lives in
+The host also emits its isolated zones (`Isolates = true`) in
+`network-zones.json`, which smash turns into dedicated networks in the generated
+`docker-compose.yml`. The rendering surface lives in
 `Atelier.Framework.Network`: `Templates/Network` holds the Kubernetes
 `NetworkPolicy`, service-mesh `ConfigMap`, docker-compose-network, and mermaid
 topology templates, and `Compositors/Network/Variants` holds the Istio

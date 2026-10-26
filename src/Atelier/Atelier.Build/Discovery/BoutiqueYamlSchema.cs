@@ -16,6 +16,9 @@ public class BoutiqueYamlSchema
         [YamlMember(Alias = "subsystem_name")]
     public string? SubsystemName { get; set; }
 
+    [YamlMember(Alias = "host_project")]
+    public string? HostProject { get; set; }
+
     [YamlMember(Alias = "dependencies")]
     public List<string>? Dependencies { get; set; }
 
