@@ -16,8 +16,6 @@ public sealed class BoutiqueHostOptions
     public string LivenessPath { get; set; } = "/health";
     public string ReadinessPath { get; set; } = "/health/ready";
     public bool NetworkEnabled { get; set; }
-    public long MaxMemoryBytes { get; set; } = 4_294_967_296L;
-    public int MaxCpuPercent { get; set; } = 80;
 }
 
 public sealed class BoutiqueHostCapabilityOptions
