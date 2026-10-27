@@ -68,6 +68,14 @@ The vertical names and services in the diagram are illustrative.
 
 Service identity is generated from this model, alongside the network policy.
 
+### DNS
+
+Each zone gets its own DNS resolver, with redundancy. The generator defines it:
+each zone's resolver serves static records for exactly the names its services
+have edges to, and the generator assigns each Service's address. Services keep
+a fixed virtual address while the pods behind them scale horizontally and change
+addresses freely.
+
 ## Proposed, not decided
 
 ### Role → tier mapping
@@ -124,6 +132,19 @@ special case: it simply has more than one inbound edge.
 - Entry: only Ingress-tier pods admit traffic from the cluster's ingress
   controller. Exit: only third-party gateways get egress outside the cluster,
   via `ipBlock` or a CNI that supports FQDN rules.
+- DNS: each zone runs its own CoreDNS `Deployment` and `Service` — at least two
+  replicas, pod anti-affinity across nodes, and a `PodDisruptionBudget`. Pods set
+  `dnsPolicy: None` with `dnsConfig.nameservers` pointing at their zone's
+  resolver, and the DNS egress allowance targets that resolver instead of
+  cluster DNS. The resolver serves the generated records from its config and
+  answers everything else `NXDOMAIN`; only third-party gateways' resolvers
+  forward to an upstream. Because the records are static, zone resolvers need no
+  Kubernetes API access. The generator assigns `spec.clusterIP` for every
+  Service from the static band of the Service CIDR (Kubernetes 1.27+ reserves
+  the lower band for static allocation), so it must be given that CIDR.
+- Docker Compose needs no equivalent: Docker's embedded DNS already answers only
+  for containers on shared networks, so per-edge networks scope resolution, and
+  `--scale` replicas resolve round-robin.
 
 **Docker Compose.**
 
@@ -183,6 +204,11 @@ the one vertical others may reach sideways.
 3. **Management traffic.** Monitoring and operations reach every tier. Is that a
    separate plane outside the tier model, or a tier of its own?
 4. **Unmarked roles.** Front ends and third-party gateways have no marker yet.
+5. **DNS zone granularity.** Is a DNS zone a vertical, a segment, or a single
+   tier × vertical cell? Finer zones isolate more but cost at least two resolver
+   pods each.
+6. **Service CIDR input.** Where the generator learns the cluster's Service CIDR
+   — build input, boutique configuration, or a deployment-time parameter.
 
 ## Gap from current code
 
