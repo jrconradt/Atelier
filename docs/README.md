@@ -26,19 +26,6 @@ New here? Read [`src/Atelier/examples/example-showcase`](../src/Atelier/examples
 | [Diagnostics](reference/diagnostics.md) | The `ATELIER*` analyzer diagnostics |
 | [`smash` build tool](reference/smash.md) | Building with smash: verbs, boutiques, `smash.yml`, and the command reference |
 
-## Not yet documented
-
-These subsystems ship in the framework but do not yet have concept pages here. Until they do, the source and its tests under `src/Atelier/` are the reference for their contracts.
-
-| Subsystem | Project |
-|---|---|
-| Resilience (retry, circuit-breaker, timeout) | `Atelier.Framework.Resilience` |
-| Performance (budgets, instrumentation, Prometheus export) | `Atelier.Framework.Performance` |
-| Queueing | `Atelier.Framework.Queueing` |
-| State machine (snapshot, migrator, coordinator) | `Atelier.Framework.StateMachine` |
-| Contract versioning and migration | `Atelier.Framework.Contract` |
-| Strategy primitives | `Atelier.Framework.Strategy` |
-
 ## Build and test
 
 ```bash
