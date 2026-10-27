@@ -1,46 +1,38 @@
 # Design: tiers × verticals
 
 **Status:** proposed — not implemented. Nothing in this note describes current
-behavior unless it says so.
+behavior unless it says so. The note separates what is **decided** from what is
+only **proposed**; proposals are candidates, not commitments.
 
-## Principle: the topology is closed at compile time
+## Decided
+
+### Principle: the topology is closed at compile time
 
 Everything a deployment's network and service-auth posture depends on is known
-when the code is built: which services exist, which scopes and claims each
-operation requires, and which services each one depends on. Nothing new can
-appear without a build, and nothing built can run without a deployment.
+when the code is built: scopes, claims, the number of applications, and each
+application's required access. Every new thing necessitates a build, and every
+new thing necessitates a deployment.
 
-Atelier therefore treats the topology as a compile-time artifact. The build
-affirms: *the access associated with this service is fixed, and will not change
-until another build.* Network policy, service identity, and gateway routing are
-generated from code, not configured beside it, and runtime authorization checks
-a request against a decision the build already made rather than making one.
+Making this a generated compile-time concern affirms: *the auth associated with
+this service is known at compile time, and will not change until another build.*
 
-The closed world covers the *shape* — what each service may reach and what each
-operation requires. Which end user holds which claim is still bound at runtime.
+### Tiers
 
-## The model
-
-Two axes.
-
-**Tiers** are horizontal and ordered, outermost first:
+Horizontal and ordered, outermost first:
 
 | Tier | Holds |
 |---|---|
-| Public | Public front ends; public user authentication. |
-| Ingress (DMZ) | Public APIs for authentication and service access — the gateways. |
-| Internal | Service gateways and core application services, segmented by service. |
-| Data | Data-access gateways and third-party gateways, segmented by source. |
+| Public | Public front-end services; public user authentication. |
+| Ingress (DMZ) | Public APIs for authentication and public service access — the gateways, divided by subnets or similar. |
+| Internal | Service gateway and core application services, segmented by service. |
+| Data | Third-party gateway and data-access gateway, segmented by source. |
 
-**Verticals** run down through the tiers. Segmentation starts at Ingress —
-each gateway gets its own segment (subnet or equivalent) — and propagates
-downward: the Internal services behind a gateway, and the data sources behind
-those services, inherit that segmentation.
+### Verticals
 
-**The rule:** a request moves from tier *n* to tier *n+1*, and only along a
-dependency the code declares. It falls straight through its vertical. A request
-sideways into another vertical, across more than one tier, or back up, has no
-route: it doesn't fail authorization, it reaches nothing.
+The segmentation that divides the Ingress gateways propagates downward. Each
+segmentation layer creates a clearly delineated vertical: a request for a
+resource falls straight through its vertical, and a request into another layer's
+segment gets nothing.
 
 ```
             ║  auth             ║  orders             ║  catalog            ║  payments
@@ -58,67 +50,50 @@ route: it doesn't fail authorization, it reaches nothing.
             ║   └► user store   ║   └► orders DB      ║   └► catalog DB     ║   └► payment provider
  ═══════════╩═══════════════════╩═════════════════════╩═════════════════════╩═════════════════════
 
-   allowed:  (tier n, vertical v) ──► (tier n+1, vertical v), along a declared dependency
-   no route: sideways, skipping a tier, upward
+   straight down within a vertical: reachable
+   into another vertical's segment: nothing
 ```
 
-## Deriving the topology from code
+The vertical names and services in the diagram are illustrative.
 
-No new hand-maintained topology declaration. The inputs already exist or sit
-next to existing attributes:
+## Proposed, not decided
 
-- **Tier** — each service declares its tier with a marker type, as
-  `[NetworkZone]` does today. Tiers are a closed, ordered set; the order is the
-  only hand-written policy.
-- **Edges** — the `[Requisite]` graph. A requisite is a declared dependency, so
-  it is the complete list of who may call whom.
-- **Verticals** — not declared. A vertical is what is reachable downward from an
-  Ingress gateway along requisite edges. Data-tier segments are keyed by source.
+Each item below is a candidate way to realize the decided design.
 
-The host generator already walks each host's services and products at compile
-time. It would additionally emit the edge list — service, tier, and each
-requisite target with its tier — and render everything below from that one
-model.
+- **Where verticals come from.** Derive them from the `[Requisite]` graph — a
+  vertical is what is reachable downward from an Ingress gateway along declared
+  dependencies — rather than declaring them. The host generator already walks
+  each host's services at compile time and would emit the edge list.
+- **Where tiers come from.** A tier marker on each service, as `[NetworkZone]`
+  does today, with the tier order as the only hand-written policy.
+- **Compile-time enforcement.** Build errors rather than runtime denials: a
+  dependency that is not exactly one tier down; a service with no tier (today's
+  `ATELIER0300` is a warning); an operation on a public-facing tier without its
+  scope/claim requirement. These would replace `ATELIER0310`.
+- **Kubernetes.** `io.atelier.tier` and `io.atelier.segment` labels on every pod,
+  default-deny per namespace, and one ingress/egress rule pair per declared edge.
+- **Docker Compose.** No shared bridge; one network per tier boundary per
+  segment, each container joining only the networks above and below it. Larger
+  topologies would need the Docker daemon's `default-address-pools` widened
+  beyond the default of about 31 bridge networks.
+- **Service identity.** Audience, requestable scopes, client registration, and
+  mTLS identity emitted per service from the same model as the network policy.
+- **Authentication across verticals.** Token validation inside each vertical's
+  gateway against signing keys provisioned at deployment, so no request crosses
+  sideways into the auth vertical. The alternative is to make auth the one
+  vertical others may reach sideways.
 
-## Compile-time enforcement
+## Open questions
 
-Violations are build errors, not runtime denials:
-
-- A requisite whose target is not exactly one tier down is an error. Same-tier
-  dependencies are allowed only within a service's own segment.
-- A service without a tier is an error (today's `ATELIER0300` is a warning).
-- An operation without its scope/claim requirement on a public-facing tier is an
-  error.
-
-These replace the zone-boundary check (`ATELIER0310`), which is defined in terms
-of `[ZonePolicy]` rather than edges.
-
-## Generated outputs
-
-All derived from the edge model; none hand-edited.
-
-**Kubernetes.** Every pod carries `io.atelier.tier` and `io.atelier.segment`
-labels. Each namespace starts from default-deny. Each declared edge renders one
-ingress rule on the target selecting exactly the source's tier and segment, and
-the matching egress rule on the source. Policy count scales with edges, well
-within CNI limits for any realistic deployment.
-
-**Docker Compose.** No shared bridge. One network per edge boundary per segment;
-each container joins the network above it and the networks below it, nothing
-else. Network count is roughly segments × tier boundaries, so larger topologies
-need the Docker daemon's `default-address-pools` widened beyond the default
-(about 31 bridge networks).
-
-**Service identity.** Per service: its audience, the scopes it may request, its
-client registration, and its mTLS identity, all emitted from the same model, so
-a credential cannot grant what the network forbids or vice versa.
-
-## Authentication across verticals
-
-Every vertical has to validate tokens, but auth is itself a vertical. Requests
-must not cross sideways into it at runtime, so token validation runs inside each
-vertical's gateway against signing keys provisioned at deployment — no runtime
-call into the auth vertical.
+1. **Shared lower nodes.** If two Internal services depend on the same
+   data-access gateway, is that gateway in both verticals, or must sources be
+   partitioned so each belongs to exactly one?
+2. **Same-tier calls.** Does a service gateway calling its core service cross a
+   tier, or is it a hop within one segment?
+3. **Management traffic.** Monitoring and operations reach every tier. Is that a
+   separate plane outside the tier model, or a tier of its own?
+4. **Signing keys.** Key material is deployment-time, not compile-time. How is it
+   distributed without itself becoming a cross-vertical route?
 
 ## Gap from current code
 
@@ -133,19 +108,6 @@ As of this note:
 - Data-store networks come from smash infrastructure flags, not from the
   services that use a store, and only one Postgres and one Redis container are
   emitted per environment.
-- The requisite manifest records products and assemblies, not edges.
+- The requisite manifest records products and assemblies, not dependency edges.
 - `ATELIER0310` reads an outbound allow-list from `[NetworkZone]`, which has no
   such property, so it flags every cross-zone requisite.
-
-## Open questions
-
-1. **Shared lower nodes.** If two Internal services depend on the same
-   data-access gateway, is that gateway in both verticals, or must sources be
-   partitioned so each belongs to exactly one? The strict answer keeps verticals
-   a forest; the permissive one makes them a DAG.
-2. **Same-tier calls.** Does a service gateway calling its core service count as
-   one tier or a within-segment hop? This note assumes the latter.
-3. **Management traffic.** Monitoring and operations reach every tier. Is that a
-   separate plane outside the tier model, or a tier of its own?
-4. **Signing keys.** Key material is deployment-time, not compile-time. Its
-   distribution path must not itself become a cross-vertical route.

@@ -32,7 +32,7 @@ Proposals not yet implemented.
 
 | Page | Topic |
 |---|---|
-| [Tiers × verticals](design/tiers-and-verticals.md) | Compile-time-closed network topology: ordered tiers, per-gateway verticals, straight-down routing |
+| [Tiers × verticals](design/tiers-and-verticals.md) | Compile-time-closed network topology: ordered tiers, verticals, straight-down routing |
 
 ## Build and test
 
