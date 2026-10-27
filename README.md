@@ -73,23 +73,6 @@ public partial class GreetingProduct : ProductBase
 
 The complete, runnable version — including the host bootstrap — is in [`src/Atelier/examples/example-showcase`](src/Atelier/examples/example-showcase).
 
-## Layout
-
-Projects under `src/Atelier/` are grouped by concern:
-
-| Concern | Projects |
-|---|---|
-| Programming model | `Atelier.Framework.Contract`, `Atelier.Framework.Context`, `Atelier.Framework.Properties`, `Atelier.Framework.Outcomes`, `Atelier.Framework.Strategy`, `Atelier.Framework.Infrastructure`, `Atelier.Framework.Attributes`, `Atelier.Framework.Primitives` |
-| Execution and hosting | `Atelier.Framework.Host.Execution`, `Atelier.Framework.Offering`, `Atelier.Framework.Requisitions`, `Atelier.Framework.Api` |
-| Events and state | `Atelier.Framework.EventStream`, `Atelier.Framework.StateMachine` |
-| Communication | `Atelier.Framework.Messaging`, `Atelier.Framework.Network`, `Atelier.Framework.Queueing` |
-| Cross-cutting | `Atelier.Framework.Identity`, `Atelier.Framework.Identity.Authorization`, `Atelier.Framework.Facility`, `Atelier.Framework.Observability`, `Atelier.Framework.Performance`, `Atelier.Framework.Resilience`, `Atelier.Framework.Attache` |
-| Facilities | `Atelier.Facilities.Cache`, `Atelier.Facilities.Cache.InMemory`, `Atelier.Facilities.Cache.Redis` |
-| Build, codegen, analysis | `Atelier.Build`, `Atelier.Framework.Analyzers`, `Atelier.Framework.Analyzers.CodeFixes`, and `Atelier.Framework.*.Generators` |
-| Testing | `Atelier.Framework.Testing`, `Atelier.Framework.Testing.Contract`, `Atelier.Framework.Test.Generators` |
-| Examples | `examples/example-bench`, `examples/example-showcase` |
-| Benchmarks | `benchmarks/cache-bench`, `benchmarks/context-bench`, `benchmarks/eventstream-bench`, `benchmarks/messaging-bench`, `benchmarks/network-bench`, `benchmarks/outcomes-bench`, `benchmarks/performance-bench`, `benchmarks/queueing-bench`, `benchmarks/requisitions-bench`, `benchmarks/statemachine-bench` |
-
 ## Build
 
 ```bash
