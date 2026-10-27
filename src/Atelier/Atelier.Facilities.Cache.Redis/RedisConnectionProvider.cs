@@ -8,7 +8,6 @@ using StackExchange.Redis;
 namespace Atelier.Facilities.Cache.Redis;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class RedisConnectionProvider : IRedisConnectionProvider, IDisposable, IAtelier
 {
     private const string PASSWORD_ENV = "ATELIER_REDIS_PASSWORD";

@@ -22,20 +22,6 @@ public sealed class ArtifactEntry : Compositor
     public string Content { get; set; } = string.Empty;
 }
 
-public sealed class NetworkPolicy : Compositor
-{
-    public string Name { get; set; } = string.Empty;
-    public string Zone { get; set; } = string.Empty;
-    public string Mtls { get; set; } = string.Empty;
-    public string Ingress { get; set; } = string.Empty;
-    public string Egress { get; set; } = string.Empty;
-}
-
-public sealed class ZonePeer : Compositor
-{
-    public string Zone { get; set; } = string.Empty;
-}
-
 public sealed class ServiceWithInterface : Compositor
 {
     public string Lifetime { get; set; } = string.Empty;

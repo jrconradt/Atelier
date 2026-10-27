@@ -25,8 +25,6 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
     private const string BOUTIQUE_PRODUCT_ATTRIBUTE = "Atelier.Framework.Attributes.BoutiqueProductAttribute";
     private const string INFRASTRUCTURE_ATTRIBUTE = "Atelier.Framework.Attributes.InfrastructureAttribute";
     private const string API_ATTRIBUTE = "Atelier.Framework.Attributes.ApiAttribute";
-    private const string NETWORK_ZONE_ATTRIBUTE = "Atelier.Framework.Attributes.NetworkZoneAttribute";
-    private const string ZONE_POLICY_ATTRIBUTE = "Atelier.Framework.Primitives.ZonePolicyAttribute";
     private const string PRODUCT_BASE = "Atelier.Framework.Offering.Product.ProductBase";
     private const string HOSTED_SERVICE = "Microsoft.Extensions.Hosting.IHostedService";
     private const string ATELIER_ASSEMBLY_PREFIX = "Atelier.";
@@ -150,9 +148,8 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             }
         }
 
-        var zonePolicies = CollectZonePolicies(productClosure, productTypes);
         var requisiteAssemblies = CollectRequisiteAssemblies(compilation);
-        var artifacts = RenderArtifacts(id, name, version, products, requisiteAssemblies, zonePolicies);
+        var artifacts = RenderArtifacts(id, name, version, products, requisiteAssemblies);
 
         return new BoutiqueHostModel(
             ToNamespace(compilation.AssemblyName),
@@ -256,89 +253,6 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         }
 
         return names.ToList();
-    }
-
-    private static List<ZonePolicyModel> CollectZonePolicies(
-        IEnumerable<IAssemblySymbol> productClosure,
-        IReadOnlyCollection<INamedTypeSymbol> productTypes)
-    {
-        var zoned = productClosure
-            .SelectMany(assembly => EnumerateTopLevelTypes(assembly.GlobalNamespace))
-            .Where(type => type.GetAttributes().Any(a => a.AttributeClass?.ToDisplayString() == INFRASTRUCTURE_ATTRIBUTE))
-            .Concat(productTypes);
-
-        var policies = new SortedDictionary<string, ZonePolicyModel>(StringComparer.Ordinal);
-        foreach (var type in zoned)
-        {
-            foreach (var zoneAttribute in type.GetAttributes()
-                         .Where(a => a.AttributeClass?.ToDisplayString() == NETWORK_ZONE_ATTRIBUTE))
-            {
-                if (zoneAttribute.ConstructorArguments.Length == 0
-                    || zoneAttribute.ConstructorArguments[0].Value is not INamedTypeSymbol zone)
-                {
-                    continue;
-                }
-
-                var policy = ReadZonePolicy(zone);
-                if (policy is not null)
-                {
-                    policies[policy.Zone] = policy;
-                }
-            }
-        }
-
-        return policies.Values.ToList();
-    }
-
-    private static ZonePolicyModel? ReadZonePolicy(INamedTypeSymbol zone)
-    {
-        var attribute = zone.GetAttributes()
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == ZONE_POLICY_ATTRIBUTE);
-        if (attribute is null)
-        {
-            return null;
-        }
-
-        var inbound = ImmutableArray<string>.Empty;
-        var outbound = ImmutableArray<string>.Empty;
-        var requiresMutualTls = false;
-        var isolates = false;
-        foreach (var named in attribute.NamedArguments)
-        {
-            switch (named.Key)
-            {
-                case "AllowedInbound":
-                    inbound = ZoneNames(named.Value);
-                    break;
-                case "AllowedOutbound":
-                    outbound = ZoneNames(named.Value);
-                    break;
-                case "RequiresMutualTls":
-                    requiresMutualTls = named.Value.Value is true;
-                    break;
-                case "Isolates":
-                    isolates = named.Value.Value is true;
-                    break;
-            }
-        }
-
-        return new ZonePolicyModel(
-            zone.Name.ToLowerInvariant(),
-            new EquatableArray<string>(inbound),
-            new EquatableArray<string>(outbound),
-            requiresMutualTls,
-            isolates);
-    }
-
-    private static ImmutableArray<string> ZoneNames(TypedConstant value)
-    {
-        return value.Kind == TypedConstantKind.Array
-            ? value.Values
-                .Select(v => v.Value)
-                .OfType<INamedTypeSymbol>()
-                .Select(zone => zone.Name.ToLowerInvariant())
-                .ToImmutableArray()
-            : ImmutableArray<string>.Empty;
     }
 
     private static IEnumerable<INamedTypeSymbol> EnumerateTopLevelTypes(INamespaceSymbol ns)
@@ -487,21 +401,12 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         string name,
         string version,
         IReadOnlyList<ProductModel> products,
-        IReadOnlyList<string> requisiteAssemblies,
-        IReadOnlyList<ZonePolicyModel> zonePolicies)
+        IReadOnlyList<string> requisiteAssemblies)
     {
-        var artifacts = new List<ArtifactModel>
+        return new List<ArtifactModel>
         {
             new ArtifactModel("requisite-manifest.json", RenderManifest(id, name, version, products, requisiteAssemblies)),
-            new ArtifactModel("network-zones.json", RenderNetworkZones(zonePolicies)),
         };
-
-        if (zonePolicies.Count > 0)
-        {
-            artifacts.Add(new ArtifactModel("network-policies.yaml", string.Join("---\n", zonePolicies.Select(RenderPolicy))));
-        }
-
-        return artifacts;
     }
 
     private static string RenderManifest(
@@ -520,41 +425,6 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         json.Append("  \"requisiteAssemblies\": ").Append(JsonArray(requisiteAssemblies)).Append("\n");
         json.Append("}\n");
         return json.ToString();
-    }
-
-    private static string RenderNetworkZones(IReadOnlyList<ZonePolicyModel> zonePolicies)
-    {
-        var isolated = zonePolicies.Where(p => p.Isolates).Select(p => p.Zone);
-        return "{\n  \"isolatedNetworks\": " + JsonArray(isolated) + "\n}\n";
-    }
-
-    private static string RenderPolicy(ZonePolicyModel policy)
-    {
-        var yaml = new BH.NetworkPolicy
-        {
-            Name = policy.Zone + "-zone-policy",
-            Zone = policy.Zone,
-            Mtls = policy.RequiresMutualTls ? "true" : "false",
-            Ingress = RenderPeers("    - from:", policy.AllowedInbound.Items),
-            Egress = RenderPeers("    - to:", policy.AllowedOutbound.Items),
-        }.Render();
-
-        var lines = yaml
-            .Split('\n')
-            .Where(line => line.Trim().Length > 0);
-
-        return string.Join("\n", lines) + "\n";
-    }
-
-    private static string RenderPeers(string ruleLine, ImmutableArray<string> zones)
-    {
-        if (zones.Length == 0)
-        {
-            return "    []";
-        }
-
-        var peers = zones.Select(zone => new BH.ZonePeer { Zone = zone }.Render().TrimEnd('\n'));
-        return ruleLine + "\n" + string.Join("\n", peers);
     }
 
     private static string JsonArray(IEnumerable<string> values)
@@ -682,13 +552,6 @@ internal sealed record RegistrationModel(
 internal sealed record ApiEndpointModel(string EndpointsType, string MapMethod);
 
 internal sealed record ArtifactModel(string FileName, string Content);
-
-internal sealed record ZonePolicyModel(
-    string Zone,
-    EquatableArray<string> AllowedInbound,
-    EquatableArray<string> AllowedOutbound,
-    bool RequiresMutualTls,
-    bool Isolates);
 
 internal sealed record BoutiqueHostDiagnostic(
     DiagnosticDescriptor Descriptor,

@@ -17,7 +17,6 @@ using Microsoft.Extensions.Options;
 namespace Atelier.Framework.EventStream.Consumers;
 
 [Infrastructure(InfrastructureLifetime.Scoped)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class TopicConsumptionProcessor : IAtelier
 {
     [Requisite] private readonly IEventStreamConsumer _consumer = null!;

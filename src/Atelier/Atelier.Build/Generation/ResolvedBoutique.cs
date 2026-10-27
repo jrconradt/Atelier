@@ -13,7 +13,6 @@ public class ResolvedBoutique
     public ResolvedSecurityContext SecurityContext { get; init; } = new();
     public ResolvedImageConfig ImageConfig { get; init; } = new();
     public ResolvedTlsConfig Tls { get; init; } = new();
-    public ResolvedNetworkZoning NetworkZoning { get; init; } = new();
     public ResolvedInfrastructureDependencies InfrastructureDeps { get; init; } = new();
     public ResolvedResourceLimits ResourceLimits { get; init; } = new();
 }
@@ -89,10 +88,6 @@ public class ResolvedTlsEndpointConfig
     public string? CertPasswordEnv { get; init; }
 }
 
-public class ResolvedNetworkZoning
-{
-    public IReadOnlyList<string> IsolatedNetworks { get; init; } = [];
-}
 
 public class ResolvedInfrastructureDependencies
 {

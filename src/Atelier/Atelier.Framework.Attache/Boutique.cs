@@ -14,7 +14,6 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Atelier.Framework.Attache;
 
 [Infrastructure(typeof(Boutique), typeof(Boutique), InfrastructureLifetime.Transient)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class Boutique : IAtelier, IBoutique
 {
     [Requisite] protected readonly IServiceProvider _serviceProvider = null!;

@@ -52,7 +52,6 @@ internal static class Program
     }
 }
 
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public sealed class GreetingService
 {
@@ -62,7 +61,6 @@ public sealed class GreetingService
     }
 }
 
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class GreetingOffering : OfferingBase
 {
@@ -97,7 +95,6 @@ public partial class GreetingOffering : OfferingBase
     }
 }
 
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class GreetingProduct : ProductBase
 {

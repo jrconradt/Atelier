@@ -15,7 +15,6 @@ namespace Atelier.Facilities.Cache.InMemory;
 [Infrastructure(typeof(IFacility),
                 typeof(InMemoryCacheFacility),
                 InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class InMemoryCacheFacility : FacilityBase
 {
     [Requisite] protected readonly IOfferingRequisitionService _offeringRequisitions = null!;
@@ -28,7 +27,6 @@ public partial class InMemoryCacheFacility : FacilityBase
 
     protected override void InitializeCapabilities()
     {
-        Capabilities.Zone = typeof(Atelier.Framework.Primitives.Application);
         Capabilities.SupportedScopes.Add(RequirementScope.Capability);
         Capabilities.CanProvide.Add(typeof(ICache));
     }
@@ -74,7 +72,6 @@ public partial class InMemoryCacheFacility : FacilityBase
             RequesterId = requirement.RequirementId,
             RequesterType = typeof(ICache),
             PreferredExecutionMode = OfferingExecutionMode.InProcess,
-            PlacementStrategy = ZonePlacementStrategy.SameZone,
             ResourceRequirements = requirement.ResourceNeeds
         };
 
@@ -96,7 +93,6 @@ public partial class InMemoryCacheFacility : FacilityBase
             RequirementId = requirement.RequirementId,
             FacilityId = FacilityId,
             Scope = requirement.Scope,
-            Zone = typeof(Atelier.Framework.Primitives.Application),
             AllocatedResources = result.AllocatedResources,
             Status = ProvisionStatus.Provisioned
         };

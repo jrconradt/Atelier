@@ -136,7 +136,7 @@ public sealed class BoutiqueGenerationRunner
 
                 artifactDirectories.Add(outputDir);
 
-                var resolved = BoutiqueResolver.Resolve(schema, HostArtifacts.ReadNetworkZoning(outputDir), _context.Verbose);
+                var resolved = BoutiqueResolver.Resolve(schema, _context.Verbose);
                 allResolved.Add(resolved);
 
                 if (_context.DryRun)

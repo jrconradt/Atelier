@@ -8,7 +8,6 @@ public interface IBoutiqueGenerationService
 {
         public Task<GeneratedArtifacts> GenerateBoutiqueContainerAsync(
         BoutiqueYamlSchema schema,
-        ResolvedNetworkZoning networkZoning,
         string outputDirectory,
         string solutionRoot,
         string compiledAssembliesDirectory,

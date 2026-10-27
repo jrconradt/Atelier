@@ -14,7 +14,6 @@ public interface IRequisitionAuthorizer
 }
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Security))]
 public partial class RequisitionAuthorizer : IAtelier, IRequisitionAuthorizer
 {
 

@@ -10,7 +10,6 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Framework.Performance;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class PerformanceMonitor : IAtelier, IPerformanceMonitor, Microsoft.Extensions.Hosting.IHostedService
 {
     Task Microsoft.Extensions.Hosting.IHostedService.StartAsync(CancellationToken cancellationToken)

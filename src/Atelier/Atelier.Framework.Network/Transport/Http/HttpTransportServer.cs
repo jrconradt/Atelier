@@ -15,7 +15,6 @@ using Microsoft.Extensions.Hosting;
 namespace Atelier.Framework.Network.Transport.Http
 {
     [Infrastructure(InfrastructureLifetime.Singleton)]
-    [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
     public partial class HttpTransportServer : IAtelier, ITransportServer, IAsyncDisposable
     {
         private const long MAX_REQUEST_BYTES = (TransportMessage.MAX_PAYLOAD_SIZE / 3L * 4L) + (256L * 1024L);

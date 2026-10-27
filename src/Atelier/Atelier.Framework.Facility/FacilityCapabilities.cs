@@ -10,7 +10,6 @@ public class FacilityCapabilities
     public HashSet<Type> CanProvide { get; set; } = new();
     public ResourceAllocation TotalCapacity { get; set; } = new();
     public ResourceAllocation CurrentAvailable { get; set; } = new();
-    public Type? Zone { get; set; }
     public Dictionary<string, string> Metadata { get; set; } = new();
 
     public HashSet<string> Operations { get; set; } = new();

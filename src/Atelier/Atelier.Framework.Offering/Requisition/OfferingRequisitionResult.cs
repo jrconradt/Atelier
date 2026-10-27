@@ -19,8 +19,6 @@ public class OfferingRequisitionResult
 
     public OfferingExecutionMode ExecutionMode { get; set; }
 
-    public Type PlacedZone { get; set; } = null!;
-
     public bool IsSharedInstance { get; set; }
 
     public string? NetworkAddress { get; set; }
@@ -65,7 +63,6 @@ public class RequisitionDenialReason
 public enum RequisitionDenialType
 {
     InsufficientResources,
-    ZoneViolation,
     OfferingNotFound,
     PermissionDenied,
     ConfigurationInvalid,

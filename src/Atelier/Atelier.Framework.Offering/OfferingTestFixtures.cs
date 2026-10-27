@@ -61,7 +61,6 @@ public static class OfferingTestFixtures
         SetProperty(trackerType, tracker, "RequesterTenantId", HAPPY_IDENTITY);
         SetProperty(trackerType, tracker, "RequesterType", typeof(object));
         SetProperty(trackerType, tracker, "OfferingType", typeof(object));
-        SetProperty(trackerType, tracker, "PlacedZone", typeof(Atelier.Framework.Primitives.Application));
         SetProperty(trackerType, tracker, "RequisitionedAt", DateTime.UtcNow);
         SetProperty(trackerType, tracker, "ReferenceCount", 1);
 

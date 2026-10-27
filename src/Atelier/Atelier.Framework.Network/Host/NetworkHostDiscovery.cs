@@ -10,7 +10,6 @@ using Atelier.Framework.Infrastructure;
 namespace Atelier.Framework.Network
 {
     [Infrastructure(InfrastructureLifetime.Singleton)]
-    [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
     public partial class NetworkHostDiscovery : IAtelier, IHostDiscovery
     {
         private readonly ConcurrentDictionary<string, HostAnnouncementRecord> _announcements = new();

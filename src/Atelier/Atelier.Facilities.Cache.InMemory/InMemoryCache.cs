@@ -11,7 +11,6 @@ using Atelier.Facilities.Cache;
 namespace Atelier.Facilities.Cache.InMemory;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class InMemoryCache : CacheAccessWrapperBase, IAtelier
 {
     private const int SWEEP_SAMPLE_INTERVAL = 64;

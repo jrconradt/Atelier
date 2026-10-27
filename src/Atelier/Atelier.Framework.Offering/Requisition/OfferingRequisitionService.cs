@@ -14,7 +14,6 @@ using Atelier.Framework.Host.Execution;
 namespace Atelier.Framework.Offering.Requisition;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class OfferingRequisitionService : IAtelier, IOfferingRequisitionService
 {
     [Requisite] protected readonly IOfferingManager _offeringManager = null!;
@@ -231,14 +230,6 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
             return Outcome<OfferingRequisitionResult>.Failure();
         }
 
-        var placementResult = DetermineZonePlacement(request);
-        if (!placementResult.IsSuccess || placementResult.Data == null)
-        {
-            return Outcome<OfferingRequisitionResult>.Failure();
-        }
-
-        var targetZone = placementResult.Data!;
-
         if (request.ResourceRequirements != null)
         {
             var approvalResult = ApproveResourceRequest(request.ResourceRequirements);
@@ -293,7 +284,6 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
             RequisitionId = requisitionId,
             OfferingType = request.OfferingType,
             ExecutionMode = request.PreferredExecutionMode,
-            PlacedZone = targetZone,
             IsSharedInstance = request.AllowSharedInstance,
             NetworkAddress = descriptor?.NetworkAddress,
             NetworkPort = descriptor?.NetworkPort,
@@ -312,13 +302,12 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
             RequesterType = request.RequesterType,
             RequesterTenantId = AmbientContext.CurrentTenantId ?? string.Empty,
             OfferingType = request.OfferingType,
-            PlacedZone = targetZone,
             IsShared = request.AllowSharedInstance,
             RequisitionedAt = DateTime.UtcNow,
             ReferenceCount = 1
         };
 
-        Observe(LogLevel.Information, values: [("OfferingType", request.OfferingType.Name), ("InstanceId", instanceId.ToString()), ("PlacedZone", targetZone.ToString()), ("RequesterId", requesterPrincipalId)]);
+        Observe(LogLevel.Information, values: [("OfferingType", request.OfferingType.Name), ("InstanceId", instanceId.ToString()), ("RequesterId", requesterPrincipalId)]);
 
         return requisitionResult;
     }
@@ -342,8 +331,7 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
                 && t.IsShared
                 && string.Equals(t.RequesterId, requesterPrincipalId, StringComparison.Ordinal)
                 && t.RequesterType == request.RequesterType
-                && string.Equals(t.RequesterTenantId, callerTenantId, StringComparison.Ordinal)
-                && (request.RequesterZone == null || t.PlacedZone == request.RequesterZone));
+                && string.Equals(t.RequesterTenantId, callerTenantId, StringComparison.Ordinal));
 
         if (shared != null)
         {
@@ -357,7 +345,6 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
                 InstanceId = shared.InstanceId,
                 RequisitionId = shared.RequisitionId,
                 OfferingType = shared.OfferingType,
-                PlacedZone = shared.PlacedZone,
                 IsSharedInstance = true,
                 RequisitionedAt = shared.RequisitionedAt,
                 Status = RequisitionStatus.Approved
@@ -389,67 +376,6 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
     {
         ArgumentNullException.ThrowIfNull(resource);
         return _authorizer.IsAuthorizedForRole(AdministratorRole, resource);
-    }
-
-    private Outcome<Type?> DetermineZonePlacement(OfferingRequisitionRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        switch (request.PlacementStrategy)
-        {
-            case ZonePlacementStrategy.SameZone:
-            {
-                if (request.RequesterZone == null)
-                {
-                    Observe(LogLevel.Warning, values: [("Reason", "SameZone strategy requires RequesterZone to be specified"), ("OfferingType", request.OfferingType.Name)]);
-                    return Outcome<Type?>.Failure();
-                }
-                return Outcome<Type?>.Success(request.RequesterZone);
-            }
-
-            case ZonePlacementStrategy.RequireSpecificZone:
-            {
-                if (request.TargetZone == null)
-                {
-                    Observe(LogLevel.Warning, values: [("Reason", "RequireSpecificZone strategy requires TargetZone to be specified"), ("OfferingType", request.OfferingType.Name)]);
-                    return Outcome<Type?>.Failure();
-                }
-                return Outcome<Type?>.Success(request.TargetZone);
-            }
-
-            case ZonePlacementStrategy.AllowCrossZone:
-            {
-                return Outcome<Type?>.Success(
-                    request.TargetZone ?? request.RequesterZone ?? typeof(Atelier.Framework.Primitives.Application));
-            }
-
-            case ZonePlacementStrategy.AutoDetect:
-            {
-                var detectedZone = DetectOptimalZone(request);
-                return Outcome<Type?>.Success(detectedZone);
-            }
-
-            default:
-            {
-                return Outcome<Type?>.Success(typeof(Atelier.Framework.Primitives.Application));
-            }
-        }
-    }
-
-    private Type DetectOptimalZone(OfferingRequisitionRequest request)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        var zoneAttribute = request.OfferingType
-            .GetCustomAttributes(typeof(NetworkZoneAttribute), false)
-            .FirstOrDefault() as NetworkZoneAttribute;
-
-        if (zoneAttribute is not null)
-        {
-            return zoneAttribute.Zone;
-        }
-
-        return request.RequesterZone ?? typeof(Atelier.Framework.Primitives.Application);
     }
 
     private Outcome ApproveResourceRequest(ResourceAllocation resourceRequirements)
@@ -484,7 +410,6 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
         public Type RequesterType { get; set; } = null!;
         public string RequesterTenantId { get; set; } = string.Empty;
         public Type OfferingType { get; set; } = null!;
-        public Type PlacedZone { get; set; } = null!;
         public bool IsShared { get; set; }
         public DateTime RequisitionedAt { get; set; }
         public DateTime? ReleasedAt { get; set; }

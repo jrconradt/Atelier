@@ -11,7 +11,6 @@ using System.Security.Claims;
 
 namespace Atelier.Framework.Identity.Services;
 
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class OidcTokenService : IOidcTokenService, IAtelier
 {

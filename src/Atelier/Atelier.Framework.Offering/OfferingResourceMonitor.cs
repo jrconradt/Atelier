@@ -18,7 +18,6 @@ public interface IOfferingResourceMonitor : IDisposable
 }
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class OfferingResourceMonitor : IAtelier, IOfferingResourceMonitor
 {
     private const int TOTAL_CPU_PERCENT = 100;

@@ -110,14 +110,14 @@ public override void ConfigureEndpoints(IEndpointRouteBuilder endpoints)
 
 ## Network Topology & Security
 
-To secure OIDC services, always home the identity offerings within the `Application` or isolated `Security` zones, and control inbound traffic via a **Domain Gateway**:
+To secure OIDC services, control inbound traffic to the identity offerings via a **Domain Gateway**:
 
 ```text
-  [Web Zone: Web Portal]
+  [Web Portal]
            |
            | [Gateway: Domain Gateway] (mTLS)
            v
-  [Application Zone: Identity Service]
+  [Identity Service]
            | (Endpoints mapped via MapOidcServerEndpoints)
            v
   [OidcTokenIssuer] -> Returns Outcome<string> JWT tokens

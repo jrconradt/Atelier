@@ -74,7 +74,6 @@ public abstract partial class FacilityBase : IAtelier, IFacility
             CanProvide = Capabilities.CanProvide,
             TotalCapacity = Capabilities.TotalCapacity,
             CurrentAvailable = ReadAvailable(),
-            Zone = Capabilities.Zone,
             Metadata = Capabilities.Metadata
         };
     }

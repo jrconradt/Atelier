@@ -10,7 +10,6 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Framework.Facility;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class RequisitionService : IAtelier, IRequisitionService
 {
     [Requisite] protected readonly IEnumerable<IFacility> _facilities = null!;

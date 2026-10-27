@@ -22,7 +22,6 @@ public class BoutiqueGenerationService : IBoutiqueGenerationService
 
     public async Task<GeneratedArtifacts> GenerateBoutiqueContainerAsync(
         BoutiqueYamlSchema schema,
-        ResolvedNetworkZoning networkZoning,
         string outputDirectory,
         string solutionRoot,
         string compiledAssembliesDirectory,
@@ -32,7 +31,7 @@ public class BoutiqueGenerationService : IBoutiqueGenerationService
 
         var context = CreateBuildContext(solutionRoot);
 
-        var resolved = BoutiqueResolver.Resolve(schema, networkZoning, _verbose);
+        var resolved = BoutiqueResolver.Resolve(schema, _verbose);
 
         var dockerfilePath = await GenerateDockerfileAsync(
             schema,
@@ -61,7 +60,7 @@ public class BoutiqueGenerationService : IBoutiqueGenerationService
 
         var schemaList = schemas.ToList();
         var resolvedList = schemaList
-            .Select(s => BoutiqueResolver.Resolve(s, new ResolvedNetworkZoning(), _verbose))
+            .Select(s => BoutiqueResolver.Resolve(s, _verbose))
             .ToList();
 
         var path = await generator.GenerateAsync(schemaList, resolvedList, outputPath).ConfigureAwait(false);

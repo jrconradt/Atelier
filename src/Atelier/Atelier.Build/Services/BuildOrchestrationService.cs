@@ -238,7 +238,6 @@ public class BuildOrchestrationService : IBuildOrchestrationService
 
                 var generated = await _generationService.GenerateBoutiqueContainerAsync(
                     schema,
-                    HostArtifacts.ReadNetworkZoning(boutiqueDir),
                     boutiqueDir,
                     solutionRoot,
                     compiledAssembliesDir,

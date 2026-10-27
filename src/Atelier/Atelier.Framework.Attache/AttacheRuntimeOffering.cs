@@ -12,7 +12,6 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Framework.Attache;
 
 [Infrastructure(InfrastructureLifetime.Scoped)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class AttacheRuntimeOffering : OfferingBase, IAttacheRuntimeOffering
 {
     [Requisite] protected readonly AttacheHost _attacheHost = null!;

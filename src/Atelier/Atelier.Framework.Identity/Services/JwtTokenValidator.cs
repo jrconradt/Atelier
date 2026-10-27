@@ -13,7 +13,6 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Atelier.Framework.Identity.Services;
 
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class JwtTokenValidator : IJwtTokenValidator, IAtelier
 {

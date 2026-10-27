@@ -1,7 +1,7 @@
 <Project>
     <!--
       Boutique hosts carry code-derived artifacts that BoutiqueHostSourceGenerator computes at
-      compile time (requisite manifest, network zones, network policies). A generator cannot write
+      compile time (the requisite manifest). A generator cannot write
       files, so after the host is built it is run once in artifacts mode to write them out.
       Opt in with <AtelierBoutiqueHost>true</AtelierBoutiqueHost>; override the destination with
       -p:AtelierArtifactsDirectory=<dir>.

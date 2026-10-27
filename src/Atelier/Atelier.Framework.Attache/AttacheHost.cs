@@ -18,7 +18,6 @@ using Microsoft.Extensions.Hosting;
 namespace Atelier.Framework.Attache;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class AttacheHost : IAtelier, IAttache, IHostedService, IAsyncDisposable
 {
     [Requisite] protected readonly IRequisitionService _requisitionService = null!;

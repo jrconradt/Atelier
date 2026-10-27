@@ -13,7 +13,6 @@ namespace Atelier.Framework.Attache.Discovery;
 [Infrastructure(InfrastructureLifetime.Singleton)]
 [Api(claims: new[] { Claims.BOUTIQUE_READ })]
 [ScopeResource(typeof(Scopes.Boutique))]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class BoutiqueDiscoveryService : IAtelier, IBoutiqueDiscoveryService
 {
     private readonly ConcurrentDictionary<string, AvailableBoutique> _boutiques = new();

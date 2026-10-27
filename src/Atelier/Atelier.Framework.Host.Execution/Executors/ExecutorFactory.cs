@@ -5,7 +5,6 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Framework.Host.Execution;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class ExecutorFactory : IExecutorFactory
 {
     [Requisite] protected readonly InProcessExecutor _inProcessExecutor = null!;

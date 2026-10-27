@@ -8,7 +8,6 @@ using System.Text.Json;
 
 namespace Atelier.Framework.Identity.Providers;
 
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class AzureAdOidcProvider : GenericOidcProvider, IAtelier
 {
     public override async Task<Outcome<OidcUserInfo>> GetUserInfoAsync(

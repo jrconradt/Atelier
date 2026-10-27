@@ -11,7 +11,6 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Framework.Contract;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class JsonContractSerializer : IContractSerializer, IAtelier
 {
         [Requisite] protected readonly IContractRegistry _registry = null!;

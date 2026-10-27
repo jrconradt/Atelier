@@ -6,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Atelier.Framework.Offering;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class ServiceProviderOfferingProvider : IOfferingProvider
 {
     private readonly IServiceProvider _serviceProvider;

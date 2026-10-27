@@ -5,7 +5,6 @@ An **Offering** is a unit of service. It derives from `OfferingBase`, declares i
 ## Defining an Offering
 
 ```csharp
-[NetworkZone(typeof(Application))]
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class GreetingOffering : OfferingBase
 {
@@ -44,7 +43,6 @@ The pieces:
 
 - **`partial`** — required. The source generators add the constructor (filling `[Requisite]` fields) and the `Logger` / `Observe(...)` plumbing in a second partial.
 - **`[Infrastructure(InfrastructureLifetime.…)]`** — registers the offering and declares its DI lifetime (`Singleton`, `Scoped`, `Transient`).
-- **`[NetworkZone(typeof(…))]`** — every offering declares the network zone it runs in; the zone is a marker type from `Atelier.Framework.Primitives` (`Application`, `Internal`, `External`, `Web`, `Security`, `Data`, `Management`), not an enum value. A missing zone is flagged by `ATELIER0300`. See [Network zones](network.md).
 - **`[Requisite]`** — a dependency the generators inject. See [Requisites](requisites.md).
 - **`OnStart` / `OnStop`** — lifecycle hooks invoked when the owning Product starts and stops.
 - **`[Operation("…")]`** — marks an operation. The generators emit traced/validated wrappers; operations must guard their `CancellationToken` and reference parameters at entry (enforced by `ATELIER1310` / `ATELIER003`).

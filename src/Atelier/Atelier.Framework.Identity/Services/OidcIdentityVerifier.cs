@@ -9,7 +9,6 @@ using Atelier.Framework.Requisitions;
 
 namespace Atelier.Framework.Identity.Services;
 
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class OidcIdentityVerifier : IIdentityVerifier, IAtelier
 {

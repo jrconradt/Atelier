@@ -10,7 +10,6 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Framework.EventStream.Consumers.Services;
 
 [Infrastructure(InfrastructureLifetime.Scoped)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class OffsetManagerService : IAtelier, IOffsetManagerService
 {
     [Requisite] protected readonly EventStreamOffsetStore _offsetStore = null!;

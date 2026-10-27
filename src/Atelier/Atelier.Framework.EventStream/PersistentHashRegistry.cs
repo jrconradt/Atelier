@@ -12,7 +12,6 @@ using Microsoft.Extensions.Options;
 namespace Atelier.Framework.EventStream;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class PersistentHashRegistry : HashRegistryBase, IAtelier
 {
     [Requisite] private readonly IOptions<EventStreamOptions> _options = null!;

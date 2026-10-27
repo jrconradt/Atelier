@@ -10,7 +10,6 @@ using Prometheus;
 namespace Atelier.Framework.Performance;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class PrometheusMetricsExporter : IAtelier, Microsoft.Extensions.Hosting.IHostedService
 {
     private static readonly TimeSpan DefaultUpdateInterval = TimeSpan.FromSeconds(15);

@@ -14,7 +14,6 @@ using Microsoft.Extensions.Options;
 namespace Atelier.Framework.EventStream.Storage;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class EventStreamOffsetStore : IAtelier, IEventStreamOffsetStore
 {
     [Requisite] private readonly IOptions<EventStreamOptions> _options = null!;
