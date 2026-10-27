@@ -55,6 +55,47 @@ public sealed class AnalyzerDiagnosticTests
     }
 
     [Fact]
+    public async Task Atelier0606_FiresWhenRequisiteIsServiceProvider()
+    {
+        const string source = """
+            using Atelier.Framework.Requisitions;
+
+            namespace Sample;
+
+            public partial class Locator
+            {
+                [Requisite] private readonly System.IServiceProvider _services = null!;
+            }
+            """;
+
+        var expected = new DiagnosticResult("ATELIER0606", Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .WithSpan(7, 58, 7, 67)
+            .WithArguments("_services");
+
+        await AnalyzerVerify.FiresAsync<ServiceLocatorRequisiteAnalyzer>(source, expected);
+    }
+
+    [Fact]
+    public async Task Atelier0606_SilentWhenServiceProviderIsNotARequisite()
+    {
+        const string source = """
+            namespace Sample;
+
+            public class Factory
+            {
+                private readonly System.IServiceProvider _services;
+
+                public Factory(System.IServiceProvider services)
+                {
+                    _services = services;
+                }
+            }
+            """;
+
+        await AnalyzerVerify.SilentAsync<ServiceLocatorRequisiteAnalyzer>(source);
+    }
+
+    [Fact]
     public async Task Atelier0400_FiresWhenSingletonHasMutableState()
     {
         const string source = """

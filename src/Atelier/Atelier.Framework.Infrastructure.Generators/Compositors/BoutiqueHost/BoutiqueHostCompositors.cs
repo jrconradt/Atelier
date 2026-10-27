@@ -35,6 +35,11 @@ public sealed class ServiceImplOnly : Compositor
     public string Implementation { get; set; } = string.Empty;
 }
 
+public sealed class ProductForward : Compositor
+{
+    public string Implementation { get; set; } = string.Empty;
+}
+
 public sealed class HostedService : Compositor
 {
     public string ServiceType { get; set; } = string.Empty;

@@ -1,13 +1,12 @@
 using Atelier.Framework.Observability;
 using Atelier.Framework.Requisitions;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace Atelier.Framework.Attache.Lifecycle;
 
 public partial class BoutiqueStartupHostedService : IHostedService, IAtelier
 {
-    [Requisite] private readonly IServiceProvider _serviceProvider = null!;
+    [Requisite] private readonly Boutique _boutique = null!;
     [Requisite] private readonly IHostApplicationLifetime _lifetime = null!;
 
     private readonly StartupConfiguration _configuration = new();
@@ -37,7 +36,7 @@ public partial class BoutiqueStartupHostedService : IHostedService, IAtelier
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var boutique = _serviceProvider.GetRequiredService<Boutique>().Configure(_manifest);
+        var boutique = _boutique.Configure(_manifest);
         _holder.Boutique = boutique;
 
         var startResult = await boutique.StartAsync(cancellationToken).ConfigureAwait(false);

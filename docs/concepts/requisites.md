@@ -52,9 +52,22 @@ own assembly, so the edge survives into metadata even though the member is
 private. A boutique host's generator reads those declarations (and its own
 source directly) and writes every service's identity — its `Namespace.ServiceName`
 — into `requisite-manifest.json` with the identities of the host services it
-requires. Each requisite resolves to the service that provides it; the manifest
-names services, never interfaces, and a requisite no host service provides is
-not an edge.
+requires. The manifest names services, never interfaces.
+
+Each requisite resolves the way DI will, against the boutique's registrations:
+
+- A single requisite must have exactly one providing service. None is
+  `ATELIER0901`; more than one is `ATELIER0902`. Both fail the build.
+- `IEnumerable<T>` is an edge to every service that provides `T`.
+- Services the .NET host provides in-process (such as `HealthCheckService`) are
+  not edges.
+- `IServiceProvider` is never a requisite (`ATELIER0606`): it can resolve
+  anything at runtime, so it declares no edge. Declare each service it would be
+  used for as its own requisite.
+
+The host generator also registers what it can decide at compile time: each
+declared product, as itself and as `ProductBase`, and the boutique's
+`IOfferingProvider`.
 
 ## Validation
 

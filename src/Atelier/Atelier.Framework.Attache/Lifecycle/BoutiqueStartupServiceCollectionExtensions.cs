@@ -25,7 +25,7 @@ public static class BoutiqueStartupServiceCollectionExtensions
 
         services.AddSingleton<IHostedService>(provider =>
             new BoutiqueStartupHostedService(
-                provider,
+                provider.GetRequiredService<Boutique>(),
                 provider.GetRequiredService<IHostApplicationLifetime>(),
                 provider.GetService<ILogger>()).Configure(
                 manifest,

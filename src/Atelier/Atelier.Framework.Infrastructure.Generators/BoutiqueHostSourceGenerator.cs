@@ -28,6 +28,9 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
     private const string REQUISITE_ATTRIBUTE = "Atelier.Framework.Requisitions.RequisiteAttribute";
     private const string REQUISITE_EDGE_ATTRIBUTE = "Atelier.Framework.Requisitions.RequisiteEdgeAttribute";
     private const string PRODUCT_BASE = "Atelier.Framework.Offering.Product.ProductBase";
+    private const string OFFERING_PROVIDER = "Atelier.Framework.Offering.IOfferingProvider";
+    private const string SERVICE_PROVIDER_OFFERING_PROVIDER = "Atelier.Framework.Offering.ServiceProviderOfferingProvider";
+    private const string NULL_OFFERING_PROVIDER = "Atelier.Framework.Offering.NullOfferingProvider";
     private const string HOSTED_SERVICE = "Microsoft.Extensions.Hosting.IHostedService";
     private const string ATELIER_ASSEMBLY_PREFIX = "Atelier.";
 
@@ -45,6 +48,13 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
 
     private static readonly string[] LIFETIME_METHODS = { "AddSingleton", "AddScoped", "AddTransient" };
 
+    // In-process services the .NET host provides. A requisite on one of these is not an
+    // edge between boutique services.
+    private static readonly HashSet<string> PLATFORM_SERVICES = new(StringComparer.Ordinal)
+    {
+        "Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService",
+    };
+
     private static readonly DiagnosticDescriptor ProductNotProductBaseRule = new DiagnosticDescriptor(
         "ATELIER0900",
         "Boutique product must derive from ProductBase",
@@ -53,6 +63,26 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "The boutique host starts each declared product through ProductBase. A type that does not derive from it cannot be started; declare a ProductBase-derived type.",
+        customTags: new[] { WellKnownDiagnosticTags.Compiler });
+
+    private static readonly DiagnosticDescriptor UnprovidedRequisiteRule = new DiagnosticDescriptor(
+        "ATELIER0901",
+        "Requisite has no providing service",
+        "{0}, which no service in this boutique provides",
+        "Generator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Every [Requisite] is an edge to the boutique service that provides it. A requisite no service provides has nothing to route to; register a provider with [Infrastructure].",
+        customTags: new[] { WellKnownDiagnosticTags.Compiler });
+
+    private static readonly DiagnosticDescriptor AmbiguousRequisiteRule = new DiagnosticDescriptor(
+        "ATELIER0902",
+        "Requisite has more than one providing service",
+        "{0}, which more than one service in this boutique provides",
+        "Generator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "A single [Requisite] must resolve to exactly one service. Require IEnumerable<T> to take every provider, or narrow the contract.",
         customTags: new[] { WellKnownDiagnosticTags.Compiler });
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -152,8 +182,11 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             }
         }
 
+        AddProductRegistrations(productTypes, registrations);
+        AddOfferingProviderRegistration(compilation, productTypes.Count > 0, registrations, services);
+
         var requisiteAssemblies = CollectRequisiteAssemblies(compilation);
-        var serviceEdges = CollectServiceEdges(compilation, services);
+        var serviceEdges = CollectServiceEdges(compilation, services, registrations, boutique, diagnostics);
         var artifacts = RenderArtifacts(id, name, version, products, requisiteAssemblies, serviceEdges);
 
         return new BoutiqueHostModel(
@@ -276,6 +309,54 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         }
     }
 
+    // Declared products are registered as themselves and as ProductBase, so the boutique
+    // receives them as requisites instead of activating them by type at runtime.
+    private static void AddProductRegistrations(
+        IReadOnlyList<INamedTypeSymbol> productTypes,
+        List<RegistrationModel> registrations)
+    {
+        foreach (var productType in productTypes)
+        {
+            var implementation = productType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var index = registrations.FindIndex(r => r.Implementation == implementation && !r.HasInterface);
+            if (index >= 0)
+            {
+                registrations[index] = registrations[index] with { IsProduct = true };
+            }
+            else
+            {
+                registrations.Add(new RegistrationModel("AddSingleton", implementation, implementation, false, false, IsProduct: true));
+            }
+        }
+    }
+
+    // Which offering provider a boutique uses is known from its declared products.
+    private static void AddOfferingProviderRegistration(
+        Compilation compilation,
+        bool hasProducts,
+        List<RegistrationModel> registrations,
+        List<INamedTypeSymbol> services)
+    {
+        var contract = compilation.GetTypeByMetadataName(OFFERING_PROVIDER);
+        var provider = compilation.GetTypeByMetadataName(hasProducts ? SERVICE_PROVIDER_OFFERING_PROVIDER : NULL_OFFERING_PROVIDER);
+        if (contract is null || provider is null)
+        {
+            return;
+        }
+
+        registrations.Add(new RegistrationModel(
+            "AddSingleton",
+            contract.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            provider.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+            true,
+            false));
+
+        if (!services.Contains(provider, SymbolEqualityComparer.Default))
+        {
+            services.Add(provider);
+        }
+    }
+
     // A service's identity is its Namespace.ServiceName. Each [Requisite] member is an
     // edge to the host service that provides the member's declared type; a requisite no
     // host service provides has nothing to route to and is not an edge. Types compiled here are read directly; referenced types' private
@@ -283,7 +364,10 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
     // declarations the requisites generator emitted into their assembly.
     private static List<ServiceEdgesModel> CollectServiceEdges(
         Compilation compilation,
-        IReadOnlyList<INamedTypeSymbol> services)
+        IReadOnlyList<INamedTypeSymbol> services,
+        IReadOnlyList<RegistrationModel> registrations,
+        AttributeData boutique,
+        List<BoutiqueHostDiagnostic> diagnostics)
     {
         var declared = CollectDeclaredEdges(services
             .SelectMany(TypeChain)
@@ -292,15 +376,31 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             .Distinct(SymbolEqualityComparer.Default)
             .Cast<IAssemblySymbol>());
 
-        var providers = new Dictionary<string, string>(StringComparer.Ordinal);
+        // Providers mirror the registrations DI will hold: each contract maps to every
+        // implementation registered for it, and every service provides itself.
+        var providers = new Dictionary<string, SortedSet<string>>(StringComparer.Ordinal);
+        void AddProvider(string contract, string implementation)
+        {
+            if (!providers.TryGetValue(contract, out var set))
+            {
+                set = new SortedSet<string>(StringComparer.Ordinal);
+                providers[contract] = set;
+            }
+
+            set.Add(implementation);
+        }
+
         foreach (var service in services)
         {
-            var identity = Identity(service);
-            providers[identity] = identity;
-            var contract = ServiceContract(service);
-            if (contract is not null)
+            AddProvider(Identity(service), Identity(service));
+        }
+
+        foreach (var registration in registrations)
+        {
+            AddProvider(StripGlobal(registration.ServiceType), StripGlobal(registration.Implementation));
+            if (registration.IsProduct)
             {
-                providers[Identity(contract)] = identity;
+                AddProvider(PRODUCT_BASE, StripGlobal(registration.Implementation));
             }
         }
 
@@ -308,22 +408,44 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         foreach (var service in services)
         {
             var edges = new SortedSet<string>(StringComparer.Ordinal);
+            var identity = Identity(service);
             foreach (var type in TypeChain(service))
             {
                 var targets = SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, compilation.Assembly)
-                    ? type.GetMembers().Select(RequisiteType).OfType<ITypeSymbol>().Select(Identity)
-                    : declared.TryGetValue(Identity(type), out var edgesOfType) ? edgesOfType : Enumerable.Empty<string>();
+                    ? type.GetMembers().Select(RequisiteType).OfType<ITypeSymbol>()
+                    : declared.TryGetValue(Identity(type), out var edgesOfType) ? edgesOfType : Enumerable.Empty<ITypeSymbol>();
 
                 foreach (var target in targets)
                 {
-                    if (providers.TryGetValue(target, out var provider))
+                    if (CollectionElement(target) is { } element)
                     {
-                        edges.Add(provider);
+                        if (providers.TryGetValue(Identity(element), out var all))
+                        {
+                            edges.UnionWith(all);
+                        }
+
+                        continue;
+                    }
+
+                    var targetIdentity = Identity(target);
+                    providers.TryGetValue(targetIdentity, out var found);
+                    switch (found?.Count ?? 0)
+                    {
+                        case 1:
+                            edges.Add(found!.Min!);
+                            break;
+                        case 0 when PLATFORM_SERVICES.Contains(targetIdentity):
+                            break;
+                        case 0:
+                            diagnostics.Add(BoutiqueHostDiagnostic.At(UnprovidedRequisiteRule, boutique, $"'{identity}' requires '{targetIdentity}'"));
+                            break;
+                        default:
+                            diagnostics.Add(BoutiqueHostDiagnostic.At(AmbiguousRequisiteRule, boutique, $"'{identity}' requires '{targetIdentity}'"));
+                            break;
                     }
                 }
             }
 
-            var identity = Identity(service);
             models[identity] = new ServiceEdgesModel(
                 identity,
                 new EquatableArray<string>(edges.ToImmutableArray()));
@@ -340,9 +462,9 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         }
     }
 
-    private static Dictionary<string, List<string>> CollectDeclaredEdges(IEnumerable<IAssemblySymbol> assemblies)
+    private static Dictionary<string, List<ITypeSymbol>> CollectDeclaredEdges(IEnumerable<IAssemblySymbol> assemblies)
     {
-        var declared = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var declared = new Dictionary<string, List<ITypeSymbol>>(StringComparer.Ordinal);
         foreach (var attribute in assemblies.SelectMany(a => a.GetAttributes()))
         {
             if (attribute.AttributeClass?.ToDisplayString() != REQUISITE_EDGE_ATTRIBUTE
@@ -356,11 +478,11 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             var key = Identity(service);
             if (!declared.TryGetValue(key, out var targets))
             {
-                targets = new List<string>();
+                targets = new List<ITypeSymbol>();
                 declared[key] = targets;
             }
 
-            targets.Add(Identity(requisite));
+            targets.Add(requisite);
         }
 
         return declared;
@@ -381,18 +503,19 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         };
     }
 
-    private static INamedTypeSymbol? ServiceContract(INamedTypeSymbol type)
+    private static ITypeSymbol? CollectionElement(ITypeSymbol type)
     {
-        var attribute = type.GetAttributes()
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == INFRASTRUCTURE_ATTRIBUTE);
-        if (attribute is not null
-            && attribute.ConstructorArguments.Length >= 3
-            && attribute.ConstructorArguments[0].Value is INamedTypeSymbol explicitServiceType)
-        {
-            return explicitServiceType;
-        }
+        return type is INamedTypeSymbol { IsGenericType: true } named
+            && named.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T
+                ? named.TypeArguments[0]
+                : null;
+    }
 
-        return type.AllInterfaces.FirstOrDefault(i => i.Name == "I" + type.Name);
+    private static string StripGlobal(string fullyQualified)
+    {
+        return fullyQualified.StartsWith("global::", StringComparison.Ordinal)
+            ? fullyQualified.Substring("global::".Length)
+            : fullyQualified;
     }
 
     private static string Identity(ITypeSymbol type)
@@ -658,6 +781,14 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             };
         }
 
+        if (registration.IsProduct)
+        {
+            yield return new BH.ProductForward
+            {
+                Implementation = registration.Implementation,
+            };
+        }
+
         if (registration.IsHostedService)
         {
             yield return new BH.HostedService
@@ -688,7 +819,8 @@ internal sealed record RegistrationModel(
     string ServiceType,
     string Implementation,
     bool HasInterface,
-    bool IsHostedService);
+    bool IsHostedService,
+    bool IsProduct = false);
 
 internal sealed record ApiEndpointModel(string EndpointsType, string MapMethod);
 

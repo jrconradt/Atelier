@@ -45,7 +45,7 @@ public static class BoutiqueHost
 
         var manifest = BuildManifest(definition, options);
 
-        RegisterCoreServices(builder.Services, definition);
+        RegisterCoreServices(builder.Services);
         definition.RegisterServices(builder.Services);
         RegisterCapabilities(builder.Services, options.Capabilities);
         builder.Services.AddAtelierBoutiqueStartup(manifest);
@@ -133,20 +133,11 @@ public static class BoutiqueHost
         };
     }
 
-    private static void RegisterCoreServices(IServiceCollection services, BoutiqueHostDefinition definition)
+    private static void RegisterCoreServices(IServiceCollection services)
     {
         services.AddSingleton<IContext>(_ => Context.Context.Empty);
         services.AddSingleton<ILoggingStrategy, ConsoleLoggingStrategy>();
         services.AddSingleton<ILogger>(sp => new Logger(sp.GetRequiredService<ILoggingStrategy>()));
-
-        if (definition.Products.Count > 0)
-        {
-            services.AddSingleton<IOfferingProvider, ServiceProviderOfferingProvider>();
-        }
-        else
-        {
-            services.AddSingleton<IOfferingProvider, NullOfferingProvider>();
-        }
     }
 
     private static void RegisterCapabilities(IServiceCollection services, BoutiqueHostCapabilityOptions capabilities)
