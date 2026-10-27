@@ -26,6 +26,14 @@ New here? Read [`src/Atelier/examples/example-showcase`](../src/Atelier/examples
 | [Diagnostics](reference/diagnostics.md) | The `ATELIER*` analyzer diagnostics |
 | [`smash` build tool](reference/smash.md) | Building with smash: verbs, boutiques, `smash.yml`, and the command reference |
 
+## Design
+
+Proposals not yet implemented.
+
+| Page | Topic |
+|---|---|
+| [Tiers × verticals](design/tiers-and-verticals.md) | Compile-time-closed network topology: ordered tiers, per-gateway verticals, straight-down routing |
+
 ## Build and test
 
 ```bash
