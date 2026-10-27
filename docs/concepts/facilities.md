@@ -1,6 +1,6 @@
-# Facilities, Attache, and Gateways
+# Facilities and Gateways
 
-A **Facility** is a concrete infrastructure capability — a cache, a database, a message broker — exposed to offerings through a flat, `Outcome`-typed contract. **Attache** is the per-instance runtime that brokers capability requests against facilities, and a **Gateway** is the source-generated bridge that lets one domain call another.
+A **Facility** is a concrete infrastructure capability — a cache, a database, a message broker — exposed to offerings through a flat, `Outcome`-typed contract. A **Gateway** is the source-generated bridge that lets one domain call another.
 
 ## The facility contract
 
@@ -41,22 +41,6 @@ A facility provider derives from `FacilityBase`; it brokers resources and provis
 The `RedisCache` provider connects to a single Redis endpoint and has no local or second-level fallback tier. A Redis outage therefore surfaces as a failed `Outcome` on every `GetAsync` / `SetAsync` / `RemoveAsync` rather than degrading to a cache miss. Availability is an operational requirement, not a provider responsibility: deploy Redis in a highly available topology (Sentinel or Cluster) behind a single advertised endpoint. Callers must treat a failed cache `Outcome` as a hard error and decide whether to fall through to their source of truth; the cache layer does not silently swallow connection failures.
 
 Cache values are stored in Redis as plaintext. Confidentiality at rest depends entirely on Redis and host configuration; the `ICache` layer applies no application-level encryption. Callers must not place PII, secrets, or other sensitive data in the cache. The cache is a transient performance tier, not a system of record, and carries no confidentiality guarantee for its contents.
-
-## Attache
-
-`IAttache` is the runtime broker an offering talks to when it wants a capability rather than a specific provider:
-
-```csharp
-public Task<Outcome<CapabilityGrant>> RequestCapabilityAsync(
-    CapabilityRequest request,
-    CancellationToken cancellationToken = default);
-
-public Task<Outcome> ReleaseCapabilityAsync(
-    string ticketId,
-    CancellationToken cancellationToken = default);
-```
-
-Attache resolves a request to a facility, provisions resources, and returns a `CapabilityGrant` carrying the ticket used to release them later. It also delivers and subscribes to `CapabilityNotice`s and reports health via `GetHealthReportAsync`. Attache hosts a Boutique — the unit of deployment — and exposes its endpoints and manifest.
 
 ## Gateways
 
