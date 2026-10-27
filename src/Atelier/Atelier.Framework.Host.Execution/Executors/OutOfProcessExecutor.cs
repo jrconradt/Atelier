@@ -7,7 +7,6 @@ using Atelier.Framework.Host.Execution.Hosts;
 namespace Atelier.Framework.Host.Execution;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class OutOfProcessExecutor : IExecutor, IAtelier
 {
     public OfferingExecutionMode ExecutionMode => OfferingExecutionMode.OutOfProcess;

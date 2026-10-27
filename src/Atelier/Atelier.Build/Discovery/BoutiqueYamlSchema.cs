@@ -93,9 +93,6 @@ public class InfrastructureYaml
 
     [YamlMember(Alias = "signalr")]
     public SignalRYaml? SignalR { get; set; }
-
-    [YamlMember(Alias = "network")]
-    public NetworkYaml? Network { get; set; }
 }
 
 public class PostgresYaml
@@ -126,75 +123,6 @@ public class SignalRYaml
 {
     [YamlMember(Alias = "enabled")]
     public bool Enabled { get; set; }
-}
-
-public class NetworkYaml
-{
-    [YamlMember(Alias = "enabled")]
-    public bool Enabled { get; set; }
-
-    [YamlMember(Alias = "isolation_level")]
-    public string IsolationLevel { get; set; } = "Standard";
-
-    [YamlMember(Alias = "require_mutual_tls")]
-    public bool RequireMutualTls { get; set; }
-
-    [YamlMember(Alias = "default_network_name")]
-    public string DefaultNetworkName { get; set; } = "atelier-network";
-
-    [YamlMember(Alias = "network_driver")]
-    public string NetworkDriver { get; set; } = "bridge";
-
-    [YamlMember(Alias = "default_zone")]
-    public string? DefaultZone { get; set; }
-
-    [YamlMember(Alias = "zones")]
-    public List<NetworkZoneYaml>? Zones { get; set; }
-
-    [YamlMember(Alias = "policies")]
-    public List<NetworkPolicyYaml>? Policies { get; set; }
-}
-
-public class NetworkZoneYaml
-{
-    [YamlMember(Alias = "name")]
-    public string Name { get; set; } = string.Empty;
-
-    [YamlMember(Alias = "type")]
-    public string Type { get; set; } = string.Empty;
-
-    [YamlMember(Alias = "isolation_level")]
-    public string? IsolationLevel { get; set; }
-
-    [YamlMember(Alias = "isolated")]
-    public bool Isolated { get; set; }
-
-    [YamlMember(Alias = "require_mutual_tls")]
-    public bool? RequireMutualTls { get; set; }
-
-    [YamlMember(Alias = "allowed_inbound_zones")]
-    public List<string>? AllowedInboundZones { get; set; }
-
-    [YamlMember(Alias = "allowed_outbound_zones")]
-    public List<string>? AllowedOutboundZones { get; set; }
-}
-
-public class NetworkPolicyYaml
-{
-    [YamlMember(Alias = "name")]
-    public string Name { get; set; } = string.Empty;
-
-    [YamlMember(Alias = "source_zone")]
-    public string SourceZone { get; set; } = string.Empty;
-
-    [YamlMember(Alias = "target_zone")]
-    public string TargetZone { get; set; } = string.Empty;
-
-    [YamlMember(Alias = "allowed")]
-    public bool Allowed { get; set; } = true;
-
-    [YamlMember(Alias = "require_mutual_tls")]
-    public bool? RequireMutualTls { get; set; }
 }
 
 public class CapabilitiesYaml

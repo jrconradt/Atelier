@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Http;
 namespace Atelier.Framework.Network.Middleware;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class ScopeEnforcementMiddleware : IAtelier
 {
 

@@ -159,9 +159,7 @@ project with `dotnet build` like any other.
 
 Everything else derived from code is computed by the same generator and carried
 by the built host: `requisite-manifest.json` (the host's `Atelier.*` assembly
-closure and products), `network-zones.json` (isolated zones), and
-`network-policies.yaml` (one Kubernetes `NetworkPolicy` per zone in the product
-closure). A generator cannot write files, so the `AtelierWriteBoutiqueArtifacts`
+closure and products). A generator cannot write files, so the `AtelierWriteBoutiqueArtifacts`
 target in `src/Atelier/Directory.Build.targets` runs the freshly built host once
 in artifacts mode (`--atelier-artifacts`) after `Build`; a plain `dotnet build`
 leaves them in `bin/<config>/<tfm>/atelier/`. smash builds the host with
@@ -169,9 +167,7 @@ leaves them in `bin/<config>/<tfm>/atelier/`. smash builds the host with
 The `<AtelierBoutiqueHost>` property is the only place a host is declared: smash
 builds every boutique this way, and a boutique whose build leaves these files is
 a host (its `smash.yml` `solution` must then be the host `.csproj`). The
-aggregated outputs are: compose isolated
-networks, the solution-root `network-policies.yaml`, and
-`Atelier.Build/.artifacts/requisite-manifest.json`. A full build therefore
+aggregated output is `Atelier.Build/.artifacts/requisite-manifest.json`. A full build therefore
 builds boutiques before generating their containers. Deployment settings — ports,
 capabilities, health paths, resource limits — are runtime configuration under
 `Atelier:Boutique` (and ASP.NET Core's own `Kestrel` section), not generated code.

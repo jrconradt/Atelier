@@ -12,7 +12,6 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Atelier.Framework.Attache;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class AttacheProduct : ProductBase
 {
     protected override void ConfigureOfferings(IOfferingConfiguration offerings)

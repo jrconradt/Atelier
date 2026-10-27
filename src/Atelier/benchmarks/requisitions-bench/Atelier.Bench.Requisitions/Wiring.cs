@@ -5,21 +5,18 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Bench.Requisitions;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public sealed class PrimaryDependency
 {
     public string Token => "primary";
 }
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public sealed class SecondaryDependency
 {
     public string Token => "secondary";
 }
 
 [Infrastructure(InfrastructureLifetime.Transient)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public sealed partial class WiredService
 {
     [Requisite] private readonly PrimaryDependency _primary = null!;

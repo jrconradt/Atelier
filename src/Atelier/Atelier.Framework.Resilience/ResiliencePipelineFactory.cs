@@ -14,7 +14,6 @@ using Polly.Timeout;
 namespace Atelier.Framework.Resilience;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class ResiliencePipelineFactory : IAtelier
 {
     [Requisite] protected readonly IConfiguration _configuration = null!;

@@ -52,8 +52,6 @@ public sealed class BoutiqueHostSourceGeneratorTests
     private const string ProductSource = """
         using Atelier.Framework.Attributes;
 
-        using Atelier.Framework.Primitives;
-
         namespace Atelier.Sample.Products;
 
         public class OrdersProduct : Atelier.Framework.Offering.Product.ProductBase { }
@@ -63,14 +61,7 @@ public sealed class BoutiqueHostSourceGeneratorTests
         [Infrastructure]
         public class OrderLedger { }
 
-        [ZonePolicy(AllowedInbound = new[] { typeof(Edge) }, RequiresMutualTls = true, Isolates = true)]
-        public sealed class Vault { }
-
-        [ZonePolicy(AllowedOutbound = new[] { typeof(Vault) })]
-        public sealed class Edge { }
-
         [Infrastructure]
-        [NetworkZone(typeof(Vault))]
         public class Safe { }
         """;
 
@@ -211,29 +202,16 @@ public sealed class BoutiqueHostSourceGeneratorTests
     }
 
     [Fact]
-    public void WithoutProducts_EmitsNoZonesOrPolicies()
-    {
-        var (generated, _) = Run("""[assembly: Atelier.Framework.Attributes.Boutique("orders")]""");
-
-        Assert.Contains(@"\""isolatedNetworks\"": []", generated);
-        Assert.DoesNotContain("network-policies.yaml", generated);
-    }
-
-    [Fact]
-    public void ProductClosureZones_RenderNetworkPolicies_AndIsolatedNetworks()
+    public void EmitsOnlyTheRequisiteManifest_AsHostArtifacts()
     {
         var (generated, _) = Run("""
             [assembly: Atelier.Framework.Attributes.Boutique("orders")]
             [assembly: Atelier.Framework.Attributes.BoutiqueProduct(typeof(Atelier.Sample.Products.OrdersProduct))]
             """);
 
-        Assert.Contains(@"\""isolatedNetworks\"": [\""vault\""]", generated);
-        Assert.Contains("\"network-policies.yaml\"", generated);
-        Assert.Contains("name: vault-zone-policy", generated);
-        Assert.Contains(@"io.atelier.requires-mtls: \""true\""", generated);
-        Assert.Contains(@"    - from:\n        - podSelector:\n            matchLabels:\n              io.atelier.zone: \""edge\""", generated);
-        Assert.Contains(@"  egress:\n    []", generated);
-        Assert.DoesNotContain("edge-zone-policy", generated);
+        Assert.Contains("\"requisite-manifest.json\"", generated);
+        Assert.DoesNotContain("network-zones.json", generated);
+        Assert.DoesNotContain("network-policies.yaml", generated);
     }
 
     private static (string? Generated, IReadOnlyList<Diagnostic> Diagnostics) Run(string hostSource)

@@ -1,127 +1,26 @@
-# Network zones and policy
+# Network
 
-A service's network position is declarative. Every service is assigned to a
-**zone** — a marker type — and each zone carries a `[ZonePolicy]` describing
-which zones may reach it, which zones it may reach, whether mutual TLS is
-required, and whether it is isolated. Zones are not enforced at runtime: the
-`smash` build tool reads the declarations and compiles them to Kubernetes
-`NetworkPolicy` infrastructure-as-code. The runtime network concern is the
-transport layer and scope authorization, covered below.
+A service reaches another service only through a declared `[Requisite]`
+dependency. That declaration is the whole of service-to-service access: there
+is no separate network topology to configure.
 
-## Zones
-
-Zones are marker classes in `Atelier.Framework.Primitives`, each implementing
-the empty `INetworkZone` interface:
-
-| Zone | Typical occupant |
-|---|---|
-| `Application` | Business offerings. |
-| `Internal` | Internal-only services. |
-| `External` | Edge / public-facing services. |
-| `Web` | Web front ends. |
-| `Security` | Authentication, authorization, secrets. |
-| `Data` | Databases, backups. |
-| `Management` | Routing, monitoring, disaster recovery. |
-
-## Zone policy
-
-Each zone marker carries a `[ZonePolicy]` (`Atelier.Framework.Primitives`). The
-policy lists the inbound and outbound zones as marker types, whether the zone
-requires mutual TLS, and whether it is isolated:
-
-```csharp
-[ZonePolicy(
-    AllowedInbound = new[] { typeof(Application), typeof(Management) },
-    AllowedOutbound = new Type[] { },
-    RequiresMutualTls = true,
-    Isolates = true)]
-public sealed class Security : INetworkZone
-{
-}
-```
-
-`AllowedInbound` and `AllowedOutbound` default to empty, `RequiresMutualTls` and
-`Isolates` to `false`. A zone with `Isolates = true` (such as `Security` and
-`Data`) is given its own isolated network rather than the default bridge.
-
-## Assigning a zone
-
-Annotate a service with `[NetworkZone(typeof(Zone))]`
-(`Atelier.Framework.Attributes`). The attribute carries only the zone marker;
-the inbound/outbound/TLS rules come from that marker's `[ZonePolicy]`.
-
-```csharp
-[NetworkZone(typeof(Security))]
-[Infrastructure(InfrastructureLifetime.Singleton)]
-public partial class RequisitionAuthorizer : IAtelier, IRequisitionAuthorizer
-{
-}
-```
-
-## Compiling to infrastructure
-
-Zone declarations compile to Kubernetes infrastructure in the boutique host's
-build. `BoutiqueHostSourceGenerator` walks the `[Infrastructure]` services and
-declared products in each product's assembly closure, follows every
-`[NetworkZone]` to its zone marker's `[ZonePolicy]`, and renders one Kubernetes
-`NetworkPolicy` per zone into the host, and the host's
-`AtelierWriteBoutiqueArtifacts` build target writes them out after `Build`.
-smash collects the hosts' policies, de-duplicated, into `network-policies.yaml`
-at the solution root:
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: security-zone-policy
-  labels:
-    io.atelier.zone: "security"
-  annotations:
-    io.atelier.requires-mtls: "true"
-spec:
-  podSelector:
-    matchLabels:
-      io.atelier.zone: "security"
-  policyTypes:
-    - Ingress
-    - Egress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              io.atelier.zone: "application"
-        - podSelector:
-            matchLabels:
-              io.atelier.zone: "management"
-  egress:
-    []
-```
-
-The host also emits its isolated zones (`Isolates = true`) in
-`network-zones.json`, which smash turns into dedicated networks in the generated
-`docker-compose.yml`. The rendering surface lives in
-`Atelier.Framework.Network`: `Templates/Network` holds the Kubernetes
-`NetworkPolicy`, service-mesh `ConfigMap`, docker-compose-network, and mermaid
-topology templates, and `Compositors/Network/Variants` holds the Istio
-`PeerAuthentication` mesh policy (strict and open) and mutual-TLS docker network
-variants. These artifacts are generated — regenerate via `smash`, do not
-hand-edit them.
+Generating network infrastructure (Kubernetes `NetworkPolicy`, isolated
+networks, per-service DNS) from those declarations is designed but not built —
+see [Tiers × verticals](../design/tiers-and-verticals.md). The host generator
+does not currently emit network policy.
 
 ## Compile-time diagnostics
 
-`Atelier.Framework.Analyzers` raises the network diagnostics at build time:
+`Atelier.Framework.Analyzers` raises the network diagnostic at build time:
 
 | ID | Severity | Meaning |
 |---|---|---|
-| `ATELIER0300` | Warning | Service is missing a `[NetworkZone]`. |
-| `ATELIER0310` | Error | A declared dependency crosses a zone boundary the policy forbids. |
-| `ATELIER0320` | Warning | Service communication is unencrypted. |
-| `ATELIER0330` | Warning | A service depends on another without declaring the dependency. |
+| `ATELIER0330` | Warning | A service holds a handle to another service that is not a declared `[Requisite]`. |
 
 ## Runtime network surface
 
-Zones are build-time infrastructure; what runs at runtime is transport and
-authorization, both in `Atelier.Framework.Network`.
+What runs at runtime is transport and authorization, both in
+`Atelier.Framework.Network`.
 
 **Transport.** `ITransportClient` and `ITransportServer` define the wire
 surface, with `Http` and `InProcess` implementations and a JSON payload codec
@@ -139,6 +38,6 @@ describe and locate hosts, their ports, and their dependencies.
 
 ## See also
 
-- [Offerings](offerings.md) — offerings carry `[NetworkZone]`.
+- [Requisites](requisites.md) — declaring dependencies.
 - [Facilities](facilities.md) — facility access and authorization.
-- [Diagnostics](../reference/diagnostics.md) — `ATELIER0300`–`ATELIER0330`.
+- [Diagnostics](../reference/diagnostics.md) — `ATELIER0330`.

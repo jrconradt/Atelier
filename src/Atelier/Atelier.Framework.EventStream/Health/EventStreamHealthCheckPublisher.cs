@@ -8,7 +8,6 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 namespace Atelier.Framework.EventStream.Health;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class EventStreamHealthCheckPublisher : IAtelier, IHealthCheckPublisher
 {
     private readonly ConcurrentDictionary<string, HealthStatus> _lastStatus = new();

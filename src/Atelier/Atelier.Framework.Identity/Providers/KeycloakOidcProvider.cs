@@ -8,7 +8,6 @@ using System.Text.Json;
 
 namespace Atelier.Framework.Identity.Providers;
 
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class KeycloakOidcProvider : GenericOidcProvider, IAtelier
 {
     private static readonly JsonSerializerOptions _userInfoJsonOptions = new()

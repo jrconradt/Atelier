@@ -6,7 +6,6 @@ using Atelier.Framework.Offering.Discovery;
 namespace Atelier.Framework.Offering;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class OfferingRegistry : IOfferingRegistry
 {
     private const int MaxAnnouncements = 50_000;

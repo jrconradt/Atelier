@@ -7,7 +7,6 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Framework.Contract;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public sealed partial class ContractValidator : IContractValidator
 {
     [Requisite] private readonly IContractRegistry _registry = null!;

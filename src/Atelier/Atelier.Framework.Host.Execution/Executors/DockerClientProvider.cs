@@ -5,7 +5,6 @@ using Docker.DotNet;
 namespace Atelier.Framework.Host.Execution;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public sealed class DockerClientProvider : IDockerClientProvider, IDisposable
 {
     private const string ENDPOINT_ENV = "ATELIER_DOCKER_HOST";

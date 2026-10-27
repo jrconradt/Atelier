@@ -133,20 +133,6 @@ public class DockerComposeGenerator
             },
         };
 
-        var isolated = resolved
-            .SelectMany(r => r.NetworkZoning.IsolatedNetworks)
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(n => n, StringComparer.Ordinal);
-
-        foreach (var network in isolated)
-        {
-            networks.Add(new T.IsolatedNetworkEntry
-            {
-                Name = SanitizeScalar(network),
-                Driver = "bridge",
-            });
-        }
-
         var microSegmented = new HashSet<string>(StringComparer.Ordinal);
         foreach (var r in resolved)
         {
@@ -317,7 +303,6 @@ public class DockerComposeGenerator
     private static Sequence RenderServiceNetworks(ResolvedBoutique resolved)
     {
         var names = new List<string> { DEFAULT_NETWORK_NAME };
-        names.AddRange(resolved.NetworkZoning.IsolatedNetworks);
 
         var shortName = resolved.Name.Replace("atelier-", string.Empty).ToLowerInvariant();
         if (resolved.InfrastructureDeps.RedisEnabled)

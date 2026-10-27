@@ -14,7 +14,6 @@ using Atelier.Framework.Host.Execution;
 namespace Atelier.Framework.Offering;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class OfferingManager : IOfferingManager, IAtelier, IAsyncDisposable
 {
     [Requisite] protected readonly IExecutorFactory _executorFactory = null!;

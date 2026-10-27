@@ -12,7 +12,6 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Framework.Performance;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class PerformanceProfiler : IAtelier, IPerformanceProfiler, IAsyncDisposable
 {
     private static readonly TimeSpan MetricRetentionWindow = TimeSpan.FromMinutes(5);

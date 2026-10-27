@@ -7,7 +7,6 @@ using Atelier.Framework.Outcomes;
 namespace Atelier.Framework.Attache.Lifecycle;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public sealed class BoutiqueStartupState
 {
     private readonly StrongBox<StoredResult?> _result = new(null);

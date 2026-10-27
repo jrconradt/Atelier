@@ -10,7 +10,6 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Framework.Messaging;
 
 [Infrastructure(InfrastructureLifetime.Scoped)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class HandlerRegistry : IAtelier, IHandlerRegistry
 {
     [Requisite] protected readonly IHandlerFactory _handlerFactory = null!;

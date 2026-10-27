@@ -11,7 +11,6 @@ using Atelier.Framework.Resilience;
 namespace Atelier.Facilities.Cache.Redis;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class RedisCache : CacheAccessWrapperBase, IAtelier
 {
     [Requisite] private readonly IRedisConnectionProvider _connection = null!;

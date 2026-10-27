@@ -59,9 +59,6 @@ Suppress a rule the same way as any Roslyn diagnostic — `#pragma warning disab
 
 | ID | Severity | Title |
 |---|---|---|
-| ATELIER0300 | Warning | Missing Network Zone |
-| ATELIER0310 | Error | Network Policy Violation |
-| ATELIER0320 | Warning | Unencrypted Service Communication |
 | ATELIER0330 | Warning | Undeclared service dependency |
 | ATELIER0710 | Error | API method has no authorization or anonymous opt-out |
 | ATELIER0720 | Error | Authenticated facility method would bypass AuthorizeAsync |

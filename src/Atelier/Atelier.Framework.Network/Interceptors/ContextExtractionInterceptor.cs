@@ -10,7 +10,6 @@ using ContextExtensions = Atelier.Framework.Context.Extensions.ContextAuthorizat
 namespace Atelier.Framework.Network.Interceptors;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class ContextExtractionInterceptor : Interceptor, IAtelier
 {
 

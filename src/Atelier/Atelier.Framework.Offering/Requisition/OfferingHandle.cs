@@ -14,7 +14,6 @@ public interface IOfferingHandle : IAsyncDisposable
     public string RequisitionId { get; }
     public Type OfferingType { get; }
     public OfferingExecutionMode ExecutionMode { get; }
-    public Type Zone { get; }
     public bool IsAlive { get; }
     public Task<Outcome> HealthCheckAsync(CancellationToken cancellationToken = default);
     public Task<Outcome> ReleaseAsync(CancellationToken cancellationToken = default);
@@ -43,7 +42,6 @@ public class OfferingHandle<T> : IOfferingHandle<T> where T : class
         InstanceId = result.InstanceId;
         RequisitionId = result.RequisitionId;
         ExecutionMode = result.ExecutionMode;
-        Zone = result.PlacedZone;
         _offeringManager = offeringManager;
         _offeringProvider = offeringProvider;
     }
@@ -51,8 +49,6 @@ public class OfferingHandle<T> : IOfferingHandle<T> where T : class
     public Type OfferingType => typeof(T);
 
     public OfferingExecutionMode ExecutionMode { get; }
-
-    public Type Zone { get; }
 
     public bool IsAlive
     {

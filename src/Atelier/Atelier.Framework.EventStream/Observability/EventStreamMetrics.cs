@@ -7,7 +7,6 @@ using Prometheus;
 namespace Atelier.Framework.EventStream.Observability;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class EventStreamMetrics : IAtelier
 {
     private static readonly Counter MessagesProcessed = Metrics.CreateCounter(

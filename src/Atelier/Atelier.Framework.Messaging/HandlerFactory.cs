@@ -6,7 +6,6 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Framework.Messaging;
 
 [Infrastructure(InfrastructureLifetime.Scoped)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class HandlerFactory : IHandlerFactory
 {
     [Requisite] protected readonly IOfferingProvider _offeringProvider = null!;

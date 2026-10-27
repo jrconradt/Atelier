@@ -12,7 +12,6 @@ using Atelier.Framework.Observability;
 namespace Atelier.Framework.Attache.Audit;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class CapabilityAuditChannel : IAtelier, ICapabilityAuditChannel, IAsyncDisposable
 {
     private const string AuditChannelName = "Atelier.Capability.Audit";

@@ -15,8 +15,6 @@ public class ProvisionTicket
     public RequirementScope Scope { get; set; }
     public string? GatewayEndpoint { get; set; }
     public int? GatewayPort { get; set; }
-    public Type Zone { get; set; } = typeof(Atelier.Framework.Primitives.Application);
-
     [JsonIgnore]
     public Dictionary<string, string> Credentials { get; set; } = new();
     public ResourceAllocation? AllocatedResources { get; set; }

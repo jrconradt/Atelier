@@ -10,7 +10,6 @@ namespace Atelier.Framework.Facility.Remote;
 [Infrastructure(typeof(IFacility),
                 typeof(RemoteFacility),
                 InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class RemoteFacility : FacilityBase, IAtelier
 {
     private readonly RemoteFacilityState _state = new();
@@ -38,7 +37,6 @@ public partial class RemoteFacility : FacilityBase, IAtelier
         Capabilities.CanProvide.UnionWith(_state.Descriptor.Capabilities.CanProvide);
         Capabilities.TotalCapacity = _state.Descriptor.Capabilities.TotalCapacity;
         Capabilities.CurrentAvailable = _state.Descriptor.Capabilities.CurrentAvailable;
-        Capabilities.Zone = _state.Descriptor.Capabilities.Zone;
         Capabilities.Operations.UnionWith(_state.Descriptor.Capabilities.Operations);
 
         foreach (var kvp in _state.Descriptor.Capabilities.Metadata)
@@ -118,7 +116,6 @@ public partial class RemoteFacility : FacilityBase, IAtelier
             FacilityId = FacilityId,
             Scope = requirement.Scope,
             GatewayEndpoint = _state.Descriptor.Endpoint,
-            Zone = Capabilities.Zone ?? typeof(Atelier.Framework.Primitives.Internal),
             AllocatedResources = allocated,
             Status = ProvisionStatus.Provisioned
         };

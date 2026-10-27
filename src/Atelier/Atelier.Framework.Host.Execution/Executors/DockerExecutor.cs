@@ -8,7 +8,6 @@ using Atelier.Framework.Host.Execution.Hosts;
 namespace Atelier.Framework.Host.Execution;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class DockerExecutor : IExecutor, IAtelier
 {
     [Requisite] protected readonly IDockerClientProvider _dockerClientProvider = null!;

@@ -9,7 +9,6 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Framework.Facility;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class FacilitySelector : IAtelier, IFacilitySelector
 {
     [Operation("SelectFacilityAsync")]

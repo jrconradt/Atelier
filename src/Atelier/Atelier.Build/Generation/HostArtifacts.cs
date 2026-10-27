@@ -12,7 +12,6 @@ namespace Atelier.Build.Generation;
 public static class HostArtifacts
 {
     public const string REQUISITE_MANIFEST = "requisite-manifest.json";
-    public const string NETWORK_ZONES = "network-zones.json";
     public const string NETWORK_POLICIES = "network-policies.yaml";
 
     public static void Clear(string artifactsDirectory)
@@ -22,7 +21,7 @@ public static class HostArtifacts
             return;
         }
 
-        foreach (var file in new[] { REQUISITE_MANIFEST, NETWORK_ZONES, NETWORK_POLICIES })
+        foreach (var file in new[] { REQUISITE_MANIFEST, NETWORK_POLICIES })
         {
             File.Delete(Path.Combine(artifactsDirectory, file));
         }
@@ -31,17 +30,6 @@ public static class HostArtifacts
     public static bool Exist(string artifactsDirectory)
     {
         return File.Exists(Path.Combine(artifactsDirectory, REQUISITE_MANIFEST));
-    }
-
-    public static ResolvedNetworkZoning ReadNetworkZoning(string artifactsDirectory)
-    {
-        using var document = ReadJson(Path.Combine(artifactsDirectory, NETWORK_ZONES));
-        return new ResolvedNetworkZoning
-        {
-            IsolatedNetworks = document is null
-                ? []
-                : StringArray(document.RootElement, "isolatedNetworks"),
-        };
     }
 
     public static IReadOnlyList<string> ReadRequisiteAssemblies(string artifactsDirectory)

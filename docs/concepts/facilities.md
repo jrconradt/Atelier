@@ -73,6 +73,5 @@ public interface IBillingGateway
 
 ## See also
 
-- [Network zones](network.md) — facilities and gateways are zone-governed.
 - [Outcomes](outcomes.md) — every facility method is `Outcome`-typed.
 - [Diagnostics](../reference/diagnostics.md) — `ATELIER0700` / `ATELIER0701` / `ATELIER0720`.

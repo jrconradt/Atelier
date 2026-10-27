@@ -8,7 +8,6 @@ using Atelier.Framework.Outcomes;
 namespace Atelier.Framework.Network.Transport.InProcess
 {
     [Infrastructure(InfrastructureLifetime.Singleton)]
-    [NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
     public partial class InProcessTransport : IAtelier, ITransportClient, ITransportServer, IAsyncDisposable
     {
         private const int MAX_QUEUED_MESSAGES = 10_000;

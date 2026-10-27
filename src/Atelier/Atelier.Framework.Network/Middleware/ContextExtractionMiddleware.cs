@@ -11,7 +11,6 @@ using ContextExtensions = Atelier.Framework.Context.Extensions.ContextAuthorizat
 namespace Atelier.Framework.Network.Middleware;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class ContextExtractionMiddleware : IAtelier
 {
 

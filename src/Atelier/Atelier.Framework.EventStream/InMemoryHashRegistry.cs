@@ -6,7 +6,6 @@ using Atelier.Framework.Observability;
 namespace Atelier.Framework.EventStream;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class InMemoryHashRegistry : HashRegistryBase, IAtelier
 {
 }

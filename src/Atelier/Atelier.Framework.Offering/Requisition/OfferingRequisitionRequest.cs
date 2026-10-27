@@ -17,12 +17,6 @@ public class OfferingRequisitionRequest
 
     public Type RequesterType { get; set; } = null!;
 
-    public Type? RequesterZone { get; set; }
-
-    public Type? TargetZone { get; set; }
-
-    public ZonePlacementStrategy PlacementStrategy { get; set; } = ZonePlacementStrategy.SameZone;
-
     public OfferingExecutionMode PreferredExecutionMode { get; set; } = OfferingExecutionMode.InProcess;
 
     public ResourceAllocation? ResourceRequirements { get; set; }
@@ -38,14 +32,6 @@ public class OfferingRequisitionRequest
     public TimeSpan? MaxWaitTime { get; set; }
 
     public RequisitionPriority Priority { get; set; } = RequisitionPriority.Normal;
-}
-
-public enum ZonePlacementStrategy
-{
-    SameZone,
-    AllowCrossZone,
-    RequireSpecificZone,
-    AutoDetect
 }
 
 public enum RequisitionPriority

@@ -12,7 +12,6 @@ public static class BoutiqueResolver
 
     public static ResolvedBoutique Resolve(
         BoutiqueYamlSchema schema,
-        ResolvedNetworkZoning networkZoning,
         bool verbose)
     {
         var ports = ResolvePorts(schema);
@@ -30,12 +29,6 @@ public static class BoutiqueResolver
             SecurityContext = ResolveSecurityContext(schema),
             ImageConfig = ResolveImageConfig(schema),
             Tls = ResolveTls(schema),
-            NetworkZoning = new ResolvedNetworkZoning
-            {
-                IsolatedNetworks = networkZoning.IsolatedNetworks
-                    .OrderBy(network => network, StringComparer.Ordinal)
-                    .ToList(),
-            },
             InfrastructureDeps = infraDeps,
             ResourceLimits = ResolveResourceLimits(schema),
         };

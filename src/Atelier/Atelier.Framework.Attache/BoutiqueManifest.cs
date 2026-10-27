@@ -2,7 +2,6 @@ using Atelier.Framework.Attributes;
 
 namespace Atelier.Framework.Attache;
 
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public class BoutiqueManifest
 {
     public required string BoutiqueId { get; set; }

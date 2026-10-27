@@ -14,7 +14,6 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Atelier.Framework.Offering;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public sealed class LifecycleProbeService
 {
     public string Echo(string value)
@@ -44,7 +43,6 @@ public sealed class LifecycleProbeCounters
 }
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class LifecycleProbeOffering : OfferingBase
 {
     [Requisite] private readonly LifecycleProbeService _service = null!;
@@ -75,7 +73,6 @@ public partial class LifecycleProbeOffering : OfferingBase
 }
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class LifecycleProbeProduct : ProductBase
 {
     protected override void ConfigureOfferings(IOfferingConfiguration offerings)

@@ -14,7 +14,6 @@ namespace Atelier.Facilities.Cache.Redis;
 [Infrastructure(typeof(IFacility),
                 typeof(RedisCacheFacility),
                 InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class RedisCacheFacility : FacilityBase
 {
     [Requisite] protected readonly IOfferingRequisitionService _offeringRequisitions = null!;
@@ -31,7 +30,6 @@ public partial class RedisCacheFacility : FacilityBase
 
     protected override void InitializeCapabilities()
     {
-        Capabilities.Zone = typeof(Atelier.Framework.Primitives.Data);
         Capabilities.SupportedScopes.Add(RequirementScope.Capability);
         Capabilities.CanProvide.Add(typeof(ICache));
     }
@@ -77,7 +75,6 @@ public partial class RedisCacheFacility : FacilityBase
             RequesterId = requirement.RequirementId,
             RequesterType = typeof(ICache),
             PreferredExecutionMode = OfferingExecutionMode.NetworkMapped,
-            PlacementStrategy = ZonePlacementStrategy.AllowCrossZone,
             ResourceRequirements = requirement.ResourceNeeds,
             Backing = new BackingOfferingDescriptor
             {
@@ -135,7 +132,6 @@ public partial class RedisCacheFacility : FacilityBase
             Scope = requirement.Scope,
             GatewayEndpoint = result.NetworkAddress,
             GatewayPort = result.NetworkPort,
-            Zone = typeof(Atelier.Framework.Primitives.Data),
             AllocatedResources = result.AllocatedResources,
             Status = ProvisionStatus.Provisioned
         };

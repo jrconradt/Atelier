@@ -16,7 +16,6 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Atelier.Framework.Identity.Services;
 
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class GenericOidcProvider : IAtelier, IOidcProvider
 {
     [Requisite] protected readonly HttpClient _httpClient = null!;

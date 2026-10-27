@@ -12,7 +12,6 @@ using Atelier.Framework.Identity.Interfaces;
 
 namespace Atelier.Framework.Identity.Services;
 
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class OidcTokenIssuer : IOidcTokenIssuer, IAtelier
 {

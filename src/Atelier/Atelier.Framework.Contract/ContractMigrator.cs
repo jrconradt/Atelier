@@ -8,7 +8,6 @@ using Atelier.Framework.Requisitions;
 namespace Atelier.Framework.Contract;
 
 [Infrastructure(InfrastructureLifetime.Singleton)]
-[NetworkZone(typeof(Atelier.Framework.Primitives.Application))]
 public partial class ContractMigrator : IContractMigrator, IAtelier
 {
     [Requisite] protected readonly IContractRegistry _registry = null!;
