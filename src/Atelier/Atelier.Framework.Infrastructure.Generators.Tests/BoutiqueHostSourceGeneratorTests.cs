@@ -243,7 +243,7 @@ public sealed class BoutiqueHostSourceGeneratorTests
     }
 
     [Fact]
-    public void RequisiteManifest_RecordsEachServiceIdentity_AndItsRequisiteEdges()
+    public void RequisiteManifest_RecordsEachServiceIdentity_AndTheServicesItRequires()
     {
         var (generated, _) = Run("""
             [assembly: Atelier.Framework.Attributes.Boutique("orders")]
@@ -259,18 +259,12 @@ public sealed class BoutiqueHostSourceGeneratorTests
             }
             """);
 
-        Assert.Contains(@"{ \""identity\"": \""Atelier.Sample.Products.OrdersProduct\"", \""requisites\"": [\n"
-            + @"        { \""type\"": \""Atelier.Framework.Offering.IWidget\"", \""service\"": \""Atelier.Framework.Offering.Widget\"" },\n"
-            + @"        { \""type\"": \""Atelier.Sample.Products.OrderLedger\"", \""service\"": \""Atelier.Sample.Products.OrderLedger\"" },\n"
-            + @"        { \""type\"": \""Microsoft.Extensions.Hosting.IHostedService\"", \""service\"": null }\n"
-            + @"    ] }", generated);
-        Assert.Contains(@"{ \""identity\"": \""Atelier.Sample.Products.OrderLedger\"", \""requisites\"": [\n"
-            + @"        { \""type\"": \""Atelier.Framework.Offering.IWidget\"", \""service\"": \""Atelier.Framework.Offering.Widget\"" }\n"
-            + @"    ] }", generated);
+        Assert.Contains(@"{ \""identity\"": \""Atelier.Sample.Products.OrdersProduct\"", \""requisites\"": [\""Atelier.Framework.Offering.Widget\"", \""Atelier.Sample.Products.OrderLedger\""] }", generated);
+        Assert.Contains(@"{ \""identity\"": \""Atelier.Sample.Products.OrderLedger\"", \""requisites\"": [\""Atelier.Framework.Offering.Widget\""] }", generated);
         Assert.Contains(@"{ \""identity\"": \""Atelier.Framework.Offering.Widget\"", \""requisites\"": [] }", generated);
-        Assert.Contains(@"{ \""identity\"": \""Atelier.Sample.Host.Clock\"", \""requisites\"": [\n"
-            + @"        { \""type\"": \""Atelier.Sample.Products.OrderLedger\"", \""service\"": \""Atelier.Sample.Products.OrderLedger\"" }\n"
-            + @"    ] }", generated);
+        Assert.DoesNotContain(@"\""Atelier.Framework.Offering.IWidget\""", generated);
+        Assert.DoesNotContain(@"\""Microsoft.Extensions.Hosting.IHostedService\""", generated);
+        Assert.Contains(@"{ \""identity\"": \""Atelier.Sample.Host.Clock\"", \""requisites\"": [\""Atelier.Sample.Products.OrderLedger\""] }", generated);
     }
 
     private static (string? Generated, IReadOnlyList<Diagnostic> Diagnostics) Run(string hostSource)

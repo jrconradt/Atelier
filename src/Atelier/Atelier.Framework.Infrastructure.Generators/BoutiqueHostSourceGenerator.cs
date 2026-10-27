@@ -277,8 +277,8 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
     }
 
     // A service's identity is its Namespace.ServiceName. Each [Requisite] member is an
-    // edge to the member's declared type, resolved to the host service that provides it
-    // when there is one. Types compiled here are read directly; referenced types' private
+    // edge to the host service that provides the member's declared type; a requisite no
+    // host service provides has nothing to route to and is not an edge. Types compiled here are read directly; referenced types' private
     // members are not visible, so their edges come from the [assembly: RequisiteEdge]
     // declarations the requisites generator emitted into their assembly.
     private static List<ServiceEdgesModel> CollectServiceEdges(
@@ -307,7 +307,7 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         var models = new SortedDictionary<string, ServiceEdgesModel>(StringComparer.Ordinal);
         foreach (var service in services)
         {
-            var edges = new SortedDictionary<string, RequisiteEdgeModel>(StringComparer.Ordinal);
+            var edges = new SortedSet<string>(StringComparer.Ordinal);
             foreach (var type in TypeChain(service))
             {
                 var targets = SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, compilation.Assembly)
@@ -316,15 +316,17 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
 
                 foreach (var target in targets)
                 {
-                    providers.TryGetValue(target, out var provider);
-                    edges[target] = new RequisiteEdgeModel(target, provider);
+                    if (providers.TryGetValue(target, out var provider))
+                    {
+                        edges.Add(provider);
+                    }
                 }
             }
 
             var identity = Identity(service);
             models[identity] = new ServiceEdgesModel(
                 identity,
-                new EquatableArray<RequisiteEdgeModel>(edges.Values.ToImmutableArray()));
+                new EquatableArray<string>(edges.ToImmutableArray()));
         }
 
         return models.Values.ToList();
@@ -557,17 +559,8 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         {
             var service = serviceEdges[i];
             json.Append(i == 0 ? "\n" : ",\n");
-            json.Append("    { \"identity\": ").Append(JsonString(service.Identity)).Append(", \"requisites\": [");
-            var requisites = service.Requisites.Items;
-            for (var j = 0; j < requisites.Length; j++)
-            {
-                json.Append(j == 0 ? "\n" : ",\n");
-                json.Append("        { \"type\": ").Append(JsonString(requisites[j].Type))
-                    .Append(", \"service\": ").Append(requisites[j].Service is null ? "null" : JsonString(requisites[j].Service!))
-                    .Append(" }");
-            }
-
-            json.Append(requisites.Length == 0 ? "] }" : "\n    ] }");
+            json.Append("    { \"identity\": ").Append(JsonString(service.Identity))
+                .Append(", \"requisites\": ").Append(JsonArray(service.Requisites.Items)).Append(" }");
         }
 
         json.Append(serviceEdges.Count == 0 ? "]\n" : "\n  ]\n");
@@ -701,9 +694,7 @@ internal sealed record ApiEndpointModel(string EndpointsType, string MapMethod);
 
 internal sealed record ArtifactModel(string FileName, string Content);
 
-internal sealed record ServiceEdgesModel(string Identity, EquatableArray<RequisiteEdgeModel> Requisites);
-
-internal sealed record RequisiteEdgeModel(string Type, string? Service);
+internal sealed record ServiceEdgesModel(string Identity, EquatableArray<string> Requisites);
 
 internal sealed record BoutiqueHostDiagnostic(
     DiagnosticDescriptor Descriptor,

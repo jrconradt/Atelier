@@ -51,8 +51,10 @@ The requisites generator records each one as
 own assembly, so the edge survives into metadata even though the member is
 private. A boutique host's generator reads those declarations (and its own
 source directly) and writes every service's identity — its `Namespace.ServiceName`
-— and its edges into `requisite-manifest.json`, resolving each edge to the host
-service that provides it where there is one.
+— into `requisite-manifest.json` with the identities of the host services it
+requires. Each requisite resolves to the service that provides it; the manifest
+names services, never interfaces, and a requisite no host service provides is
+not an edge.
 
 ## Validation
 
