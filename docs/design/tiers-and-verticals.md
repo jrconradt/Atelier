@@ -70,11 +70,11 @@ Service identity is generated from this model, alongside the network policy.
 
 ### DNS
 
-Each zone gets its own DNS resolver, with redundancy. The generator defines it:
-each zone's resolver serves static records for exactly the names its services
-have edges to, and the generator assigns each Service's address. Services keep
-a fixed virtual address while the pods behind them scale horizontally and change
-addresses freely.
+Each load-balanced set — each Service — gets its own DNS, with redundancy. The
+generator defines it: a Service's resolver answers exactly the names of its
+outbound edges and nothing else. Names are fixed at compile time; addresses are
+looked up live, so pods scale horizontally and change addresses freely. Users
+supply no address range — the generator chooses every address it needs.
 
 ## Proposed, not decided
 
@@ -132,16 +132,24 @@ special case: it simply has more than one inbound edge.
 - Entry: only Ingress-tier pods admit traffic from the cluster's ingress
   controller. Exit: only third-party gateways get egress outside the cluster,
   via `ipBlock` or a CNI that supports FQDN rules.
-- DNS: each zone runs its own CoreDNS `Deployment` and `Service` — at least two
-  replicas, pod anti-affinity across nodes, and a `PodDisruptionBudget`. Pods set
-  `dnsPolicy: None` with `dnsConfig.nameservers` pointing at their zone's
-  resolver, and the DNS egress allowance targets that resolver instead of
-  cluster DNS. The resolver serves the generated records from its config and
-  answers everything else `NXDOMAIN`; only third-party gateways' resolvers
-  forward to an upstream. Because the records are static, zone resolvers need no
-  Kubernetes API access. The generator assigns `spec.clusterIP` for every
-  Service from the static band of the Service CIDR (Kubernetes 1.27+ reserves
-  the lower band for static allocation), so it must be given that CIDR.
+- DNS, after the NodeLocal DNSCache pattern:
+  - A pod's nameserver must be an IP literal, so every Service's resolver needs
+    an address known at generation time. The generator assigns each Service a
+    link-local address (`169.254.53.N`). Link-local space sits outside every
+    cluster's pod and Service CIDRs, so no cluster range is needed as input.
+  - One CoreDNS `DaemonSet` on host networking runs on every node and binds all
+    of the generated addresses, one server block per Service. Redundancy is per
+    node: a failed resolver affects only its own node, and adding Services adds
+    server blocks, not pods.
+  - Each server block forwards only that Service's outbound-edge names to
+    cluster DNS (`forward . /etc/resolv.conf` under
+    `dnsPolicy: ClusterFirstWithHostNet`) and answers everything else
+    `NXDOMAIN`. Only third-party gateways' blocks forward external names. No
+    Kubernetes API access is needed.
+  - Pods set `dnsPolicy: None` with `dnsConfig.nameservers` set to their
+    Service's address, and the DNS egress allowance targets that address.
+  - Cluster DNS remains the single address source, so its own redundancy
+    underwrites every Service's resolver.
 - Docker Compose needs no equivalent: Docker's embedded DNS already answers only
   for containers on shared networks, so per-edge networks scope resolution, and
   `--scale` replicas resolve round-robin.
@@ -204,11 +212,10 @@ the one vertical others may reach sideways.
 3. **Management traffic.** Monitoring and operations reach every tier. Is that a
    separate plane outside the tier model, or a tier of its own?
 4. **Unmarked roles.** Front ends and third-party gateways have no marker yet.
-5. **DNS zone granularity.** Is a DNS zone a vertical, a segment, or a single
-   tier × vertical cell? Finer zones isolate more but cost at least two resolver
-   pods each.
-6. **Service CIDR input.** Where the generator learns the cluster's Service CIDR
-   — build input, boutique configuration, or a deployment-time parameter.
+5. **Restricted clusters.** The DNS DaemonSet needs host networking and
+   `NET_ADMIN` to bind its link-local addresses. Some managed clusters (GKE
+   Autopilot, for example) disallow both. Is that an acceptable constraint, or
+   does it need a fallback?
 
 ## Gap from current code
 
