@@ -64,9 +64,19 @@ not declared separately.
 
 The vertical names and services in the diagram are illustrative.
 
-### Service identity
+### Service identity, scopes, and claims
 
 Service identity is generated from this model, alongside the network policy.
+
+- A service's identity is its `Namespace.ServiceName` — for example
+  `Infrastructure.WhateverService`, and its gateway
+  `Infrastructure.WhateverService.Gateway`.
+- Scopes are declared by the generator at compile time, following that identity
+  pattern.
+- Claims — what a service, or whoever, is granted access to — follow the same
+  model.
+- The security model is a compile-time enforced mandate: a violation is a build
+  error, not a runtime denial.
 
 ### DNS
 
@@ -221,15 +231,12 @@ the one vertical others may reach sideways.
 
 As of this note:
 
-- Zones are one axis: seven unordered markers with hand-written inbound and
-  outbound lists in `[ZonePolicy]`. There is no tier order and no segment.
-- Policies are rendered per zone, so every service in a zone reaches everything
-  its zone may reach.
+- The earlier zone model (`[NetworkZone]`, `[ZonePolicy]`, and seven zone
+  markers) has been removed. No network policy is generated; nothing replaces it
+  yet.
 - The generated compose puts every container on the shared `atelier-network`
-  in addition to any isolated or per-store network, which voids the isolation.
+  in addition to any per-store network, which voids the isolation.
 - Data-store networks come from smash infrastructure flags, not from the
   services that use a store, and only one Postgres and one Redis container are
   emitted per environment.
 - The requisite manifest records products and assemblies, not dependency edges.
-- `ATELIER0310` reads an outbound allow-list from `[NetworkZone]`, which has no
-  such property, so it flags every cross-zone requisite.
