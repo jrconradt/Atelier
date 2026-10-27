@@ -28,7 +28,7 @@ public interface IOfferingHandle<out T> : IOfferingHandle where T : class
 public class OfferingHandle<T> : IOfferingHandle<T> where T : class
 {
     [Requisite] protected readonly IOfferingManager _offeringManager = null!;
-    [Requisite] protected readonly IOfferingProvider _offeringProvider = null!;
+    private readonly T? _offering;
     private bool _disposed;
 
     public string InstanceId { get; }
@@ -37,13 +37,13 @@ public class OfferingHandle<T> : IOfferingHandle<T> where T : class
     public OfferingHandle(
         OfferingRequisitionResult result,
         IOfferingManager offeringManager,
-        IOfferingProvider offeringProvider)
+        T? offering)
     {
         InstanceId = result.InstanceId;
         RequisitionId = result.RequisitionId;
         ExecutionMode = result.ExecutionMode;
         _offeringManager = offeringManager;
-        _offeringProvider = offeringProvider;
+        _offering = offering;
     }
 
     public Type OfferingType => typeof(T);
@@ -68,7 +68,7 @@ public class OfferingHandle<T> : IOfferingHandle<T> where T : class
                 throw new ObjectDisposedException(nameof(OfferingHandle<T>));
             }
 
-            var offering = _offeringProvider.GetOffering<T>();
+            var offering = _offering;
             if (offering == null)
             {
                 throw new InvalidOperationException(

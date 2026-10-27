@@ -14,9 +14,11 @@ namespace Atelier.Framework.Attache;
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class AttacheProduct : ProductBase
 {
+    [Requisite] private readonly AttacheRuntimeOffering _runtime = null!;
+
     protected override void ConfigureOfferings(IOfferingConfiguration offerings)
     {
-        offerings.AddOffering<AttacheRuntimeOffering>();
+        offerings.AddOffering(_runtime);
     }
 
     protected override void ConfigureServices(IServiceCollection services)

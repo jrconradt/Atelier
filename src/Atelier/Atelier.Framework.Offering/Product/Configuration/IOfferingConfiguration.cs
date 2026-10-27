@@ -2,11 +2,8 @@ namespace Atelier.Framework.Offering.Product.Configuration;
 
 public interface IOfferingConfiguration
 {
-    IOfferingConfiguration AddOffering<TOffering>()
-        where TOffering : class, IOffering;
+    IOfferingConfiguration AddOffering(IOffering offering);
 
-    IOfferingConfiguration AddOffering<TOffering>(Action<TOffering> configure)
+    IOfferingConfiguration AddOffering<TOffering>(TOffering offering, Action<TOffering> configure)
         where TOffering : class, IOffering;
-
-    IOfferingConfiguration AddOffering(Type offeringType);
 }

@@ -21,7 +21,6 @@ internal static class Program
         var services = new ServiceCollection();
         services.AddSingleton<ILoggingStrategy, ConsoleLoggingStrategy>();
         services.AddSingleton<ILogger>(sp => new Logger(sp.GetRequiredService<ILoggingStrategy>()));
-        services.AddSingleton<IOfferingProvider, ServiceProviderOfferingProvider>();
         services.AddSingleton<GreetingService>();
         services.AddSingleton<GreetingOffering>();
         services.AddSingleton<GreetingProduct>();
@@ -98,9 +97,11 @@ public partial class GreetingOffering : OfferingBase
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class GreetingProduct : ProductBase
 {
+    [Requisite] private readonly GreetingOffering _greeting = null!;
+
     protected override void ConfigureOfferings(IOfferingConfiguration offerings)
     {
-        offerings.AddOffering<GreetingOffering>();
+        offerings.AddOffering(_greeting);
     }
 
     protected override Task<Outcome> OnStartAsync(CancellationToken cancellationToken)

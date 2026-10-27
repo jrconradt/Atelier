@@ -66,8 +66,10 @@ Each requisite resolves the way DI will, against the boutique's registrations:
   used for as its own requisite.
 
 The host generator also registers what it can decide at compile time: each
-declared product, as itself and as `ProductBase`, and the boutique's
-`IOfferingProvider`.
+declared product as itself and as `ProductBase`, and every service under the
+framework contracts it implements (`IOffering`, `IRequestHandler`), so a requisite
+on `IEnumerable<IOffering>` or `IEnumerable<IRequestHandler>` receives exactly the
+boutique's offerings or handlers.
 
 ## Validation
 

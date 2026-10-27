@@ -1,1 +1,0 @@
-services.AddSingleton<global::Atelier.Framework.Offering.Product.ProductBase>(sp => sp.GetRequiredService<{{ implementation }}>());

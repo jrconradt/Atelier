@@ -1,0 +1,1 @@
+services.{{ lifetime }}<{{ contract }}>(sp => sp.GetRequiredService<{{ implementation }}>());

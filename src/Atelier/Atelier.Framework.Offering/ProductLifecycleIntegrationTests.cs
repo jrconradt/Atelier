@@ -75,9 +75,11 @@ public partial class LifecycleProbeOffering : OfferingBase
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class LifecycleProbeProduct : ProductBase
 {
+    [Requisite] private readonly LifecycleProbeOffering _probe = null!;
+
     protected override void ConfigureOfferings(IOfferingConfiguration offerings)
     {
-        offerings.AddOffering<LifecycleProbeOffering>();
+        offerings.AddOffering(_probe);
     }
 
     protected override Task<Outcome> OnStartAsync(CancellationToken cancellationToken)
@@ -98,7 +100,6 @@ public static class ProductLifecycleIntegrationTests
         var services = new ServiceCollection();
         services.AddSingleton<ILoggingStrategy, ConsoleLoggingStrategy>();
         services.AddSingleton<ILogger>(sp => new Logger(sp.GetRequiredService<ILoggingStrategy>()));
-        services.AddSingleton<IOfferingProvider, ServiceProviderOfferingProvider>();
         services.AddSingleton<LifecycleProbeService>();
         services.AddSingleton<LifecycleProbeOffering>();
         services.AddSingleton<LifecycleProbeProduct>();

@@ -35,8 +35,10 @@ public sealed class ServiceImplOnly : Compositor
     public string Implementation { get; set; } = string.Empty;
 }
 
-public sealed class ProductForward : Compositor
+public sealed class ContractForward : Compositor
 {
+    public string Lifetime { get; set; } = string.Empty;
+    public string Contract { get; set; } = string.Empty;
     public string Implementation { get; set; } = string.Empty;
 }
 

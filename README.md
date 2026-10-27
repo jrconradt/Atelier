@@ -51,9 +51,11 @@ A Product composes offerings and owns their lifecycle:
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class GreetingProduct : ProductBase
 {
+    [Requisite] private readonly GreetingOffering _greeting = null!;
+
     protected override void ConfigureOfferings(IOfferingConfiguration offerings)
     {
-        offerings.AddOffering<GreetingOffering>();
+        offerings.AddOffering(_greeting);
     }
 
     protected override Task<Outcome> OnStartAsync(CancellationToken cancellationToken)

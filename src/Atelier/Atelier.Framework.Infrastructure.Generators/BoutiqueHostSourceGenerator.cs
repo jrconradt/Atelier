@@ -28,9 +28,15 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
     private const string REQUISITE_ATTRIBUTE = "Atelier.Framework.Requisitions.RequisiteAttribute";
     private const string REQUISITE_EDGE_ATTRIBUTE = "Atelier.Framework.Requisitions.RequisiteEdgeAttribute";
     private const string PRODUCT_BASE = "Atelier.Framework.Offering.Product.ProductBase";
-    private const string OFFERING_PROVIDER = "Atelier.Framework.Offering.IOfferingProvider";
-    private const string SERVICE_PROVIDER_OFFERING_PROVIDER = "Atelier.Framework.Offering.ServiceProviderOfferingProvider";
-    private const string NULL_OFFERING_PROVIDER = "Atelier.Framework.Offering.NullOfferingProvider";
+    private const string PRODUCT_BASE_CONTRACT = "global::" + PRODUCT_BASE;
+
+    // Framework contracts a service is also registered under, so the services that take
+    // them as IEnumerable<T> requisites receive every implementation in the boutique.
+    private static readonly string[] FORWARDED_CONTRACTS =
+    {
+        "Atelier.Framework.Offering.IOffering",
+        "Atelier.Framework.Messaging.IRequestHandler",
+    };
     private const string HOSTED_SERVICE = "Microsoft.Extensions.Hosting.IHostedService";
     private const string ATELIER_ASSEMBLY_PREFIX = "Atelier.";
 
@@ -183,7 +189,6 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         }
 
         AddProductRegistrations(productTypes, registrations);
-        AddOfferingProviderRegistration(compilation, productTypes.Count > 0, registrations, services);
 
         var requisiteAssemblies = CollectRequisiteAssemblies(compilation);
         var serviceEdges = CollectServiceEdges(compilation, services, registrations, boutique, diagnostics);
@@ -321,39 +326,12 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             var index = registrations.FindIndex(r => r.Implementation == implementation && !r.HasInterface);
             if (index >= 0)
             {
-                registrations[index] = registrations[index] with { IsProduct = true };
+                registrations[index] = registrations[index] with { Forwards = new EquatableArray<string>(registrations[index].Forwards.Items.Add(PRODUCT_BASE_CONTRACT)) };
             }
             else
             {
-                registrations.Add(new RegistrationModel("AddSingleton", implementation, implementation, false, false, IsProduct: true));
+                registrations.Add(new RegistrationModel("AddSingleton", implementation, implementation, false, false, new EquatableArray<string>(ImmutableArray.Create(PRODUCT_BASE_CONTRACT))));
             }
-        }
-    }
-
-    // Which offering provider a boutique uses is known from its declared products.
-    private static void AddOfferingProviderRegistration(
-        Compilation compilation,
-        bool hasProducts,
-        List<RegistrationModel> registrations,
-        List<INamedTypeSymbol> services)
-    {
-        var contract = compilation.GetTypeByMetadataName(OFFERING_PROVIDER);
-        var provider = compilation.GetTypeByMetadataName(hasProducts ? SERVICE_PROVIDER_OFFERING_PROVIDER : NULL_OFFERING_PROVIDER);
-        if (contract is null || provider is null)
-        {
-            return;
-        }
-
-        registrations.Add(new RegistrationModel(
-            "AddSingleton",
-            contract.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-            provider.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-            true,
-            false));
-
-        if (!services.Contains(provider, SymbolEqualityComparer.Default))
-        {
-            services.Add(provider);
         }
     }
 
@@ -398,9 +376,9 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         foreach (var registration in registrations)
         {
             AddProvider(StripGlobal(registration.ServiceType), StripGlobal(registration.Implementation));
-            if (registration.IsProduct)
+            foreach (var contract in registration.Forwards.Items)
             {
-                AddProvider(PRODUCT_BASE, StripGlobal(registration.Implementation));
+                AddProvider(StripGlobal(contract), StripGlobal(registration.Implementation));
             }
         }
 
@@ -571,12 +549,21 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         var isHostedService = lifetimeValue == 0
             && type.AllInterfaces.Any(i => i.ToDisplayString() == HOSTED_SERVICE);
 
+        var forwards = type.AllInterfaces
+            .Select(i => i.ToDisplayString())
+            .Where(i => FORWARDED_CONTRACTS.Contains(i))
+            .Select(i => "global::" + i)
+            .Where(i => !string.Equals(i, service, StringComparison.Ordinal))
+            .OrderBy(i => i, StringComparer.Ordinal)
+            .ToImmutableArray();
+
         return new RegistrationModel(
             lifetime,
             service,
             implementation,
             !string.Equals(service, implementation, StringComparison.Ordinal),
-            isHostedService);
+            isHostedService,
+            new EquatableArray<string>(forwards));
     }
 
     private static ApiEndpointModel? TryBuildApiEndpoints(IAssemblySymbol assembly, INamedTypeSymbol type)
@@ -781,10 +768,12 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             };
         }
 
-        if (registration.IsProduct)
+        foreach (var contract in registration.Forwards.Items)
         {
-            yield return new BH.ProductForward
+            yield return new BH.ContractForward
             {
+                Lifetime = registration.Lifetime,
+                Contract = contract,
                 Implementation = registration.Implementation,
             };
         }
@@ -820,7 +809,7 @@ internal sealed record RegistrationModel(
     string Implementation,
     bool HasInterface,
     bool IsHostedService,
-    bool IsProduct = false);
+    EquatableArray<string> Forwards);
 
 internal sealed record ApiEndpointModel(string EndpointsType, string MapMethod);
 
