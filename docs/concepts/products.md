@@ -8,9 +8,11 @@ A **Product** composes Offerings and owns their lifecycle. It derives from `Prod
 [Infrastructure(InfrastructureLifetime.Singleton)]
 public partial class GreetingProduct : ProductBase
 {
+    [Requisite] private readonly GreetingOffering _greeting = null!;
+
     protected override void ConfigureOfferings(IOfferingConfiguration offerings)
     {
-        offerings.AddOffering<GreetingOffering>();
+        offerings.AddOffering(_greeting);
     }
 
     protected override Task<Outcome> OnStartAsync(CancellationToken cancellationToken)
@@ -29,13 +31,13 @@ public partial class GreetingProduct : ProductBase
 
 `ProductBase` provides the public lifecycle surface:
 
-- **`StartAsync(CancellationToken)` / `StopAsync(CancellationToken)`** — return `Task<Outcome>`; they run `ConfigureOfferings`, resolve each offering through the `OfferingProvider`, and invoke `OnStartAsync` / `OnStopAsync`.
-- **`ConfigureOfferings(IOfferingConfiguration)`** — register the offerings the product owns with `AddOffering<TOffering>()`.
+- **`StartAsync(CancellationToken)` / `StopAsync(CancellationToken)`** — return `Task<Outcome>`; they run `ConfigureOfferings` and invoke `OnStartAsync` / `OnStopAsync`.
+- **`ConfigureOfferings(IOfferingConfiguration)`** — register the offerings the product owns with `AddOffering(offering)`. A product receives its offerings as `[Requisite]` members, so each one is a declared edge.
 - **`ConfigureServices` / `ConfigureEndpoints` / `ConfigureFacilities`** — optional overrides for extra DI registrations, endpoint mappings, and facilities.
 
 ## Running a Product
 
-The host wires the core services (`IContextAccessor`, `ILogger`, `IOfferingProvider`, and the offerings) and drives the product lifecycle. The complete, runnable bootstrap is in [`src/Atelier/examples/example-showcase`](../../src/Atelier/examples/example-showcase):
+The host wires the core services (`IContextAccessor`, `ILogger`, and the offerings) and drives the product lifecycle. The complete, runnable bootstrap is in [`src/Atelier/examples/example-showcase`](../../src/Atelier/examples/example-showcase):
 
 ```csharp
 var product = provider.GetRequiredService<GreetingProduct>();

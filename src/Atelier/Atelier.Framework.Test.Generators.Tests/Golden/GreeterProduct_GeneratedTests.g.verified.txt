@@ -41,7 +41,7 @@ internal static class GreeterProduct_GeneratedTests
                 }
                 var instance = ctor.Invoke(args);
                 foreach (var fieldName in new[] {
-                    "OfferingProvider",
+                    "_greeter",
                 })
                 {
                     var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
@@ -105,19 +105,6 @@ internal static class GreeterProduct_GeneratedTests
                 if (val is null)
                     throw new InvalidOperationException($"Logger field/property is null after ctor invocation on {type.FullName} — generator did not wire the inherited Logger member");
             }
-            private sealed class AutoMockedOfferingProvider_GreeterProduct : global::Atelier.Framework.Offering.IOfferingProvider
-            {
-                public TOffering? GetOffering<TOffering>() where TOffering : class
-                    => AutoMockProvider.For(typeof(global::Atelier.Framework.Offering.IOffering)) as TOffering;
-                public global::Atelier.Framework.Outcomes.Outcome<TOffering> GetRequiredOffering<TOffering>() where TOffering : class
-                    => global::Atelier.Framework.Outcomes.Outcome<TOffering>.Failure();
-                public global::System.Collections.Generic.IEnumerable<TOffering> GetOfferings<TOffering>() where TOffering : class
-                    => global::System.Array.Empty<TOffering>();
-                public object? GetOffering(global::System.Type offeringType)
-                    => AutoMockProvider.For(typeof(global::Atelier.Framework.Offering.IOffering));
-                public global::Atelier.Framework.Outcomes.Outcome<object> GetRequiredOffering(global::System.Type offeringType)
-                    => global::Atelier.Framework.Outcomes.Outcome<object>.Success(AutoMockProvider.For(typeof(global::Atelier.Framework.Offering.IOffering))!);
-            }
             [GeneratedTest("Lifecycle/Product-Configure-Start-Stop-Succeeds", "global::Sample.GreeterProduct")]
             public static async Task Test_Lifecycle_ConfigureStartStop_GreeterProduct()
             {
@@ -128,19 +115,11 @@ internal static class GreeterProduct_GeneratedTests
                 {
                     throw new NeedsFixtureException($"Product {type.FullName} has no synthesized constructor of arity 2; register a TestFixtures fixture supplying a constructed product.");
                 }
-                var provider = new AutoMockedOfferingProvider_GreeterProduct();
                 var parameters = ctor.GetParameters();
                 var ctorArgs = new object?[parameters.Length];
                 for (var i = 0; i < parameters.Length; i++)
                 {
-                    if (typeof(global::Atelier.Framework.Offering.IOfferingProvider).IsAssignableFrom(parameters[i].ParameterType))
-                    {
-                        ctorArgs[i] = provider;
-                    }
-                    else
-                    {
-                        ctorArgs[i] = AutoMockProvider.For(parameters[i].ParameterType);
-                    }
+                    ctorArgs[i] = AutoMockProvider.For(parameters[i].ParameterType);
                 }
                 var product = ctor.Invoke(ctorArgs) as global::Atelier.Framework.Offering.Product.ProductBase;
                 if (product is null)
@@ -148,14 +127,14 @@ internal static class GreeterProduct_GeneratedTests
                     throw new InvalidOperationException($"Could not instantiate product {type.FullName} via its synthesized constructor");
                 }
                 var flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy;
-                var configuration = new global::Atelier.Framework.Offering.Product.Configuration.OfferingConfiguration(provider);
+                var configuration = new global::Atelier.Framework.Offering.Product.Configuration.OfferingConfiguration();
                 var configure = type.GetMethod("ConfigureOfferings", flags);
                 if (configure is null)
                 {
                     throw new InvalidOperationException($"Product {type.FullName} has no ConfigureOfferings method");
                 }
                 configure.Invoke(product, new object?[] { configuration });
-                if (configuration.GetOfferingTypes().Count == 0)
+                if (configuration.GetOfferings().Count == 0)
                 {
                     throw new InvalidOperationException($"Product {type.FullName} registered no offerings in ConfigureOfferings");
                 }

@@ -17,7 +17,7 @@ namespace Atelier.Framework.Offering.Requisition;
 public partial class OfferingRequisitionService : IAtelier, IOfferingRequisitionService
 {
     [Requisite] protected readonly IOfferingManager _offeringManager = null!;
-    [Requisite] protected readonly IOfferingProvider _offeringProvider = null!;
+    [Requisite] protected readonly IEnumerable<IOffering> _offerings = null!;
     [Requisite] protected readonly IOfferingResourceMonitor _resourceMonitor = null!;
     [Requisite] protected readonly Authorization.IRequisitionAuthorizer _authorizer = null!;
     private const string AdministratorRole = "RequisitionAdministrator";
@@ -399,7 +399,7 @@ public partial class OfferingRequisitionService : IAtelier, IOfferingRequisition
         return new OfferingHandle<T>(
             result,
             _offeringManager,
-            _offeringProvider);
+            _offerings.OfType<T>().FirstOrDefault());
     }
 
     private class RequisitionTracker

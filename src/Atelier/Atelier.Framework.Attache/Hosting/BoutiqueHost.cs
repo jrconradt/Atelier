@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 
 namespace Atelier.Framework.Attache.Hosting;
@@ -45,7 +46,7 @@ public static class BoutiqueHost
 
         var manifest = BuildManifest(definition, options);
 
-        RegisterCoreServices(builder.Services, definition);
+        RegisterCoreServices(builder.Services);
         definition.RegisterServices(builder.Services);
         RegisterCapabilities(builder.Services, options.Capabilities);
         builder.Services.AddAtelierBoutiqueStartup(manifest);
@@ -53,17 +54,6 @@ public static class BoutiqueHost
         definition.ConfigureServices(builder.Services);
 
         var app = builder.Build();
-
-        app.Services.GetRequiredService<AttacheHost>().Configure(new AttacheConfiguration
-        {
-            AutoStartBoutiques = true,
-            ResourceLimits = new AttacheResourceLimits
-            {
-                MaxBoutiques = 1,
-                MaxMemoryBytes = options.MaxMemoryBytes,
-                MaxCpuPercent = options.MaxCpuPercent,
-            },
-        });
 
         MapEndpoints(app, definition, options, manifest, instanceId);
         definition.ConfigureApplication(app);
@@ -133,20 +123,11 @@ public static class BoutiqueHost
         };
     }
 
-    private static void RegisterCoreServices(IServiceCollection services, BoutiqueHostDefinition definition)
+    private static void RegisterCoreServices(IServiceCollection services)
     {
         services.AddSingleton<IContext>(_ => Context.Context.Empty);
         services.AddSingleton<ILoggingStrategy, ConsoleLoggingStrategy>();
         services.AddSingleton<ILogger>(sp => new Logger(sp.GetRequiredService<ILoggingStrategy>()));
-
-        if (definition.Products.Count > 0)
-        {
-            services.AddSingleton<IOfferingProvider, ServiceProviderOfferingProvider>();
-        }
-        else
-        {
-            services.AddSingleton<IOfferingProvider, NullOfferingProvider>();
-        }
     }
 
     private static void RegisterCapabilities(IServiceCollection services, BoutiqueHostCapabilityOptions capabilities)
@@ -256,16 +237,19 @@ public static class BoutiqueHost
             return;
         }
 
-        var healthReport = await services.GetRequiredService<AttacheHost>()
-            .GetHealthReportAsync()
+        var healthReport = await services.GetRequiredService<HealthCheckService>()
+            .CheckHealthAsync(httpContext.RequestAborted)
             .ConfigureAwait(false);
-        if (!healthReport.IsSuccess)
-        {
-            httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
-            return;
-        }
 
-        await httpContext.Response.WriteAsJsonAsync(healthReport.Data).ConfigureAwait(false);
+        await httpContext.Response.WriteAsJsonAsync(new
+        {
+            isHealthy = healthReport.Status == HealthStatus.Healthy,
+            status = healthReport.Status.ToString(),
+            issues = healthReport.Entries
+                .Where(entry => entry.Value.Status != HealthStatus.Healthy)
+                .Select(entry => $"{entry.Key}: {entry.Value.Status} ({entry.Value.Description ?? "no description"})")
+                .ToList(),
+        }).ConfigureAwait(false);
     }
 
     private static void RegisterLifecycle(WebApplication app, string boutiqueId, string instanceId)

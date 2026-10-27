@@ -10,7 +10,6 @@ namespace Atelier.Framework.Offering.Product;
 
 public abstract partial class ProductBase : IAtelier
 {
-    [Requisite] protected readonly IOfferingProvider OfferingProvider = null!;
 
     private readonly List<IOffering> _offerings = new();
     private readonly EndpointConfiguration _endpointConfiguration = new();
@@ -70,7 +69,7 @@ public abstract partial class ProductBase : IAtelier
             return;
         }
 
-        var offeringConfig = new OfferingConfiguration(OfferingProvider);
+        var offeringConfig = new OfferingConfiguration();
         ConfigureOfferings(offeringConfig);
 
         var facilityConfig = new FacilityConfiguration();

@@ -15,7 +15,7 @@ New here? Read [`src/Atelier/examples/example-showcase`](../src/Atelier/examples
 | [Messaging](concepts/messaging.md) | Request/response dispatch via `IRequestHandler` and `IHandlerRegistry` |
 | [Event stream](concepts/eventstream.md) | Topic-based consumers, offset tracking, and at-least-once delivery |
 | [Network](concepts/network.md) | Transport, scope authorization, and host discovery |
-| [Facilities](concepts/facilities.md) | The Facility / Attache / Gateway model for infrastructure capabilities |
+| [Facilities](concepts/facilities.md) | The Facility / Gateway model for infrastructure capabilities |
 | [Observability](concepts/observability.md) | `IAtelier` and the `Observe(...)` contract |
 | [Identity and Auth](concepts/identity.md) | Authentication, JWT, and OIDC server/client setups |
 

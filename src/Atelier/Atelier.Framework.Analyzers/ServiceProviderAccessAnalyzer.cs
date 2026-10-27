@@ -87,8 +87,7 @@ public class ServiceProviderAccessAnalyzer : DiagnosticAnalyzer
 
         var containingSymbol = context.ContainingSymbol;
         if (containingSymbol != null
-            && IsServiceClass(containingSymbol)
-            && !IsAllowlistedCompositionRoot(containingSymbol))
+            && IsServiceClass(containingSymbol))
         {
             var diagnostic = Diagnostic.Create(
                 ServiceProviderAccessRule,
@@ -134,10 +133,5 @@ public class ServiceProviderAccessAnalyzer : DiagnosticAnalyzer
     private static bool IsServiceClass(ISymbol symbol)
     {
         return symbol.ContainingType.HasAttribute("InfrastructureAttribute");
-    }
-
-    private static bool IsAllowlistedCompositionRoot(ISymbol symbol)
-    {
-        return symbol.ContainingType?.Name == "ServiceProviderOfferingProvider";
     }
 }

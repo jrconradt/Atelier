@@ -7,6 +7,7 @@ using Templar.Rendering;
 using Templar.Presets;
 using I = Atelier.Framework.Requisitions.Generators.Compositors.Injection;
 using A = Atelier.Framework.Requisitions.Generators.Compositors.Injection.Assignments;
+using E = Atelier.Framework.Requisitions.Generators.Compositors.Edges;
 
 namespace Atelier.Framework.Generators.Requisition;
 
@@ -24,6 +25,19 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
 
         context.RegisterSourceOutput(
             injections,
+            static (spc, result) =>
+                spc.AddSource(result.HintName,
+                              SourceText.From(result.Source, Encoding.UTF8)));
+
+        var edges = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                static (node, _) => IsCandidate(node),
+                static (ctx, _) => TransformEdges(ctx))
+            .Where(static result => result is not null)
+            .Select(static (result, _) => result!);
+
+        context.RegisterSourceOutput(
+            edges,
             static (spc, result) =>
                 spc.AddSource(result.HintName,
                               SourceText.From(result.Source, Encoding.UTF8)));
@@ -49,7 +63,8 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
         return hasRequisiteAttribute || partialWithBase;
     }
 
-    private static RequisiteInjectionResult? Transform(GeneratorSyntaxContext ctx)
+    // A partial class is processed once, from its first candidate declaration.
+    private static INamedTypeSymbol? ResolveClass(GeneratorSyntaxContext ctx)
     {
         var classDeclaration = (ClassDeclarationSyntax)ctx.Node;
         var classSymbol = ctx.SemanticModel.GetDeclaredSymbol(classDeclaration);
@@ -71,6 +86,17 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
                 return null;
             }
             break;
+        }
+
+        return classSymbol;
+    }
+
+    private static RequisiteInjectionResult? Transform(GeneratorSyntaxContext ctx)
+    {
+        var classSymbol = ResolveClass(ctx);
+        if (classSymbol is null)
+        {
+            return null;
         }
 
         var loggerType = ctx.SemanticModel.Compilation.GetTypeByMetadataName("Atelier.Framework.Observability.ILogger");
@@ -132,6 +158,64 @@ public sealed class RequisiteInjectionSourceGenerator : IIncrementalGenerator
         var namespacePart = GeneratorNaming.SanitizeNamespace(classSymbol.ContainingNamespace);
         var fileName = $"{namespacePart}_{classSymbol.Name}_RequisiteInjection.g.cs";
         return new RequisiteInjectionResult(fileName, injectionCode);
+    }
+
+    private static RequisiteInjectionResult? TransformEdges(GeneratorSyntaxContext ctx)
+    {
+        var classSymbol = ResolveClass(ctx);
+        if (classSymbol is null || classSymbol.IsGenericType)
+        {
+            return null;
+        }
+
+        var compilation = ctx.SemanticModel.Compilation;
+        var assembly = compilation.Assembly;
+        if (compilation.GetTypeByMetadataName("Atelier.Framework.Requisitions.RequisiteEdgeAttribute") is null
+            || !compilation.IsSymbolAccessibleWithin(classSymbol, assembly))
+        {
+            return null;
+        }
+
+        var requisites = GetRequisiteMembers(classSymbol)
+            .Where(m => !m.IsRuntime)
+            .Select(m => m.Type.WithNullableAnnotation(NullableAnnotation.None))
+            .Where(t => !ContainsTypeParameter(t)
+                && compilation.IsSymbolAccessibleWithin(t, assembly))
+            .Select(t => t.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(t => t, StringComparer.Ordinal)
+            .ToList();
+
+        if (requisites.Count == 0)
+        {
+            return null;
+        }
+
+        var service = classSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        var source = new E.RequisiteEdges
+        {
+            Edges = Sequence.Lines(requisites.Select(r => (Compositor)new E.RequisiteEdge
+            {
+                Service = service,
+                Requisite = r,
+            })),
+        }.Render();
+
+        var namespacePart = GeneratorNaming.SanitizeNamespace(classSymbol.ContainingNamespace);
+        return new RequisiteInjectionResult($"{namespacePart}_{classSymbol.Name}_RequisiteEdges.g.cs", source);
+    }
+
+    private static bool ContainsTypeParameter(ITypeSymbol type)
+    {
+        return type switch
+        {
+            ITypeParameterSymbol => true,
+            IArrayTypeSymbol array => ContainsTypeParameter(array.ElementType),
+            IPointerTypeSymbol pointer => ContainsTypeParameter(pointer.PointedAtType),
+            INamedTypeSymbol named => named.TypeArguments.Any(ContainsTypeParameter)
+                || (named.ContainingType is not null && ContainsTypeParameter(named.ContainingType)),
+            _ => false,
+        };
     }
 
     private static bool LoggerWillExistInChain(INamedTypeSymbol classSymbol)

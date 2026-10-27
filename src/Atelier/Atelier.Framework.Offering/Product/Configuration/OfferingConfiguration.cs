@@ -4,92 +4,58 @@ namespace Atelier.Framework.Offering.Product.Configuration;
 
 public class OfferingConfiguration : IOfferingConfiguration
 {
-    private readonly List<Type> _offeringTypes = new();
-    private readonly Dictionary<Type, List<Action<object>>> _configurators = new();
-    private readonly IOfferingProvider _offeringProvider;
+    private readonly List<IOffering> _offerings = new();
+    private readonly Dictionary<IOffering, List<Action>> _configurators = new(ReferenceEqualityComparer.Instance);
 
-    public OfferingConfiguration(IOfferingProvider offeringProvider)
+    public IOfferingConfiguration AddOffering(IOffering offering)
     {
-        _offeringProvider = offeringProvider ?? throw new ArgumentNullException(nameof(offeringProvider));
+        ArgumentNullException.ThrowIfNull(offering);
+
+        if (!_offerings.Contains(offering))
+        {
+            _offerings.Add(offering);
+        }
+
+        return this;
     }
 
-    public IOfferingConfiguration AddOffering<TOffering>()
+    public IOfferingConfiguration AddOffering<TOffering>(TOffering offering, Action<TOffering> configure)
         where TOffering : class, IOffering
     {
-        return AddOffering(typeof(TOffering));
-    }
-
-    public IOfferingConfiguration AddOffering<TOffering>(Action<TOffering> configure)
-        where TOffering : class, IOffering
-    {
+        ArgumentNullException.ThrowIfNull(offering);
         ArgumentNullException.ThrowIfNull(configure);
 
-        AddOffering(typeof(TOffering));
+        AddOffering(offering);
 
-        if (!_configurators.ContainsKey(typeof(TOffering)))
+        if (!_configurators.TryGetValue(offering, out var configurators))
         {
-            _configurators[typeof(TOffering)] = new List<Action<object>>();
+            configurators = new List<Action>();
+            _configurators[offering] = configurators;
         }
 
-        _configurators[typeof(TOffering)].Add(obj => configure((TOffering)obj));
+        configurators.Add(() => configure(offering));
 
         return this;
     }
 
-    public IOfferingConfiguration AddOffering(Type offeringType)
+    public ReadOnlyCollection<IOffering> GetOfferings()
     {
-        ArgumentNullException.ThrowIfNull(offeringType);
-
-        if (!typeof(IOffering).IsAssignableFrom(offeringType))
-        {
-            throw new ArgumentException(
-                $"Type {offeringType.Name} must implement IOffering",
-                nameof(offeringType));
-        }
-
-        if (!_offeringTypes.Contains(offeringType))
-        {
-            _offeringTypes.Add(offeringType);
-        }
-
-        return this;
-    }
-
-    public ReadOnlyCollection<Type> GetOfferingTypes()
-    {
-        return _offeringTypes.AsReadOnly();
+        return _offerings.AsReadOnly();
     }
 
     public IEnumerable<IOffering> ResolveOfferings()
     {
-        var offerings = new List<IOffering>();
-
-        foreach (var offeringType in _offeringTypes)
+        foreach (var offering in _offerings)
         {
-            var offeringObj = _offeringProvider.GetOffering(offeringType);
-            if (offeringObj == null)
-            {
-                throw new InvalidOperationException(
-                    $"Offering of type {offeringType.Name} not found in provider");
-            }
-
-            if (offeringObj is not IOffering offering)
-            {
-                throw new InvalidOperationException(
-                    $"Offering {offeringType.Name} does not implement IOffering");
-            }
-
-            if (_configurators.TryGetValue(offeringType, out var configurators))
+            if (_configurators.TryGetValue(offering, out var configurators))
             {
                 foreach (var configurator in configurators)
                 {
-                    configurator(offeringObj);
+                    configurator();
                 }
             }
-
-            offerings.Add(offering);
         }
 
-        return offerings;
+        return _offerings.ToList();
     }
 }

@@ -1,6 +1,5 @@
 using Atelier.Framework.Primitives;
 using System.Collections.Concurrent;
-using System.Reflection;
 using Atelier.Framework.Infrastructure;
 using Atelier.Framework.Attributes;
 using Atelier.Framework.Infrastructure.Operation;
@@ -9,15 +8,13 @@ using Atelier.Framework.Offering;
 using Atelier.Framework.Offering.Product;
 using Atelier.Framework.Outcomes;
 using Atelier.Framework.Requisitions;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Atelier.Framework.Attache;
 
 [Infrastructure(typeof(Boutique), typeof(Boutique), InfrastructureLifetime.Transient)]
 public partial class Boutique : IAtelier, IBoutique
 {
-    [Requisite] protected readonly IServiceProvider _serviceProvider = null!;
-    [Requisite] protected readonly IOfferingProvider _offeringProvider = null!;
+    [Requisite] protected readonly IEnumerable<ProductBase> _declaredProducts = null!;
 
     private BoutiqueManifest _manifest = new()
     {
@@ -25,8 +22,6 @@ public partial class Boutique : IAtelier, IBoutique
         Name = "atelier-unconfigured"
     };
     private readonly ConcurrentDictionary<string, ProductBase> _products = new();
-
-    private static readonly ConcurrentDictionary<Type, RequisiteField[]> _requisiteFieldCache = new();
 
     private BoutiqueState _state = BoutiqueState.Created;
 
@@ -149,26 +144,12 @@ public partial class Boutique : IAtelier, IBoutique
         ArgumentNullException.ThrowIfNull(manifest);
 
 
-        Type? productType = manifest.ProductType;
-
-        if (productType == null
-            && !string.IsNullOrEmpty(manifest.ProductTypeName))
-        {
-            if (manifest.ProductTypeName.Contains(',', StringComparison.Ordinal))
-            {
-                Observe(LogLevel.Warning, values: [("Reason", "Product type name must not be assembly-qualified"), ("BoutiqueId", BoutiqueId), ("ProductTypeName", manifest.ProductTypeName)]);
-
-                return Outcome<string>.Failure();
-            }
-
-            productType = SafeTypeResolver.Resolve(manifest.ProductTypeName);
-        }
-
+        var productType = manifest.ProductType;
         if (productType == null)
         {
             Observe(
                 LogLevel.Warning,
-                values: [("Reason", "Product type could not be resolved"), ("BoutiqueId", BoutiqueId), ("ProductTypeName", manifest.ProductTypeName)]);
+                values: [("Reason", "Product type is not declared"), ("BoutiqueId", BoutiqueId), ("ProductTypeName", manifest.ProductTypeName)]);
             return Outcome<string>.Failure();
         }
 
@@ -182,11 +163,14 @@ public partial class Boutique : IAtelier, IBoutique
 
         try
         {
-            var product = (ProductBase)ActivatorUtilities.CreateInstance(
-                _serviceProvider,
-                productType);
-
-            InjectRequisiteFields(product);
+            var product = _declaredProducts.FirstOrDefault(p => p.GetType() == productType);
+            if (product == null)
+            {
+                Observe(
+                    LogLevel.Warning,
+                    values: [("Reason", "Product is not declared in this boutique"), ("BoutiqueId", BoutiqueId), ("ProductType", productType.Name)]);
+                return Outcome<string>.Failure();
+            }
 
             var productId = $"{BoutiqueId}_{product.Name}_{Guid.NewGuid():N}";
 
@@ -282,83 +266,5 @@ public partial class Boutique : IAtelier, IBoutique
         };
 
         return Task.FromResult(Outcome<BoutiqueHealthReport>.Success(report));
-    }
-
-        private void InjectRequisiteFields(object instance)
-    {
-        var requisiteFields = _requisiteFieldCache.GetOrAdd(
-            instance.GetType(),
-            BuildRequisiteFields);
-
-        foreach (var requisiteField in requisiteFields)
-        {
-            var field = requisiteField.Field;
-
-            var currentValue = field.GetValue(instance);
-            if (currentValue != null)
-            {
-                continue;
-            }
-
-            var service = _offeringProvider.GetOffering(field.FieldType);
-            if (service != null)
-            {
-                field.SetValue(instance, service);
-            }
-            else if (requisiteField.Required)
-            {
-                throw new InvalidOperationException(
-                    $"Cannot resolve required [Requisite] field '{field.Name}' " +
-                    $"of type '{field.FieldType.Name}' on '{requisiteField.DeclaringTypeName}'");
-            }
-        }
-    }
-
-        private static RequisiteField[] BuildRequisiteFields(Type concreteType)
-    {
-        var requisiteFields = new List<RequisiteField>();
-        var type = concreteType;
-
-        while (type != null && type != typeof(object))
-        {
-            var fields = type.GetFields(
-                BindingFlags.Instance |
-                BindingFlags.Public |
-                BindingFlags.NonPublic |
-                BindingFlags.DeclaredOnly);
-
-            foreach (var field in fields)
-            {
-                var requisiteAttr = field.GetCustomAttribute<RequisiteAttribute>();
-                if (requisiteAttr == null)
-                {
-                    continue;
-                }
-
-                requisiteFields.Add(new RequisiteField(field,
-                                                        requisiteAttr.Required,
-                                                        type.Name));
-            }
-
-            type = type.BaseType;
-        }
-
-        return requisiteFields.ToArray();
-    }
-
-        private readonly struct RequisiteField
-    {
-        public RequisiteField(FieldInfo field,
-                              bool required,
-                              string declaringTypeName)
-        {
-            Field = field;
-            Required = required;
-            DeclaringTypeName = declaringTypeName;
-        }
-
-        public FieldInfo Field { get; }
-        public bool Required { get; }
-        public string DeclaringTypeName { get; }
     }
 }

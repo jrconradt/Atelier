@@ -25,7 +25,18 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
     private const string BOUTIQUE_PRODUCT_ATTRIBUTE = "Atelier.Framework.Attributes.BoutiqueProductAttribute";
     private const string INFRASTRUCTURE_ATTRIBUTE = "Atelier.Framework.Attributes.InfrastructureAttribute";
     private const string API_ATTRIBUTE = "Atelier.Framework.Attributes.ApiAttribute";
+    private const string REQUISITE_ATTRIBUTE = "Atelier.Framework.Requisitions.RequisiteAttribute";
+    private const string REQUISITE_EDGE_ATTRIBUTE = "Atelier.Framework.Requisitions.RequisiteEdgeAttribute";
     private const string PRODUCT_BASE = "Atelier.Framework.Offering.Product.ProductBase";
+    private const string PRODUCT_BASE_CONTRACT = "global::" + PRODUCT_BASE;
+
+    // Framework contracts a service is also registered under, so the services that take
+    // them as IEnumerable<T> requisites receive every implementation in the boutique.
+    private static readonly string[] FORWARDED_CONTRACTS =
+    {
+        "Atelier.Framework.Offering.IOffering",
+        "Atelier.Framework.Messaging.IRequestHandler",
+    };
     private const string HOSTED_SERVICE = "Microsoft.Extensions.Hosting.IHostedService";
     private const string ATELIER_ASSEMBLY_PREFIX = "Atelier.";
 
@@ -43,6 +54,13 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
 
     private static readonly string[] LIFETIME_METHODS = { "AddSingleton", "AddScoped", "AddTransient" };
 
+    // In-process services the .NET host provides. A requisite on one of these is not an
+    // edge between boutique services.
+    private static readonly HashSet<string> PLATFORM_SERVICES = new(StringComparer.Ordinal)
+    {
+        "Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService",
+    };
+
     private static readonly DiagnosticDescriptor ProductNotProductBaseRule = new DiagnosticDescriptor(
         "ATELIER0900",
         "Boutique product must derive from ProductBase",
@@ -51,6 +69,26 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "The boutique host starts each declared product through ProductBase. A type that does not derive from it cannot be started; declare a ProductBase-derived type.",
+        customTags: new[] { WellKnownDiagnosticTags.Compiler });
+
+    private static readonly DiagnosticDescriptor UnprovidedRequisiteRule = new DiagnosticDescriptor(
+        "ATELIER0901",
+        "Requisite has no providing service",
+        "{0}, which no service in this boutique provides",
+        "Generator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Every [Requisite] is an edge to the boutique service that provides it. A requisite no service provides has nothing to route to; register a provider with [Infrastructure].",
+        customTags: new[] { WellKnownDiagnosticTags.Compiler });
+
+    private static readonly DiagnosticDescriptor AmbiguousRequisiteRule = new DiagnosticDescriptor(
+        "ATELIER0902",
+        "Requisite has more than one providing service",
+        "{0}, which more than one service in this boutique provides",
+        "Generator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "A single [Requisite] must resolve to exactly one service. Require IEnumerable<T> to take every provider, or narrow the contract.",
         customTags: new[] { WellKnownDiagnosticTags.Compiler });
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -125,6 +163,7 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         var participating = CollectParticipatingAssemblies(compilation, productClosure);
 
         var registrations = new List<RegistrationModel>();
+        var services = new List<INamedTypeSymbol>(productTypes);
         var apiEndpoints = new List<ApiEndpointModel>();
         foreach (var assembly in participating)
         {
@@ -135,6 +174,7 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
                 if (registration is not null)
                 {
                     registrations.Add(registration);
+                    services.Add(type);
                 }
 
                 if (!SymbolEqualityComparer.Default.Equals(assembly, compilation.Assembly))
@@ -148,8 +188,11 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             }
         }
 
+        AddProductRegistrations(productTypes, registrations);
+
         var requisiteAssemblies = CollectRequisiteAssemblies(compilation);
-        var artifacts = RenderArtifacts(id, name, version, products, requisiteAssemblies);
+        var serviceEdges = CollectServiceEdges(compilation, services, registrations, boutique, diagnostics);
+        var artifacts = RenderArtifacts(id, name, version, products, requisiteAssemblies, serviceEdges);
 
         return new BoutiqueHostModel(
             ToNamespace(compilation.AssemblyName),
@@ -271,6 +314,193 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         }
     }
 
+    // Declared products are registered as themselves and as ProductBase, so the boutique
+    // receives them as requisites instead of activating them by type at runtime.
+    private static void AddProductRegistrations(
+        IReadOnlyList<INamedTypeSymbol> productTypes,
+        List<RegistrationModel> registrations)
+    {
+        foreach (var productType in productTypes)
+        {
+            var implementation = productType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            var index = registrations.FindIndex(r => r.Implementation == implementation && !r.HasInterface);
+            if (index >= 0)
+            {
+                registrations[index] = registrations[index] with { Forwards = new EquatableArray<string>(registrations[index].Forwards.Items.Add(PRODUCT_BASE_CONTRACT)) };
+            }
+            else
+            {
+                registrations.Add(new RegistrationModel("AddSingleton", implementation, implementation, false, false, new EquatableArray<string>(ImmutableArray.Create(PRODUCT_BASE_CONTRACT))));
+            }
+        }
+    }
+
+    // A service's identity is its Namespace.ServiceName. Each [Requisite] member is an
+    // edge to the host service that provides the member's declared type; a requisite no
+    // host service provides has nothing to route to and is not an edge. Types compiled here are read directly; referenced types' private
+    // members are not visible, so their edges come from the [assembly: RequisiteEdge]
+    // declarations the requisites generator emitted into their assembly.
+    private static List<ServiceEdgesModel> CollectServiceEdges(
+        Compilation compilation,
+        IReadOnlyList<INamedTypeSymbol> services,
+        IReadOnlyList<RegistrationModel> registrations,
+        AttributeData boutique,
+        List<BoutiqueHostDiagnostic> diagnostics)
+    {
+        var declared = CollectDeclaredEdges(services
+            .SelectMany(TypeChain)
+            .Select(type => type.ContainingAssembly)
+            .Where(assembly => assembly is not null && !SymbolEqualityComparer.Default.Equals(assembly, compilation.Assembly))
+            .Distinct(SymbolEqualityComparer.Default)
+            .Cast<IAssemblySymbol>());
+
+        // Providers mirror the registrations DI will hold: each contract maps to every
+        // implementation registered for it, and every service provides itself.
+        var providers = new Dictionary<string, SortedSet<string>>(StringComparer.Ordinal);
+        void AddProvider(string contract, string implementation)
+        {
+            if (!providers.TryGetValue(contract, out var set))
+            {
+                set = new SortedSet<string>(StringComparer.Ordinal);
+                providers[contract] = set;
+            }
+
+            set.Add(implementation);
+        }
+
+        foreach (var service in services)
+        {
+            AddProvider(Identity(service), Identity(service));
+        }
+
+        foreach (var registration in registrations)
+        {
+            AddProvider(StripGlobal(registration.ServiceType), StripGlobal(registration.Implementation));
+            foreach (var contract in registration.Forwards.Items)
+            {
+                AddProvider(StripGlobal(contract), StripGlobal(registration.Implementation));
+            }
+        }
+
+        var models = new SortedDictionary<string, ServiceEdgesModel>(StringComparer.Ordinal);
+        foreach (var service in services)
+        {
+            var edges = new SortedSet<string>(StringComparer.Ordinal);
+            var identity = Identity(service);
+            foreach (var type in TypeChain(service))
+            {
+                var targets = SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, compilation.Assembly)
+                    ? type.GetMembers().Select(RequisiteType).OfType<ITypeSymbol>()
+                    : declared.TryGetValue(Identity(type), out var edgesOfType) ? edgesOfType : Enumerable.Empty<ITypeSymbol>();
+
+                foreach (var target in targets)
+                {
+                    if (CollectionElement(target) is { } element)
+                    {
+                        if (providers.TryGetValue(Identity(element), out var all))
+                        {
+                            edges.UnionWith(all);
+                        }
+
+                        continue;
+                    }
+
+                    var targetIdentity = Identity(target);
+                    providers.TryGetValue(targetIdentity, out var found);
+                    switch (found?.Count ?? 0)
+                    {
+                        case 1:
+                            edges.Add(found!.Min!);
+                            break;
+                        case 0 when PLATFORM_SERVICES.Contains(targetIdentity):
+                            break;
+                        case 0:
+                            diagnostics.Add(BoutiqueHostDiagnostic.At(UnprovidedRequisiteRule, boutique, $"'{identity}' requires '{targetIdentity}'"));
+                            break;
+                        default:
+                            diagnostics.Add(BoutiqueHostDiagnostic.At(AmbiguousRequisiteRule, boutique, $"'{identity}' requires '{targetIdentity}'"));
+                            break;
+                    }
+                }
+            }
+
+            models[identity] = new ServiceEdgesModel(
+                identity,
+                new EquatableArray<string>(edges.ToImmutableArray()));
+        }
+
+        return models.Values.ToList();
+    }
+
+    private static IEnumerable<INamedTypeSymbol> TypeChain(INamedTypeSymbol type)
+    {
+        for (var current = type; current is not null; current = current.BaseType)
+        {
+            yield return current;
+        }
+    }
+
+    private static Dictionary<string, List<ITypeSymbol>> CollectDeclaredEdges(IEnumerable<IAssemblySymbol> assemblies)
+    {
+        var declared = new Dictionary<string, List<ITypeSymbol>>(StringComparer.Ordinal);
+        foreach (var attribute in assemblies.SelectMany(a => a.GetAttributes()))
+        {
+            if (attribute.AttributeClass?.ToDisplayString() != REQUISITE_EDGE_ATTRIBUTE
+                || attribute.ConstructorArguments.Length != 2
+                || attribute.ConstructorArguments[0].Value is not ITypeSymbol service
+                || attribute.ConstructorArguments[1].Value is not ITypeSymbol requisite)
+            {
+                continue;
+            }
+
+            var key = Identity(service);
+            if (!declared.TryGetValue(key, out var targets))
+            {
+                targets = new List<ITypeSymbol>();
+                declared[key] = targets;
+            }
+
+            targets.Add(requisite);
+        }
+
+        return declared;
+    }
+
+    private static ITypeSymbol? RequisiteType(ISymbol member)
+    {
+        if (!member.GetAttributes().Any(a => a.AttributeClass?.ToDisplayString() == REQUISITE_ATTRIBUTE))
+        {
+            return null;
+        }
+
+        return member switch
+        {
+            IFieldSymbol field => field.Type,
+            IPropertySymbol property => property.Type,
+            _ => null,
+        };
+    }
+
+    private static ITypeSymbol? CollectionElement(ITypeSymbol type)
+    {
+        return type is INamedTypeSymbol { IsGenericType: true } named
+            && named.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IEnumerable_T
+                ? named.TypeArguments[0]
+                : null;
+    }
+
+    private static string StripGlobal(string fullyQualified)
+    {
+        return fullyQualified.StartsWith("global::", StringComparison.Ordinal)
+            ? fullyQualified.Substring("global::".Length)
+            : fullyQualified;
+    }
+
+    private static string Identity(ITypeSymbol type)
+    {
+        return type.WithNullableAnnotation(NullableAnnotation.None).ToDisplayString();
+    }
+
     private static RegistrationModel? TryBuildRegistration(INamedTypeSymbol type)
     {
         if (type.TypeKind != TypeKind.Class
@@ -319,12 +549,21 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         var isHostedService = lifetimeValue == 0
             && type.AllInterfaces.Any(i => i.ToDisplayString() == HOSTED_SERVICE);
 
+        var forwards = type.AllInterfaces
+            .Select(i => i.ToDisplayString())
+            .Where(i => FORWARDED_CONTRACTS.Contains(i))
+            .Select(i => "global::" + i)
+            .Where(i => !string.Equals(i, service, StringComparison.Ordinal))
+            .OrderBy(i => i, StringComparer.Ordinal)
+            .ToImmutableArray();
+
         return new RegistrationModel(
             lifetime,
             service,
             implementation,
             !string.Equals(service, implementation, StringComparison.Ordinal),
-            isHostedService);
+            isHostedService,
+            new EquatableArray<string>(forwards));
     }
 
     private static ApiEndpointModel? TryBuildApiEndpoints(IAssemblySymbol assembly, INamedTypeSymbol type)
@@ -401,11 +640,12 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         string name,
         string version,
         IReadOnlyList<ProductModel> products,
-        IReadOnlyList<string> requisiteAssemblies)
+        IReadOnlyList<string> requisiteAssemblies,
+        IReadOnlyList<ServiceEdgesModel> serviceEdges)
     {
         return new List<ArtifactModel>
         {
-            new ArtifactModel("requisite-manifest.json", RenderManifest(id, name, version, products, requisiteAssemblies)),
+            new ArtifactModel("requisite-manifest.json", RenderManifest(id, name, version, products, requisiteAssemblies, serviceEdges)),
         };
     }
 
@@ -414,7 +654,8 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         string name,
         string version,
         IReadOnlyList<ProductModel> products,
-        IReadOnlyList<string> requisiteAssemblies)
+        IReadOnlyList<string> requisiteAssemblies,
+        IReadOnlyList<ServiceEdgesModel> serviceEdges)
     {
         var json = new StringBuilder();
         json.Append("{\n");
@@ -422,7 +663,17 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
         json.Append("  \"name\": ").Append(JsonString(name)).Append(",\n");
         json.Append("  \"version\": ").Append(JsonString(version)).Append(",\n");
         json.Append("  \"products\": ").Append(JsonArray(products.Select(p => p.DisplayName))).Append(",\n");
-        json.Append("  \"requisiteAssemblies\": ").Append(JsonArray(requisiteAssemblies)).Append("\n");
+        json.Append("  \"requisiteAssemblies\": ").Append(JsonArray(requisiteAssemblies)).Append(",\n");
+        json.Append("  \"services\": [");
+        for (var i = 0; i < serviceEdges.Count; i++)
+        {
+            var service = serviceEdges[i];
+            json.Append(i == 0 ? "\n" : ",\n");
+            json.Append("    { \"identity\": ").Append(JsonString(service.Identity))
+                .Append(", \"requisites\": ").Append(JsonArray(service.Requisites.Items)).Append(" }");
+        }
+
+        json.Append(serviceEdges.Count == 0 ? "]\n" : "\n  ]\n");
         json.Append("}\n");
         return json.ToString();
     }
@@ -517,6 +768,16 @@ public sealed class BoutiqueHostSourceGenerator : IIncrementalGenerator
             };
         }
 
+        foreach (var contract in registration.Forwards.Items)
+        {
+            yield return new BH.ContractForward
+            {
+                Lifetime = registration.Lifetime,
+                Contract = contract,
+                Implementation = registration.Implementation,
+            };
+        }
+
         if (registration.IsHostedService)
         {
             yield return new BH.HostedService
@@ -547,11 +808,14 @@ internal sealed record RegistrationModel(
     string ServiceType,
     string Implementation,
     bool HasInterface,
-    bool IsHostedService);
+    bool IsHostedService,
+    EquatableArray<string> Forwards);
 
 internal sealed record ApiEndpointModel(string EndpointsType, string MapMethod);
 
 internal sealed record ArtifactModel(string FileName, string Content);
+
+internal sealed record ServiceEdgesModel(string Identity, EquatableArray<string> Requisites);
 
 internal sealed record BoutiqueHostDiagnostic(
     DiagnosticDescriptor Descriptor,

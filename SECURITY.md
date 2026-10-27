@@ -39,9 +39,9 @@ Facilities (caching, messaging, identity, and others) are pluggable and isolated
 
 ### Data Protection and Regulatory Scope
 
-Atelier is a domain-agnostic infrastructure framework. It provides no data-subject-rights machinery (consent capture, access/erasure/export, retention-by-record) and no data-residency or region-pinning controls. The identity and audit layers capture principal and tenant identifiers for operational purposes only; they do not implement erasure or export pathways for those identifiers.
+Atelier is a domain-agnostic infrastructure framework. It provides no data-subject-rights machinery (consent capture, access/erasure/export, retention-by-record) and no data-residency or region-pinning controls. The identity layer captures principal and tenant identifiers for operational purposes only; it does not implement erasure or export pathways for those identifiers.
 
-When Atelier is deployed into a context governed by GDPR, CCPA, or similar regulation, the deploying party owns all data-subject-rights and data-residency obligations for personal data flowing through the system. Do not assume the audit or identity layers satisfy erasure, consent, or residency requirements.
+When Atelier is deployed into a context governed by GDPR, CCPA, or similar regulation, the deploying party owns all data-subject-rights and data-residency obligations for personal data flowing through the system. Do not assume the identity layer satisfies erasure, consent, or residency requirements.
 
 ## Disclaimer
 

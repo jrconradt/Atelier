@@ -50,9 +50,11 @@ public sealed class GeneratorGoldenTests
 
         public partial class GreeterProduct : ProductBase
         {
+            [Atelier.Framework.Requisitions.Requisite] private readonly GreeterOffering _greeter = null!;
+
             protected override void ConfigureOfferings(IOfferingConfiguration offerings)
             {
-                offerings.AddOffering<GreeterOffering>();
+                offerings.AddOffering(_greeter);
             }
 
             protected override Task<Outcome> OnStartAsync(CancellationToken cancellationToken)
