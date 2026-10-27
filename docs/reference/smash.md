@@ -159,7 +159,7 @@ project with `dotnet build` like any other.
 
 Everything else derived from code is computed by the same generator and carried
 by the built host: `requisite-manifest.json` (the host's `Atelier.*` assembly
-closure and products). A generator cannot write files, so the `AtelierWriteBoutiqueArtifacts`
+closure, its products, and each service's identity with its `[Requisite]` edges). A generator cannot write files, so the `AtelierWriteBoutiqueArtifacts`
 target in `src/Atelier/Directory.Build.targets` runs the freshly built host once
 in artifacts mode (`--atelier-artifacts`) after `Build`; a plain `dotnet build`
 leaves them in `bin/<config>/<tfm>/atelier/`. smash builds the host with

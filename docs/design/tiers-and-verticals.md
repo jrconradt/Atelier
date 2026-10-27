@@ -239,4 +239,5 @@ As of this note:
 - Data-store networks come from smash infrastructure flags, not from the
   services that use a store, and only one Postgres and one Redis container are
   emitted per environment.
-- The requisite manifest records products and assemblies, not dependency edges.
+- The requisite manifest records each service's identity and its `[Requisite]`
+  edges, but nothing renders network infrastructure from them yet.

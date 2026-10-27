@@ -20,6 +20,18 @@ public sealed class BoutiqueHostSourceGeneratorTests
             public abstract class ProductBase { }
         }
 
+        namespace Atelier.Framework.Requisitions
+        {
+            [System.AttributeUsage(System.AttributeTargets.Field | System.AttributeTargets.Property)]
+            public class RequisiteAttribute : System.Attribute { }
+
+            [System.AttributeUsage(System.AttributeTargets.Assembly, AllowMultiple = true)]
+            public sealed class RequisiteEdgeAttribute : System.Attribute
+            {
+                public RequisiteEdgeAttribute(System.Type service, System.Type requisite) { }
+            }
+        }
+
         namespace Atelier.Framework.Offering
         {
             public interface IWidget { }
@@ -52,14 +64,30 @@ public sealed class BoutiqueHostSourceGeneratorTests
     private const string ProductSource = """
         using Atelier.Framework.Attributes;
 
+        // What the requisites generator emits for this assembly's private [Requisite] members.
+        [assembly: Atelier.Framework.Requisitions.RequisiteEdge(typeof(Atelier.Sample.Products.OrdersProduct), typeof(Atelier.Sample.Products.OrderLedger))]
+        [assembly: Atelier.Framework.Requisitions.RequisiteEdge(typeof(Atelier.Sample.Products.OrdersProduct), typeof(Atelier.Framework.Offering.IWidget))]
+        [assembly: Atelier.Framework.Requisitions.RequisiteEdge(typeof(Atelier.Sample.Products.OrdersProduct), typeof(Microsoft.Extensions.Hosting.IHostedService))]
+        [assembly: Atelier.Framework.Requisitions.RequisiteEdge(typeof(Atelier.Sample.Products.LedgerBase), typeof(Atelier.Framework.Offering.IWidget))]
+
         namespace Atelier.Sample.Products;
 
-        public class OrdersProduct : Atelier.Framework.Offering.Product.ProductBase { }
+        public class OrdersProduct : Atelier.Framework.Offering.Product.ProductBase
+        {
+            [Atelier.Framework.Requisitions.Requisite] private readonly OrderLedger _ledger = null!;
+            [Atelier.Framework.Requisitions.Requisite] private readonly Atelier.Framework.Offering.IWidget _widget = null!;
+            [Atelier.Framework.Requisitions.Requisite] private Microsoft.Extensions.Hosting.IHostedService Hosted { get; } = null!;
+        }
 
         public class NotAProduct { }
 
+        public abstract class LedgerBase
+        {
+            [Atelier.Framework.Requisitions.Requisite] protected readonly Atelier.Framework.Offering.IWidget Widget = null!;
+        }
+
         [Infrastructure]
-        public class OrderLedger { }
+        public class OrderLedger : LedgerBase { }
 
         [Infrastructure]
         public class Safe { }
@@ -212,6 +240,37 @@ public sealed class BoutiqueHostSourceGeneratorTests
         Assert.Contains("\"requisite-manifest.json\"", generated);
         Assert.DoesNotContain("network-zones.json", generated);
         Assert.DoesNotContain("network-policies.yaml", generated);
+    }
+
+    [Fact]
+    public void RequisiteManifest_RecordsEachServiceIdentity_AndItsRequisiteEdges()
+    {
+        var (generated, _) = Run("""
+            [assembly: Atelier.Framework.Attributes.Boutique("orders")]
+            [assembly: Atelier.Framework.Attributes.BoutiqueProduct(typeof(Atelier.Sample.Products.OrdersProduct))]
+
+            namespace Atelier.Sample.Host
+            {
+                [Atelier.Framework.Attributes.Infrastructure]
+                public class Clock
+                {
+                    [Atelier.Framework.Requisitions.Requisite] private readonly Atelier.Sample.Products.OrderLedger _ledger = null!;
+                }
+            }
+            """);
+
+        Assert.Contains(@"{ \""identity\"": \""Atelier.Sample.Products.OrdersProduct\"", \""requisites\"": [\n"
+            + @"        { \""type\"": \""Atelier.Framework.Offering.IWidget\"", \""service\"": \""Atelier.Framework.Offering.Widget\"" },\n"
+            + @"        { \""type\"": \""Atelier.Sample.Products.OrderLedger\"", \""service\"": \""Atelier.Sample.Products.OrderLedger\"" },\n"
+            + @"        { \""type\"": \""Microsoft.Extensions.Hosting.IHostedService\"", \""service\"": null }\n"
+            + @"    ] }", generated);
+        Assert.Contains(@"{ \""identity\"": \""Atelier.Sample.Products.OrderLedger\"", \""requisites\"": [\n"
+            + @"        { \""type\"": \""Atelier.Framework.Offering.IWidget\"", \""service\"": \""Atelier.Framework.Offering.Widget\"" }\n"
+            + @"    ] }", generated);
+        Assert.Contains(@"{ \""identity\"": \""Atelier.Framework.Offering.Widget\"", \""requisites\"": [] }", generated);
+        Assert.Contains(@"{ \""identity\"": \""Atelier.Sample.Host.Clock\"", \""requisites\"": [\n"
+            + @"        { \""type\"": \""Atelier.Sample.Products.OrderLedger\"", \""service\"": \""Atelier.Sample.Products.OrderLedger\"" }\n"
+            + @"    ] }", generated);
     }
 
     private static (string? Generated, IReadOnlyList<Diagnostic> Diagnostics) Run(string hostSource)

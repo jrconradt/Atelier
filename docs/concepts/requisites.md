@@ -43,6 +43,17 @@ public sealed class GreetingService
 
 `Atelier.Framework.Requisitions.Generators` also emits factories for these lifetimes (`FactorySourceGenerator`) and registration wiring, so the host can construct types with their requisites resolved.
 
+## Dependency edges
+
+Every `[Requisite]` is a declared edge from a service to the type it depends on.
+The requisites generator records each one as
+`[assembly: RequisiteEdge(typeof(Service), typeof(Requisite))]` in the service's
+own assembly, so the edge survives into metadata even though the member is
+private. A boutique host's generator reads those declarations (and its own
+source directly) and writes every service's identity — its `Namespace.ServiceName`
+— and its edges into `requisite-manifest.json`, resolving each edge to the host
+service that provides it where there is one.
+
 ## Validation
 
 `RequisiteDependencyAnalyzer` (`ATELIER0600`) flags a `[Requisite]` whose dependency has no discoverable registration, turning a runtime resolution failure into a compile-time diagnostic.
