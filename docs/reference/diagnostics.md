@@ -35,7 +35,8 @@ Suppress a rule the same way as any Roslyn diagnostic — `#pragma warning disab
 | ATELIER0010 | Error | Missing null guard on `[Operation]` non-nullable reference parameter |
 | ATELIER003 | Warning | Missing null check in `[Operation]` method |
 | ATELIER004 | Warning | Method parameters must be validated |
-| ATELIER1310 | Error | Missing `CancellationToken` guard in `[Operation]` method |
+| ATELIER004_FIX | Info | Add Parameter Validation |
+| ATELIER1310 | Error | `[Operation]` method missing `CancellationToken` guard at entry |
 | ATELIER1404 | Warning | Public service method missing `[Operation]` attribute |
 
 ## Outcome pattern
@@ -44,16 +45,16 @@ Suppress a rule the same way as any Roslyn diagnostic — `#pragma warning disab
 |---|---|---|
 | ATELIER1000 | Error | Operation throws exception instead of returning `Outcome.Failure()` |
 | ATELIER1001 | Warning | Service method throws exception instead of returning `Outcome.Failure()` |
-| ATELIER1002 | Info | `ArgumentException` in operation — consider validation before the operation |
+| ATELIER1002 | Info | `ArgumentException` in operation - consider validation before operation call |
 
 ## Async discipline
 
 | ID | Severity | Title |
 |---|---|---|
 | ATELIER1200 | Warning | Missing `ConfigureAwait(false)` in library code |
-| ATELIER1201 | Warning | `ConfigureAwait(true)` in library code — should be false |
+| ATELIER1201 | Warning | `ConfigureAwait(true)` in library code - should be false |
 | ATELIER1300 | Error | Synchronous blocking on async operation using `.Result` |
-| ATELIER1301 | Error | Synchronous blocking on async operation using `.Wait()` |
+| ATELIER1301 | Error | Synchronous blocking on async operation using `.Wait()` or `GetAwaiter().GetResult()` |
 | ATELIER1302 | Error | Synchronous blocking on multiple tasks using `Task.WaitAll`/`WaitAny` |
 
 ## Network and security
@@ -66,8 +67,8 @@ Suppress a rule the same way as any Roslyn diagnostic — `#pragma warning disab
 | ATELIER0730 | Error | Authorization metadata is declared where nothing enforces it |
 | ATELIER0740 | Error | Secret-bearing contract member must be marked [JsonIgnore] |
 | ATELIER0741 | Error | Authorization claim or scope is not a catalog constant |
-| ATELIER0750 | Error | Mutating API operation has no write-tier scope |
-| ATELIER0751 | Error | Operation name is lexically ambiguous between read and mutation |
+| ATELIER0750 | Error | Write-effect API operation has no write-tier scope |
+| ATELIER0751 | Error | Operation on a `[ScopeResource]` type does not declare its authorization effect |
 | ATELIER0752 | Error | [ScopeResource] target does not expose both READ and WRITE scope constants |
 
 ## Lifetime and state
@@ -77,7 +78,7 @@ Suppress a rule the same way as any Roslyn diagnostic — `#pragma warning disab
 | ATELIER0400 | Warning | Singleton service has mutable state |
 | ATELIER0401 | Info | Scoped service without state |
 | ATELIER0402 | Warning | Repository should be scoped |
-| ATELIER0403 | Error | Dispose method on a type that declares neither IDisposable nor IAsyncDisposable |
+| ATELIER0403 | Error | Dispose Method Without Disposable Interface |
 
 ## Context
 
@@ -90,7 +91,7 @@ Suppress a rule the same way as any Roslyn diagnostic — `#pragma warning disab
 
 | ID | Severity | Title |
 |---|---|---|
-| ATELIER0200 | Warning | DTO class should be marked `[Contract]` |
+| ATELIER0200 | Warning | DTOs must define contracts |
 | ATELIER0210 | Error | Contract version change must declare backward compatibility |
 | ATELIER1500 | Error | [Contract] attribute on interface - should only be on DTOs |
 | ATELIER1501 | Error | [Contract] attribute on abstract class - should only be on DTOs |
@@ -106,7 +107,7 @@ Suppress a rule the same way as any Roslyn diagnostic — `#pragma warning disab
 
 ## Generator diagnostics
 
-These identifiers are reported by source generators rather than the analyzer assembly, and fail the build. `ATELIER0700`/`ATELIER0701` and `ATELIER0900`–`ATELIER0902` come from `Atelier.Framework.Infrastructure.Generators`; `ATELIER0800`/`ATELIER0801` come from `Atelier.Framework.Network.Generators`. Each is defined as a `DiagnosticDescriptor` in its generator's source.
+These identifiers are reported by source generators rather than the analyzer assembly; errors fail the build. `ATELIER0700`/`ATELIER0701` and `ATELIER0900`–`ATELIER0902` come from `Atelier.Framework.Infrastructure.Generators`; `ATELIER0800`/`ATELIER0801` come from `Atelier.Framework.Network.Generators`; `PROD004`–`PROD006` come from `Atelier.Framework.Offering.Generators`. Each is defined as a `DiagnosticDescriptor` in its generator's source.
 
 | ID | Severity | Title |
 |---|---|---|
@@ -117,3 +118,6 @@ These identifiers are reported by source generators rather than the analyzer ass
 | ATELIER0900 | Error | Boutique product must derive from ProductBase |
 | ATELIER0901 | Error | Requisite has no providing service |
 | ATELIER0902 | Error | Requisite has more than one providing service |
+| PROD004 | Warning | Offering must have Infrastructure attribute |
+| PROD005 | Warning | Product has manual ConfigureOfferings override |
+| PROD006 | Error | Duplicate product domain |
